@@ -9,22 +9,29 @@ to add as little attack surface as possible.
    code, tool output and credentials are never sent anywhere by Agent Office.
 2. **No network listeners.** The app opens no TCP/UDP port. UI ↔ core uses Tauri's
    in-process IPC. Hooks reach the app through a local **named pipe**
-   (`\\.\pipe\agent-office-<user-hash>`) created with `PIPE_REJECT_REMOTE_CLIENTS`.
-3. **Authenticated hook relay.** The relay presents a per-user random token stored in
-   `%LOCALAPPDATA%\AgentOffice\ipc.token` (protected by the user profile ACL). Frames
-   without a valid token are dropped.
+   (`\\.\pipe\agent-office-v1-<hash>`) created as the first instance of that name (so
+   no other process can squat on it) and rejecting remote clients. Development builds
+   on Linux/macOS use a Unix socket with mode 0600.
+3. **Authenticated hook relay.** The relay presents a per-user random token (256 bits)
+   stored in `%LOCALAPPDATA%\AgentOffice\ipc.token` (protected by the user profile ACL;
+   0600 on Unix). The app compares it in constant time and drops frames without it.
 4. **Least privilege in the UI.** The webview can only call the Tauri commands
    explicitly allowed in `src-tauri/capabilities/`. No shell/fs plugins are exposed to
    the renderer. A strict Content-Security-Policy blocks remote scripts.
 5. **Never kill what we didn't start.** Only processes created by Agent Office (and
    tracked in their own Job Object) can be stopped or killed.
 6. **Safe config edits.** Provider config files (e.g. `%USERPROFILE%\.claude\settings.json`)
-   are parsed first (invalid JSON → refuse), backed up with a timestamp, written
-   atomically, and only entries carrying the Agent Office marker are ever changed or
-   removed. Uninstall restores the file to the user's own content.
+   are parsed first (invalid JSON → refuse), backed up with a timestamp (last 5 kept),
+   written atomically (temporary file + rename), and only hook entries that run the
+   Agent Office executable for that provider are ever changed or removed. Uninstall
+   restores the file to the user's own content. Every change needs an explicit click
+   and confirmation in Diagnostics.
 7. **Fail open for the agent.** If the app is closed or the relay fails, the hook exits
    0 with no output, so the agent behaves as if Agent Office did not exist. Agent Office
    never auto-approves anything; approvals only happen after an explicit user click.
+   An unanswered request is denied (managed sessions) or handed back to the agent's
+   own prompt (external sessions). Answering external sessions' requests from the app
+   is off by default.
 
 ## Secrets
 
@@ -39,6 +46,17 @@ to add as little attack surface as possible.
 * SQLite database and logs live under `%LOCALAPPDATA%\AgentOffice` (per-user).
 * Retention is configurable (default 14 days of events); large tool outputs are
   truncated at ingest (default 8 KB). Storing prompt text can be disabled.
+
+## What hooks carry
+
+Hook payloads can contain prompts, file paths, commands and tool output. The relay
+sends them only to the local app over the pipe above; the app applies redaction and
+size limits before anything is stored, and nothing leaves the machine.
+
+Managed Claude sessions get a per-session settings file in
+`%LOCALAPPDATA%\AgentOffice\sessions\`. It contains only the relay command and is
+deleted when the session ends. Session discovery runs the official, read-only
+`claude agents --json`.
 
 ## Hooks and trust
 

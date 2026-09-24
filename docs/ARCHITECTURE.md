@@ -45,7 +45,7 @@ Rest of the stack, deliberately small:
 ```
  ┌──────────────── Provider CLIs (child processes or user terminals) ───────────────┐
  │  claude -p (stream-json)   codex app-server (JSON-RPC)   agent acp (ACP JSON-RPC) │
- │  claude / codex / agent in the user's own terminal ──► hooks ──► agent-office-hook│
+ │  claude / codex / agent in the user's own terminal ──► hooks ──► agent-office hook│
  └──────────┬───────────────────────┬──────────────────────────┬───────────────┬────┘
             │ stdio                 │ stdio                    │ stdio         │ named pipe
  ┌──────────▼───────────────────────▼──────────────────────────▼───────────────▼────┐
@@ -93,9 +93,10 @@ AI-Agent-Office/
 │  │                       # event bus, session reducer, redaction  (no OS / no Tauri deps)
 │  ├─ ao-store/            # SQLite schema, migrations, batched writer, retention
 │  ├─ ao-detect/           # executable discovery + version probing (PATHEXT aware)
-│  ├─ ao-process/          # process manager (Job Objects on Windows)            [Phase 7]
-│  ├─ ao-ipc/              # named-pipe protocol shared by app and hook relay    [Phase 3]
-│  ├─ ao-hook-relay/       # `agent-office-hook.exe` sidecar                     [Phase 3]
+│  ├─ ao-process/          # owns managed agents' process trees (Job Objects / process groups)
+│  ├─ ao-ipc/              # local IPC (named pipe / Unix socket) + token, shared by app and relay
+│  ├─ ao-hook-relay/       # hook relay (`agent-office hook …`) + standalone binary for tests
+│  ├─ ao-testkit/          # fixture harness, fake provider CLIs (fake-claude), cargo_bin helper
 │  ├─ ao-git/              # GitService (git.exe porcelain v2)                   [Phase 8]
 │  └─ providers/
 │     ├─ ao-provider-claude/
@@ -129,13 +130,19 @@ pub trait ProviderAdapter: Send + Sync + 'static {
     async fn send_prompt(&self, id: &SessionId, prompt: &str) -> Result<(), ProviderError>;
     async fn resolve_permission(&self, id: &SessionId, request: &PermissionRequestId, decision: PermissionDecision) -> Result<(), ProviderError>;
     async fn list_sessions(&self) -> Result<Vec<ExternalSessionInfo>, ProviderError>;
-    async fn integration_status(&self) -> IntegrationStatus;
-    async fn install_integration(&self) -> Result<IntegrationStatus, ProviderError>;
-    async fn uninstall_integration(&self) -> Result<IntegrationStatus, ProviderError>;
-    async fn repair_integration(&self) -> Result<IntegrationStatus, ProviderError>;
-    // Phase 3 adds: async fn handle_hook(&self, input: HookEnvelope) -> Result<HookOutcome, ProviderError>;
+    async fn integration_status(&self, ctx: &AdapterContext) -> IntegrationStatus;
+    async fn install_integration(&self, ctx: &AdapterContext) -> Result<IntegrationStatus, ProviderError>;
+    async fn uninstall_integration(&self, ctx: &AdapterContext) -> Result<IntegrationStatus, ProviderError>;
+    async fn repair_integration(&self, ctx: &AdapterContext) -> Result<IntegrationStatus, ProviderError>;
+    fn configure(&self, settings: &ProviderSettings);            // user preferences (default: ignore)
+    async fn start(&self, ctx: AdapterContext);                  // background work, e.g. session discovery
+    async fn handle_hook(&self, call: HookCall, ctx: AdapterContext) -> HookReply; // default: empty reply
 }
 ```
+
+`AdapterContext` carries the `EventSink`, the `RelayCommand` agent CLIs must run to
+reach Agent Office (`None` when hooks are unavailable) and the data folder (for
+per-session scratch files such as Claude's `--settings` file).
 
 Every method except `descriptor`/`capabilities` has a default implementation that
 returns `ProviderError::Unsupported { capability }`. `approvePermission` /
@@ -229,23 +236,39 @@ Commands (`invoke`) for request/response, one **Channel** for the event stream.
 The core batches state patches and events and flushes at most every 100 ms, so a
 burst of 1 000 events is one UI update, not 1 000.
 
-### 5.2 Hooks ↔ core: `agent-office-hook.exe` over a named pipe
+### 5.2 Hooks ↔ core: `agent-office hook` over a named pipe
 
-Hooks are configured as **exec-form commands** pointing at the bundled sidecar
-`agent-office-hook.exe <provider>` (no shell, no Bash, no PowerShell scripts). The
-relay:
+Hooks are configured as **exec-form commands** (`command` + `args`, no shell, no Bash,
+no PowerShell scripts) pointing at the **Agent Office executable itself** in relay
+mode:
 
-1. reads the hook JSON from stdin (size-capped),
-2. connects to `\\.\pipe\agent-office-<user-hash>` (`PIPE_REJECT_REMOTE_CLIENTS`),
-   authenticates with the per-user token stored in `%LOCALAPPDATA%\AgentOffice\ipc.token`,
-3. sends a length-prefixed JSON frame,
-4. for decision-capable events in "answer from app" mode, waits for a reply (bounded),
-   then prints the provider-specific JSON output,
-5. **if the app is not running or anything fails, exits 0 with no output within
-   ~200 ms**, so the agent always continues normally.
+```
+"C:\...\Agent Office\agent-office.exe" hook claude --origin global [--wait 150] [--data-dir <dir>]
+```
 
-No TCP port is opened. (Claude also supports `http` hooks; we do not use them to
-avoid a listening port.)
+Using the main executable avoids bundling and versioning a second sidecar; its file
+name is pinned (`mainBinaryName: agent-office`) so installed hooks stay
+recognisable. The relay (`ao-hook-relay`):
+
+1. reads the hook JSON from stdin (capped at 4 MiB; larger payloads are truncated
+   and flagged),
+2. connects to `\\.\pipe\agent-office-v1-<hash of the data folder>` (created with
+   `first_pipe_instance` and `reject_remote_clients`; a 0600 Unix socket on
+   development machines) and authenticates with the per-user token in
+   `<data folder>\ipc.token`,
+3. sends one length-prefixed JSON frame (`HookRequest`: provider, origin
+   `global`/`managed`, timestamp, payload) and waits for the answer at most
+   `--wait` seconds (5 s by default; permission requests use the configured answer
+   timeout),
+4. prints the answer's stdout (e.g. a Claude permission decision) and exits with its
+   code,
+5. **if the app is not running or anything fails, exits 0 with no output** (300 ms
+   connect timeout), so the agent always continues normally.
+
+In the app, the `HookBridge` counts every hook event per provider (Diagnostics →
+*Hook bridge*: the empirical record of what each CLI fires on this machine) and
+passes the call to `ProviderAdapter::handle_hook`. No TCP port is opened. (Claude
+also supports `http` hooks; we do not use them to avoid a listening port.)
 
 ### 5.3 Managed sessions
 
@@ -255,22 +278,38 @@ avoid a listening port.)
 | Codex | `codex app-server` (stdio) | JSON-RPC 2.0, protocol v2 |
 | Cursor | `agent acp` | ACP JSON-RPC 2.0 |
 
-If global Claude hooks are installed, managed sessions do not inject a second copy;
-the ingest layer also de-duplicates by `(provider, session, hook event, tool_use_id)`.
+Claude managed sessions always get their own hooks through a per-session
+`--settings` file (origin `managed`, permission requests answered from the app).
+Claude **merges** those with the user's hooks (verified with 2.1.281), so when the
+global integration is installed both fire; the adapter drops `global` calls for
+sessions it launched (the id is reserved before the process starts). Within a
+managed Claude session the two channels split the work:
+
+| From hooks | From stream-json |
+| --- | --- |
+| prompts, tool calls, files, commands, subagents, permission requests, compaction, session start/end | model (`system/init`), assistant text, API retries and errors, token usage and cost estimate (`result`), end of turn |
 
 ## 6. Process Manager (Windows-first)
 
-* Spawns with `CreateProcessW` semantics through `tokio::process` plus Windows flags
-  (`CREATE_NO_WINDOW`, `CREATE_NEW_PROCESS_GROUP`); resolves `.cmd` shims via
-  `cmd.exe /d /s /c` with proper argument quoting.
+Implemented in `ao-process` (Phase 3):
+
+* Spawns through `tokio::process` with `CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP`.
+  `.cmd` shims (npm installs) are started by Rust's standard library, which runs
+  them through `cmd.exe` with its own argument escaping and refuses arguments it
+  cannot escape safely; Agent Office puts nothing user-typed on command lines
+  (prompts go through stdin, hook settings through a file).
 * Each managed process is assigned to its **own Job Object**
   (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`): the whole tree (agent + shells it spawned)
-  is terminated with the job, and nothing outside the job can be affected.
-* Captures stdout/stderr line-by-line, owns stdin, records PID **and process creation
-  time** (PID reuse guard), exit code, and restart count.
-* Stop = protocol-level cancel → close stdin → wait (grace period) → `TerminateJobObject`.
-* Liveness: exit detection via process handle; **stalled** detection when a session
-  says it is busy but nothing arrived for N minutes (shown as a warning, never auto-killed).
+  is terminated with the job, and nothing outside the job can be affected. The
+  process is assigned right after it starts; a grandchild spawned in that first
+  instant would escape the job (known limitation; the CLIs we launch do not do that).
+* Captures stdout/stderr line by line, owns stdin, and keeps the process handle for
+  its whole life, so it never acts on a PID that could have been reused.
+* Stop = close stdin → wait (grace period) → terminate the job. Dropping a
+  `ManagedProcess` also terminates its tree.
+
+Planned (Phase 7): stall detection (busy but silent for N minutes, shown as a
+warning, never auto-killed) and restart counters.
 * **Never kills a process it did not create.** External sessions have no kill action
   (except Claude background sessions via the official `claude stop <id>`).
 * Non-Windows builds use process groups (`setsid`/`killpg`) behind the same API.

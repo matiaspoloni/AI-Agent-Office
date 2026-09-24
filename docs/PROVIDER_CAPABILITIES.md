@@ -30,7 +30,7 @@ Two integration modes exist for every provider:
 
 | Provider | Version inspected | How it was verified |
 | --- | --- | --- |
-| Claude Code | `2.1.281` (installed in the research container) | `claude --help`, `claude agents --help`, `claude agents --json` executed; hooks reference and headless docs at `code.claude.com/docs/en/hooks` and `/headless`. |
+| Claude Code | `2.1.281` (installed in the research container) | `claude --help`, `claude agents --help`, `claude agents --json` executed; hooks reference and headless docs at `code.claude.com/docs/en/hooks` and `/headless`. **Phase 3:** hook payloads and stream-json lines captured from real runs (throw-away config folder), and one end-to-end run of the finished integration with the real CLI — see §3.5. |
 | OpenAI Codex CLI | `0.156.1` (npm `@openai/codex@latest`) | CLI help of every subcommand; `codex features list` (`hooks = stable`); app-server protocol generated locally with `codex app-server generate-ts` / `generate-json-schema`; hooks input/output schema read from `openai/codex` source (`codex-rs/hooks/src/schema.rs`). |
 | Cursor CLI (`agent`) | Not installable in the research container (download host blocked by the sandbox's network policy) | ACP schema from the official `@agentclientprotocol/sdk@1.5.0` package; Cursor docs (`cursor.com/docs/cli/acp`, `/docs/cli/reference/output-format`, `/docs/hooks`) via search snippets; community integration reports. **Every Cursor-specific claim below is marked "needs on-machine verification" until Phase 5 tests it on Windows.** |
 
@@ -52,7 +52,7 @@ Two integration modes exist for every provider:
 | Command events | Yes (`Bash`/`PowerShell` tool) | Yes | Yes (`commandExecution`, exit code, output deltas) | Yes | Yes (kind `execute`) | Experimental |
 | Approve / reject permission from the app | Yes (`PermissionRequest` hook decision) | Partial² (opt-in) | Yes (server requests `*/requestApproval`) | Partial² (opt-in) | Yes (`session/request_permission`) | No |
 | Subagents | Yes (`SubagentStart`/`SubagentStop`, `agent_id` on events) | Yes | Yes (`collabAgentToolCall`, `SubagentStart`/`Stop` hooks) | Yes (hooks) | No³ | No³ |
-| Token usage | Yes (`result.usage` in stream-json) | No | Yes (`thread/tokenUsage/updated`) | No | Runtime (`usage_update` if sent) | No |
+| Token usage | Yes (`result.modelUsage` in stream-json) | No | Yes (`thread/tokenUsage/updated`) | No | Runtime (`usage_update` if sent) | No |
 | Cost | Partial⁴ (estimate) | No | No | No | Runtime | No |
 | Model reported | Yes | Partial (`SessionStart.model`, not always) | Yes | Yes (hooks carry `model`) | Runtime | No |
 | Context compaction | Yes (`PreCompact`/`PostCompact`) | Yes | Yes (`thread/compacted`) | Yes | Runtime (`compaction_update`) | Experimental |
@@ -109,12 +109,15 @@ Events Agent Office subscribes to and how they map to the unified model:
 | `PermissionRequest` | `tool_name`, `tool_input`, `permission_suggestions` | `permission.requested` |
 | `PermissionDenied` | tool fields | `permission.denied` |
 | `Notification` | `notification_type` (`permission_prompt`, `idle_prompt`, …), `message` | `agent.waiting` / `agent.idle` |
-| `Stop` | `last_assistant_message` | `agent.idle` (turn done) |
-| `StopFailure` | `error_type` | `agent.error` |
+| `Stop` | `last_assistant_message` | `agent.message` + `agent.idle` (external sessions; managed sessions take both from stream-json) |
+| `StopFailure` | `error`, `error_details`, `last_assistant_message` | `agent.error` (external sessions) |
 | `SubagentStart` | `agent_id`, `agent_type` | `subagent.started` |
 | `SubagentStop` | `agent_id`, `agent_transcript_path` | `subagent.ended` |
 | `PreCompact` / `PostCompact` | `trigger` | `context.compacted` |
-| `CwdChanged`, `WorktreeCreate`, `WorktreeRemove` | — | `session.updated` (cwd/worktree) → GitService refresh |
+| `CwdChanged` | `old_cwd`, `new_cwd` | `session.updated` (cwd) → GitService refresh |
+
+`WorktreeCreate` is **not** subscribed: a command hook on that event *replaces*
+Claude's own git worktree creation (documented), so observing it would change behaviour.
 
 Common fields on every hook: `session_id`, `transcript_path`, `cwd`, `permission_mode`,
 `hook_event_name`, and `agent_id` / `agent_type` when the event comes from a subagent.
@@ -132,7 +135,8 @@ Common fields on every hook: `session_id`, `transcript_path`, `cwd`, `permission
 
 * Hook commands default to Git Bash when installed, otherwise PowerShell. Agent Office
   uses the **exec form** (`command` + `args`) so no shell is involved at all: our
-  hook command is the absolute path to `agent-office-hook.exe`.
+  hook command is the absolute path to `agent-office.exe` with the arguments
+  `hook claude --origin global …`.
 * Settings location: `%USERPROFILE%\.claude\settings.json`.
 * Settings edits are picked up by Claude Code's file watcher; the user can inspect
   them with `/hooks`.
@@ -146,6 +150,57 @@ Common fields on every hook: `session_id`, `transcript_path`, `cwd`, `permission
 * `claude agents --json` output is only described in CLI help; the adapter treats
   unknown/missing fields as absent and disables the feature if parsing fails.
 * Hooks run only after the workspace-trust dialog was accepted (interactive mode).
+* `PermissionRequest` carries no `tool_use_id`, so a permission cannot be tied to a
+  specific tool call; Agent Office gives each request its own id and ties it to the
+  session/agent.
+
+### 3.5 Implementation status (Phase 3) and verified behaviour
+
+Implemented in `ao-provider-claude`: detection, global hook integration
+(install / repair / uninstall / status), external sessions through hooks, session
+discovery with `claude agents --json`, managed sessions (`claude -p` stream-json +
+per-session `--settings`), prompts to managed sessions, stop (own process tree;
+external only background sessions via `claude stop <id>`), permission answers from
+the app.
+
+Settings integration (`%USERPROFILE%\.claude\settings.json`, or `%CLAUDE_CONFIG_DIR%`):
+
+* the file is parsed first; invalid JSON or an unexpected `hooks` shape → status
+  *Cannot read config*, **nothing is written**;
+* only handlers whose command is `agent-office(.exe)` / `agent-office-hook(.exe)` with
+  `claude` as provider argument are considered ours; everything else (user hooks,
+  plugins, other settings) is preserved byte-for-byte in meaning;
+* install is idempotent and removes duplicates; *Needs repair* when the executable
+  moved or preferences changed the hook shape (changing preferences repairs it
+  automatically);
+* a timestamped backup `settings.json.agent-office-backup-<ms>` is written before
+  every change (the last 5 are kept), then the new file is written to a temporary
+  file and renamed over the original;
+* `disableAllHooks: true` → *Needs your action* (we never flip the user's switch).
+
+Observed with Claude Code 2.1.281 (fixtures in `fixtures/claude/`, real captures
+marked `-real`):
+
+| Finding | Consequence in Agent Office |
+| --- | --- |
+| Hooks from `--settings` are **merged** with user hooks, not replacing them. | Managed sessions ignore `global`-origin calls for sessions they launched. |
+| Exec form (`command` + `args`), `async: true` and `timeout` (seconds) work as documented. | All observation hooks are async; only `PermissionRequest` (when answering) and `SessionEnd` are synchronous. |
+| Async hooks are cancelled when a `-p` session tears down; `SessionEnd` has about 1.5 s. | `SessionEnd` is a quick synchronous hook (`--wait 3`, timeout 5 s). |
+| `SubagentStart`/`SubagentStop` also fire for internal helper agents with an empty `agent_type`. | Those are ignored (no phantom subagents). |
+| In `-p` mode `SessionStart` has no `model`; `system/init` has it. | Model of managed sessions comes from stream-json. |
+| `result.usage` is per turn; `result.modelUsage` and `total_cost_usd` are running totals. | Usage = sum of `modelUsage`; cost always labelled *estimate*. |
+| In `-p` mode both the `Stop` hook and the stream `result` report the end of a turn. | Managed sessions use stream-json only (no duplicate message/idle). |
+| `--permission-mode` choices: `acceptEdits`, `auto`, `bypassPermissions`, `manual`, `dontAsk`, `plan`; `system/init` reports `manual` as `default`. | The New Agent dialog offers exactly these; `default` is sent as `manual`. |
+| `--model` accepts aliases (`fable`, `opus`, `sonnet`) or full names. | Offered as suggestions; any name can be typed. |
+| `claude agents --json` prints `pid`, `cwd`, `kind`, `startedAt`, `sessionId`, `name`, `status` (`busy`/`idle`). | Sessions appear before their first hook; coarse busy/idle is used only for sessions without hooks. |
+
+Permission answers:
+
+| Session | Agent Office setting | What happens |
+| --- | --- | --- |
+| Managed | always | The request waits for Approve / Reject in the app; no answer within the timeout → denied, with a message. |
+| External | *Answer permission requests of external sessions* **off** (default) | Observe only: the request is shown; answer it in Claude's terminal. |
+| External | on | The request waits for Approve / Reject in the app; no answer within the timeout → Claude shows its own prompt (`permission.expired`). |
 
 ---
 

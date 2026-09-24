@@ -27,7 +27,7 @@ on Ubuntu: `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindica
 | `npm run build:ui` | Typecheck + bundle the UI into `dist/` |
 | `npm run test` | All Rust tests (`cargo test --workspace`) + UI tests (Vitest) |
 | `npm run lint` | TypeScript typecheck, `cargo fmt --check`, `cargo clippy -D warnings` |
-| `npm run smoke` | Headless smoke test of the desktop binary (`--smoke-test`) |
+| `npm run smoke` | Headless smoke test of the desktop binary (`--smoke-test`); `SMOKE_KEEP_REPORT=<file>` keeps the report |
 | `npm run bindings` | Regenerate TypeScript types from Rust (`src/bindings/`) |
 | `npm run preview:record` | Regenerate the browser-preview timeline from the Rust demo provider |
 
@@ -44,7 +44,12 @@ src-tauri/            desktop app: host runtime, Tauri commands, diagnostics, lo
 crates/ao-core        event model, capabilities, adapter trait, pipeline, reducer, batching
 crates/ao-store       SQLite schema/migrations, batched writer
 crates/ao-detect      executable discovery + version probing
+crates/ao-process     process trees of managed agents (Job Objects / process groups)
+crates/ao-ipc         local IPC between the hook relay and the app (named pipe / Unix socket)
+crates/ao-hook-relay  `agent-office hook <provider>` relay + standalone `agent-office-hook` binary
+crates/ao-testkit     fixture harness, fake CLIs (`fake-claude`, `ao-fake-child`), cargo_bin
 crates/providers/*    one crate per provider (claude, codex, cursor, demo)
+fixtures/             provider payloads used by mapping tests (`-real` = captured from a real CLI)
 scripts/              cross-platform Node scripts (smoke test, installer collection)
 docs/                 architecture, capabilities, roadmap, security, this file
 ```
@@ -84,7 +89,9 @@ control agents or run diagnostics.
 | --- | --- |
 | Database | `%LOCALAPPDATA%\AgentOffice\agent-office.db` |
 | Logs | `%LOCALAPPDATA%\AgentOffice\logs\app.log.*`, `providers.log.*` |
-| Override data folder | `AGENT_OFFICE_DATA_DIR=<folder>` |
+| Override data folder | `AGENT_OFFICE_DATA_DIR=<folder>` (hooks installed from such an instance pass `--data-dir`) |
+| IPC token | `%LOCALAPPDATA%\AgentOffice\ipc.token` |
+| Managed session hook files | `%LOCALAPPDATA%\AgentOffice\sessions\` (deleted when the session ends) |
 | Log level | `AGENT_OFFICE_LOG=debug` (or `info,provider=debug`) |
 
 ## Tests
@@ -94,6 +101,20 @@ control agents or run diagnostics.
   writer, detection, capability declarations, the demo provider (permissions,
   stop), preview recording, and the host runtime (event → state → UI → disk,
   restart behaviour).
+* **Process and IPC tests** start real helper binaries built on demand by
+  `ao_testkit::bins::cargo_bin` (process-tree kill, relay ↔ server round trips,
+  bad tokens, app not running).
+* **Mapping fixtures**: every file in `fixtures/claude/hooks` and
+  `fixtures/claude/stream` is an input plus the expected unified events
+  (`crates/providers/ao-provider-claude/tests/fixtures.rs`). Add a fixture for every
+  new payload shape you see in Diagnostics → *Hook bridge*.
+* **End-to-end** (`src-tauri/tests/claude_e2e.rs`): the real host, IPC server and
+  relay driven by `fake-claude`, a stand-in for the `claude` CLI that runs configured
+  hooks exactly like Claude Code (exec form, JSON on stdin, async/sync). It covers a
+  managed session (prompt, approve, reject, usage, stop) and the global integration
+  (install over existing settings, answering an external permission, observe-only
+  mode, uninstall restoring the file). The user's real Claude configuration is
+  never used: tests point the adapter at a temporary config folder.
 * **UI tests** (Vitest): scene/seat allocation incl. 20 sessions + 50 subagents,
   path finding, store merging, timestamp shifting, capability gating.
 * **Smoke test**: `npm run smoke` runs the real binary headless with a temporary
@@ -107,3 +128,9 @@ control agents or run diagnostics.
 * **Blank window on Windows** — make sure WebView2 is installed/updated.
 * **Database error in Diagnostics** — the app falls back to temporary in-memory
   storage and shows the error; check the path and file permissions.
+* **Hook bridge "Not listening"** — another Agent Office instance with the same data
+  folder already owns the pipe; close it, or start this one with a different
+  `AGENT_OFFICE_DATA_DIR`.
+* **No events from Claude** — Diagnostics → Providers must show *Installed* for the
+  hooks; inside Claude, `/hooks` lists them. Hooks also need the folder to be trusted
+  and `disableAllHooks` to be off.

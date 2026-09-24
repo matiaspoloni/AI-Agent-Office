@@ -6,9 +6,10 @@ living pixel-art office. Each session is an employee: you can see who is coding,
 is running tests, who is waiting for your permission and who just hit an error, and
 you can act on them when the provider allows it.
 
-> **Status: early development (Phase 1 of 10).** The desktop shell, core event model,
-> SQLite storage, provider detection and a clearly-labelled *demo* provider work.
-> Real Claude/Codex/Cursor sessions arrive in Phases 3–5. See
+> **Status: early development (Phase 3 of 10).** The desktop shell, unified event
+> pipeline, SQLite storage, provider detection, a clearly-labelled *demo* provider and
+> **Claude Code** (sessions launched from the app, and sessions in your own terminal
+> through hooks) work. Codex and Cursor sessions arrive in Phases 4–5. See
 > [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## What it is
@@ -46,6 +47,23 @@ installer uses the WebView2 runtime that ships with Windows 11.
 
 You need the agent CLIs you want to watch installed as usual (`claude`, `codex`,
 `agent`). Agent Office detects them automatically.
+
+## Watching Claude Code
+
+1. Open **Diagnostics** and press **Install hooks** next to Claude Code (confirm).
+   Agent Office adds its entries to `%USERPROFILE%\.claude\settings.json`, keeps
+   everything else, and saves a backup next to the file first.
+2. Run `claude` in any terminal: a character appears and follows what it does.
+3. Or press **New agent** → Claude Code to launch a session from the app; it takes
+   prompts from the agent panel and asks you to Approve / Reject tool use there.
+
+Permission prompts of sessions in your own terminal are only *shown* by default. Turn
+on *Answer permission requests of external sessions* in Diagnostics → Settings to
+answer them from the app (Claude shows its own prompt if you don't answer in time).
+
+**Before uninstalling Agent Office**, press **Uninstall** next to Claude Code in
+Diagnostics so Claude stops calling it (the installer will do this automatically in
+a later phase).
 
 ## Quick start (development build)
 
