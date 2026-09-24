@@ -160,7 +160,8 @@ export function DiagnosticsView() {
               </p>
               <p className="small">
                 Events ingested {report.backend.eventsIngested} · dropped {report.backend.eventsDropped} · duplicates{" "}
-                {report.backend.duplicatesDropped} · active sessions {report.backend.activeSessions}
+                {report.backend.duplicatesDropped} · rejected {report.backend.eventsRejected} · active sessions{" "}
+                {report.backend.activeSessions}
               </p>
               <p className="small muted">
                 Stored output limit {report.backend.maxOutputChars} chars · prompts{" "}

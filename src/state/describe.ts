@@ -48,7 +48,9 @@ export function describeEvent(e: AgentEvent): string {
     case "permission.approved":
       return `Permission approved (${e.payload.resolvedBy})`;
     case "permission.denied":
-      return `Permission denied (${e.payload.resolvedBy})`;
+      return `Permission denied (${e.payload.resolvedBy})${e.payload.message ? `: ${e.payload.message}` : ""}`;
+    case "permission.expired":
+      return e.payload.message ?? "No answer in Agent Office; answer in the agent's own prompt";
     case "subagent.started":
       return `Subagent started: ${e.payload.agentType ?? "subagent"}${e.payload.description ? ` — ${e.payload.description}` : ""}`;
     case "subagent.updated":
@@ -79,6 +81,7 @@ export function eventTone(e: AgentEvent): "normal" | "good" | "bad" | "warn" | "
     case "permission.denied":
       return "bad";
     case "permission.requested":
+    case "permission.expired":
       return "warn";
     case "tool.completed":
     case "command.completed":

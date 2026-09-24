@@ -32,6 +32,8 @@ pub struct BackendStatus {
     pub events_dropped: u64,
     #[ts(type = "number")]
     pub duplicates_dropped: u64,
+    #[ts(type = "number")]
+    pub events_rejected: u64,
     pub active_sessions: u32,
     pub ui_subscribed: bool,
     pub max_output_chars: u32,
@@ -142,6 +144,7 @@ pub async fn run(host: Arc<Host>) -> DiagnosticsReport {
             events_ingested: host.ingested(),
             events_dropped: host.dropped(),
             duplicates_dropped: host.duplicates(),
+            events_rejected: host.rejected(),
             active_sessions: host.active_sessions() as u32,
             ui_subscribed: host.ui_subscribed(),
             max_output_chars: prefs.max_output_chars,

@@ -41,6 +41,7 @@ export type CharacterFrame = keyof typeof CHARACTER_FRAMES;
 
 export const ICONS: Record<string, string[]> = {
   alert: ["...r...", "..rrr..", "..rrr..", "..rrr..", "...r...", ".......", "...r..."],
+  question: [".ooo...", "o...o..", "....o..", "...o...", "..o....", ".......", "..o...."],
   error: ["r.....r", ".r...r.", "..r.r..", "...r...", "..r.r..", ".r...r.", "r.....r"],
   check: [".......", "......g", ".....g.", "g...g..", ".g.g...", "..g....", "......."],
   terminal: ["kkkkkkk", "k.....k", "kg....k", "k.g...k", "kg.gg.k", "k.....k", "kkkkkkk"],
@@ -53,6 +54,7 @@ export const ICONS: Record<string, string[]> = {
 
 export const ICON_PALETTE: Palette = {
   r: "#ff4d4d",
+  o: "#f08a24",
   g: "#3fbf5f",
   k: "#2b2f3a",
   b: "#4c8df5",

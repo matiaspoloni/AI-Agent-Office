@@ -79,6 +79,68 @@ impl AgentEvent {
     pub fn type_name(&self) -> &'static str {
         self.kind.type_name()
     }
+
+    /// Checks envelope and payload invariants. Adapters are expected to
+    /// produce valid events; the pipeline rejects (and reports) the rest so a
+    /// buggy adapter cannot corrupt the office state.
+    pub fn validate(&self) -> Result<(), String> {
+        fn id_ok(value: &str) -> bool {
+            !value.trim().is_empty() && value.len() <= 256 && !value.chars().any(char::is_control)
+        }
+        if self.provider.0.is_empty()
+            || self.provider.0.len() > 64
+            || !self
+                .provider
+                .0
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
+        {
+            return Err(format!("invalid provider id `{}`", self.provider));
+        }
+        if !id_ok(&self.session_id.0) {
+            return Err("invalid session id".into());
+        }
+        if !id_ok(&self.agent_id.0) {
+            return Err("invalid agent id".into());
+        }
+        if self.parent_agent_id.as_ref() == Some(&self.agent_id) {
+            return Err("an agent cannot be its own parent".into());
+        }
+        let subagent_event = matches!(
+            self.kind,
+            EventKind::SubagentStarted(_)
+                | EventKind::SubagentUpdated(_)
+                | EventKind::SubagentEnded(_)
+        );
+        if subagent_event && self.is_main_agent() {
+            return Err(format!(
+                "{} must target a subagent, not the main agent",
+                self.type_name()
+            ));
+        }
+        match &self.kind {
+            EventKind::ToolStarted(t) if t.tool_name.trim().is_empty() => {
+                Err("tool.started without tool name".into())
+            }
+            EventKind::ToolCompleted(t) | EventKind::ToolFailed(t)
+                if t.tool_name.trim().is_empty() =>
+            {
+                Err("tool result without tool name".into())
+            }
+            EventKind::PermissionRequested(p) if p.request_id.0.trim().is_empty() => {
+                Err("permission.requested without request id".into())
+            }
+            EventKind::FileRead(f)
+            | EventKind::FileCreated(f)
+            | EventKind::FileModified(f)
+            | EventKind::FileDeleted(f)
+                if f.path.trim().is_empty() =>
+            {
+                Err("file event without path".into())
+            }
+            _ => Ok(()),
+        }
+    }
 }
 
 /// Where the event came from.
@@ -532,6 +594,10 @@ pub enum EventKind {
     PermissionApproved(PermissionResolved),
     #[serde(rename = "permission.denied")]
     PermissionDenied(PermissionResolved),
+    /// Agent Office stopped offering an answer (timeout); the provider's own
+    /// prompt (e.g. in the terminal) is now the only way to answer.
+    #[serde(rename = "permission.expired")]
+    PermissionExpired(PermissionResolved),
     #[serde(rename = "subagent.started")]
     SubagentStarted(SubagentInfo),
     #[serde(rename = "subagent.updated")]
@@ -578,6 +644,7 @@ impl EventKind {
             EventKind::PermissionRequested(_) => "permission.requested",
             EventKind::PermissionApproved(_) => "permission.approved",
             EventKind::PermissionDenied(_) => "permission.denied",
+            EventKind::PermissionExpired(_) => "permission.expired",
             EventKind::SubagentStarted(_) => "subagent.started",
             EventKind::SubagentUpdated(_) => "subagent.updated",
             EventKind::SubagentEnded(_) => "subagent.ended",
@@ -599,9 +666,9 @@ impl EventKind {
                 p.tool_call_id.as_ref().map(|id| id.as_str())
             }
             EventKind::PermissionRequested(p) => Some(p.request_id.as_str()),
-            EventKind::PermissionApproved(p) | EventKind::PermissionDenied(p) => {
-                Some(p.request_id.as_str())
-            }
+            EventKind::PermissionApproved(p)
+            | EventKind::PermissionDenied(p)
+            | EventKind::PermissionExpired(p) => Some(p.request_id.as_str()),
             EventKind::CommandStarted(p) => p.command_id.as_deref(),
             EventKind::CommandCompleted(p) | EventKind::CommandFailed(p) => p.command_id.as_deref(),
             _ => None,
@@ -641,6 +708,42 @@ mod tests {
 
         let back: AgentEvent = serde_json::from_value(json).unwrap();
         assert_eq!(back, event);
+    }
+
+    #[test]
+    fn validation_rejects_broken_envelopes() {
+        let ok = AgentEvent::for_session(
+            "claude",
+            "s1",
+            EventSource::Hook,
+            EventKind::AgentIdle(TextNote::default()),
+        );
+        assert!(ok.validate().is_ok());
+
+        let mut bad = ok.clone();
+        bad.provider = ProviderId::new("Claude Code");
+        assert!(bad.validate().is_err());
+
+        let mut bad = ok.clone();
+        bad.session_id = SessionId::new(" ");
+        assert!(bad.validate().is_err());
+
+        let sub_on_main = AgentEvent::for_session(
+            "claude",
+            "s1",
+            EventSource::Hook,
+            EventKind::SubagentStarted(SubagentInfo::default()),
+        );
+        assert!(sub_on_main.validate().is_err());
+        assert!(sub_on_main
+            .clone()
+            .with_agent("a1", None)
+            .validate()
+            .is_ok());
+        assert!(sub_on_main
+            .with_agent("a1", Some(AgentId::new("a1")))
+            .validate()
+            .is_err());
     }
 
     #[test]

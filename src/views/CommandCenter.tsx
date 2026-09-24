@@ -28,7 +28,7 @@ export function CommandCenter() {
   const data = useMemo(() => {
     const all = Object.values(agents);
     const active = all.filter((a) => !a.ended);
-    const waiting = active.filter((a) => a.pendingPermission);
+    const waiting = active.filter((a) => a.pendingPermission || a.activity === "WAITING_INPUT");
     const errors = active.filter((a) => a.activity === "ERROR");
     const sessionList = Object.values(sessions);
     const completed = sessionList.filter((s) => s.status === "ended");
@@ -76,7 +76,7 @@ export function CommandCenter() {
     <div className="command-center">
       <div className="kpis">
         <Kpi label="Active agents" value={data.active.length} />
-        <Kpi label="Waiting approvals" value={data.waiting.length} tone={data.waiting.length ? "warn" : undefined} />
+        <Kpi label="Waiting on you" value={data.waiting.length} tone={data.waiting.length ? "warn" : undefined} />
         <Kpi label="Errors" value={data.errors.length} tone={data.errors.length ? "bad" : undefined} />
         <Kpi label="Completed sessions" value={data.completed.length} tone="good" />
         <Kpi label="Projects" value={data.projectIds.size} />
@@ -89,7 +89,7 @@ export function CommandCenter() {
       </div>
 
       <section className="card">
-        <h3>Waiting approvals</h3>
+        <h3>Waiting on you (approvals and questions)</h3>
         {data.waiting.length === 0 && <p className="muted">Nobody is waiting for you.</p>}
         {data.waiting.map((a) => {
           const session = sessions[a.sessionKey];
@@ -103,7 +103,7 @@ export function CommandCenter() {
               <button className="link" onClick={() => open(a.key)}>
                 {a.name}
               </button>
-              <span className="grow">{a.pendingPermission?.description}</span>
+              <span className="grow">{a.pendingPermission?.description ?? a.currentAction}</span>
               {canResolve ? (
                 <>
                   <button className="btn good" disabled={busyKey === a.key} onClick={() => resolve(a.key, true)}>

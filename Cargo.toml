@@ -4,6 +4,7 @@ members = [
   "crates/ao-core",
   "crates/ao-store",
   "crates/ao-detect",
+  "crates/ao-testkit",
   "crates/providers/ao-provider-claude",
   "crates/providers/ao-provider-codex",
   "crates/providers/ao-provider-cursor",
@@ -21,6 +22,7 @@ rust-version = "1.80"
 ao-core = { path = "crates/ao-core" }
 ao-store = { path = "crates/ao-store" }
 ao-detect = { path = "crates/ao-detect" }
+ao-testkit = { path = "crates/ao-testkit" }
 ao-provider-claude = { path = "crates/providers/ao-provider-claude" }
 ao-provider-codex = { path = "crates/providers/ao-provider-codex" }
 ao-provider-cursor = { path = "crates/providers/ao-provider-cursor" }

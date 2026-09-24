@@ -9,10 +9,12 @@ use crate::event::{
 };
 use crate::ids::{agent_key, session_key, AgentId, ProjectId, ProviderId, SessionId};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use ts_rs::TS;
 
 const MAX_TRACKED_FILES: usize = 500;
+/// Finished tool ids remembered per agent to tolerate out-of-order delivery.
+const FINISHED_TOOL_MEMORY: usize = 64;
 const MAX_TEXT: usize = 280;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -135,6 +137,11 @@ pub struct AgentState {
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pending_permission: Option<PermissionRequested>,
+    /// When the pending permission was requested. Later work by the same agent
+    /// proves the request was answered elsewhere (e.g. in the terminal).
+    #[ts(optional, type = "number")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pending_permission_at: Option<i64>,
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_message: Option<String>,
@@ -146,9 +153,69 @@ pub struct AgentState {
     #[ts(optional, type = "number")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ended_at: Option<i64>,
+    /// Recently finished tool ids: hooks may be delivered out of order, so a
+    /// start that arrives after its own completion must not look "running".
+    #[serde(skip)]
+    #[ts(skip)]
+    finished_tools: VecDeque<String>,
 }
 
 impl AgentState {
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        key: String,
+        session_key: String,
+        e: &AgentEvent,
+        agent_id: AgentId,
+        is_main: bool,
+        parent_key: Option<String>,
+        name: String,
+        activity: Activity,
+    ) -> Self {
+        Self {
+            key,
+            session_key,
+            provider: e.provider.clone(),
+            session_id: e.session_id.clone(),
+            agent_id,
+            is_main,
+            parent_key,
+            name,
+            agent_type: None,
+            activity,
+            activity_since: e.timestamp,
+            current_action: None,
+            running_tools: Vec::new(),
+            pending_permission: None,
+            pending_permission_at: None,
+            last_message: None,
+            last_error: None,
+            tool_calls: 0,
+            ended: false,
+            ended_at: None,
+            finished_tools: VecDeque::new(),
+        }
+    }
+
+    fn remember_finished(&mut self, id: &str) {
+        if self.finished_tools.len() >= FINISHED_TOOL_MEMORY {
+            self.finished_tools.pop_front();
+        }
+        self.finished_tools.push_back(id.to_owned());
+    }
+
+    /// Clears a pending permission when later activity shows it was answered elsewhere.
+    fn clear_answered_permission(&mut self, at: i64) {
+        if self.pending_permission.is_some() && self.pending_permission_at.is_some_and(|t| at > t) {
+            self.pending_permission = None;
+            self.pending_permission_at = None;
+            if matches!(self.activity, Activity::WaitingPermission) {
+                self.activity = Activity::Thinking;
+                self.activity_since = at;
+            }
+        }
+    }
+
     fn set_activity(&mut self, activity: Activity, at: i64) {
         if self.activity != activity {
             self.activity = activity;
@@ -165,7 +232,11 @@ impl AgentState {
             self.set_activity(activity, at);
         } else if !matches!(
             self.activity,
-            Activity::Idle | Activity::WaitingPermission | Activity::Error | Activity::Done
+            Activity::Idle
+                | Activity::WaitingPermission
+                | Activity::WaitingInput
+                | Activity::Error
+                | Activity::Done
         ) {
             self.current_action = None;
             self.set_activity(Activity::Thinking, at);
@@ -328,70 +399,59 @@ impl WorldState {
                     usage: None,
                 },
             );
+            let name = default_name(title.as_deref(), cwd.as_deref(), &e.session_id);
             self.agents.insert(
                 main_key.clone(),
-                AgentState {
-                    key: main_key,
-                    session_key: key.clone(),
-                    provider: e.provider.clone(),
-                    session_id: e.session_id.clone(),
-                    agent_id: main_id,
-                    is_main: true,
-                    parent_key: None,
-                    name: default_name(title.as_deref(), cwd.as_deref(), &e.session_id),
-                    agent_type: None,
-                    activity: Activity::Idle,
-                    activity_since: e.timestamp,
-                    current_action: None,
-                    running_tools: Vec::new(),
-                    pending_permission: None,
-                    last_message: None,
-                    last_error: None,
-                    tool_calls: 0,
-                    ended: false,
-                    ended_at: None,
-                },
+                AgentState::new(
+                    main_key,
+                    key.clone(),
+                    e,
+                    main_id,
+                    true,
+                    None,
+                    name,
+                    Activity::Idle,
+                ),
             );
         }
         key
     }
 
-    fn ensure_agent(&mut self, e: &AgentEvent, skey: &str) -> String {
+    /// Returns the agent key, creating the subagent if needed. Returns `None`
+    /// for events that must not create an unknown subagent: a stop/idle/message
+    /// for an agent never seen (e.g. Claude's internal helper agents also fire
+    /// SubagentStop) would otherwise spawn a ghost character.
+    fn ensure_agent(&mut self, e: &AgentEvent, skey: &str) -> Option<String> {
         let key = agent_key(&e.provider, &e.session_id, &e.agent_id);
         if !self.agents.contains_key(&key) {
+            if matches!(
+                e.kind,
+                EventKind::SubagentEnded(_) | EventKind::AgentIdle(_) | EventKind::AgentMessage(_)
+            ) {
+                return None;
+            }
             let parent_key = Some(match &e.parent_agent_id {
                 Some(parent) => agent_key(&e.provider, &e.session_id, parent),
                 None => self.sessions[skey].main_agent_key.clone(),
             });
             self.agents.insert(
                 key.clone(),
-                AgentState {
-                    key: key.clone(),
-                    session_key: skey.to_owned(),
-                    provider: e.provider.clone(),
-                    session_id: e.session_id.clone(),
-                    agent_id: e.agent_id.clone(),
-                    is_main: false,
+                AgentState::new(
+                    key.clone(),
+                    skey.to_owned(),
+                    e,
+                    e.agent_id.clone(),
+                    false,
                     parent_key,
-                    name: "Subagent".into(),
-                    agent_type: None,
-                    activity: Activity::Thinking,
-                    activity_since: e.timestamp,
-                    current_action: None,
-                    running_tools: Vec::new(),
-                    pending_permission: None,
-                    last_message: None,
-                    last_error: None,
-                    tool_calls: 0,
-                    ended: false,
-                    ended_at: None,
-                },
+                    "Subagent".into(),
+                    Activity::Thinking,
+                ),
             );
             if let Some(session) = self.sessions.get_mut(skey) {
                 session.agent_keys.push(key.clone());
             }
         }
-        key
+        Some(key)
     }
 
     /// Folds one event into the state. Returns what changed.
@@ -405,10 +465,26 @@ impl WorldState {
         }
 
         let skey = self.ensure_session(e);
-        let akey = self.ensure_agent(e, &skey);
         touched.sessions.insert(skey.clone());
+        let Some(akey) = self.ensure_agent(e, &skey) else {
+            return touched;
+        };
         touched.agents.insert(akey.clone());
         let at = e.timestamp;
+        if matches!(
+            e.kind,
+            EventKind::ToolStarted(_)
+                | EventKind::ToolCompleted(_)
+                | EventKind::ToolFailed(_)
+                | EventKind::CommandCompleted(_)
+                | EventKind::CommandFailed(_)
+                | EventKind::PromptSubmitted(_)
+        ) {
+            self.agents
+                .get_mut(&akey)
+                .expect("agent exists")
+                .clear_answered_permission(at);
+        }
 
         {
             let session = self.sessions.get_mut(&skey).expect("session exists");
@@ -476,6 +552,7 @@ impl WorldState {
                     if let Some(agent) = self.agents.get_mut(&key) {
                         agent.running_tools.clear();
                         agent.pending_permission = None;
+                        agent.pending_permission_at = None;
                         agent.current_action = None;
                         agent.ended = true;
                         agent.ended_at.get_or_insert(at);
@@ -503,6 +580,7 @@ impl WorldState {
                 let agent = self.agents.get_mut(&akey).unwrap();
                 agent.running_tools.clear();
                 agent.pending_permission = None;
+                agent.pending_permission_at = None;
                 agent.current_action = note.text.as_deref().map(clip);
                 agent.set_activity(Activity::Idle, at);
             }
@@ -519,13 +597,23 @@ impl WorldState {
                         );
                         agent.set_activity(Activity::WaitingPermission, at);
                     }
-                    WaitingReason::Input | WaitingReason::Other => {
+                    WaitingReason::Input => {
                         agent.current_action = Some(
                             waiting
                                 .message
                                 .as_deref()
                                 .map(clip)
-                                .unwrap_or_else(|| "Waiting for input".into()),
+                                .unwrap_or_else(|| "Waiting for your answer".into()),
+                        );
+                        agent.set_activity(Activity::WaitingInput, at);
+                    }
+                    WaitingReason::Other => {
+                        agent.current_action = Some(
+                            waiting
+                                .message
+                                .as_deref()
+                                .map(clip)
+                                .unwrap_or_else(|| "Waiting".into()),
                         );
                         agent.set_activity(Activity::Idle, at);
                     }
@@ -542,6 +630,14 @@ impl WorldState {
                 self.sessions.get_mut(&skey).unwrap().stats.tool_calls += 1;
                 let agent = self.agents.get_mut(&akey).unwrap();
                 agent.tool_calls += 1;
+                let already_finished = tool
+                    .tool_call_id
+                    .as_ref()
+                    .is_some_and(|id| agent.finished_tools.iter().any(|f| f == &id.0));
+                if already_finished {
+                    // The completion overtook the start: count it, don't show it as running.
+                    return touched;
+                }
                 agent.running_tools.push(RunningTool {
                     id: tool.tool_call_id.as_ref().map(|id| id.0.clone()),
                     name: tool.tool_name.clone(),
@@ -570,6 +666,8 @@ impl WorldState {
                 };
                 if let Some(index) = position {
                     agent.running_tools.remove(index);
+                } else if let Some(id) = id {
+                    agent.remember_finished(id);
                 }
                 if let (EventKind::ToolFailed(_), Some(detail)) = (&e.kind, &tool.detail) {
                     agent.last_error = Some(clip(detail));
@@ -606,7 +704,23 @@ impl WorldState {
                 let agent = self.agents.get_mut(&akey).unwrap();
                 agent.current_action = Some(clip(&request.description));
                 agent.pending_permission = Some(request.clone());
+                agent.pending_permission_at = Some(at);
                 agent.set_activity(Activity::WaitingPermission, at);
+            }
+            EventKind::PermissionExpired(resolved) => {
+                let agent = self.agents.get_mut(&akey).unwrap();
+                if agent
+                    .pending_permission
+                    .as_ref()
+                    .is_some_and(|p| p.request_id == resolved.request_id)
+                {
+                    agent.pending_permission = None;
+                    agent.pending_permission_at = None;
+                    agent.current_action =
+                        Some(resolved.message.as_deref().map(clip).unwrap_or_else(|| {
+                            "Waiting for permission in the agent's own prompt".into()
+                        }));
+                }
             }
             EventKind::PermissionApproved(resolved) | EventKind::PermissionDenied(resolved) => {
                 let agent = self.agents.get_mut(&akey).unwrap();
@@ -616,6 +730,7 @@ impl WorldState {
                     .is_some_and(|p| p.request_id == resolved.request_id)
                 {
                     agent.pending_permission = None;
+                    agent.pending_permission_at = None;
                 }
                 if agent.activity == Activity::WaitingPermission
                     && agent.pending_permission.is_none()
@@ -645,6 +760,7 @@ impl WorldState {
                 let agent = self.agents.get_mut(&akey).unwrap();
                 agent.running_tools.clear();
                 agent.pending_permission = None;
+                agent.pending_permission_at = None;
                 agent.ended = true;
                 agent.ended_at = Some(at);
                 agent.set_activity(Activity::Done, at);
@@ -870,6 +986,105 @@ mod tests {
         let a = w.agent("claude:s1:sub-1").unwrap();
         assert!(a.ended);
         assert_eq!(a.activity, Activity::Done);
+    }
+
+    #[test]
+    fn completion_overtaking_start_does_not_leave_a_running_tool() {
+        let mut w = WorldState::new();
+        w.apply(&ev(
+            EventKind::ToolCompleted(done("t1", "Read", ToolCategory::Read)),
+            5,
+        ));
+        w.apply(&ev(
+            EventKind::ToolStarted(tool("t1", "Read", ToolCategory::Read, "Read a")),
+            4,
+        ));
+        assert!(main_agent(&w).running_tools.is_empty());
+        assert_ne!(main_agent(&w).activity, Activity::Reading);
+        assert_eq!(w.session("claude:s1").unwrap().stats.tool_calls, 1);
+    }
+
+    #[test]
+    fn permission_answered_elsewhere_is_cleared_by_later_work() {
+        let mut w = WorldState::new();
+        w.apply(&ev(
+            EventKind::ToolStarted(tool("t1", "Bash", ToolCategory::Execute, "rm -rf build")),
+            1,
+        ));
+        let request = PermissionRequested {
+            request_id: "perm-1".into(),
+            tool_name: Some("Bash".into()),
+            description: "Run: rm -rf build".into(),
+            can_resolve: false,
+            options: vec![],
+        };
+        w.apply(&ev(EventKind::PermissionRequested(request), 2));
+        // A PreToolUse delivered late (older timestamp) must not clear it.
+        w.apply(&ev(
+            EventKind::ToolStarted(tool("t0", "Read", ToolCategory::Read, "Read x")),
+            1,
+        ));
+        assert!(main_agent(&w).pending_permission.is_some());
+        // The tool finishing afterwards proves the user answered in the terminal.
+        w.apply(&ev(
+            EventKind::ToolCompleted(done("t1", "Bash", ToolCategory::Execute)),
+            3,
+        ));
+        assert!(main_agent(&w).pending_permission.is_none());
+        assert_ne!(main_agent(&w).activity, Activity::WaitingPermission);
+    }
+
+    #[test]
+    fn expired_permission_keeps_waiting_without_app_answer() {
+        let mut w = WorldState::new();
+        let request = PermissionRequested {
+            request_id: "perm-1".into(),
+            tool_name: None,
+            description: "Edit a.rs".into(),
+            can_resolve: true,
+            options: vec![],
+        };
+        w.apply(&ev(EventKind::PermissionRequested(request), 1));
+        w.apply(&ev(
+            EventKind::PermissionExpired(PermissionResolved {
+                request_id: "perm-1".into(),
+                resolved_by: PermissionResolver::Timeout,
+                message: None,
+            }),
+            2,
+        ));
+        assert!(main_agent(&w).pending_permission.is_none());
+        assert_eq!(main_agent(&w).activity, Activity::WaitingPermission);
+    }
+
+    #[test]
+    fn stop_of_unknown_subagent_does_not_create_a_ghost() {
+        let mut w = WorldState::new();
+        w.apply(&ev(EventKind::SessionStarted(SessionInfo::default()), 1));
+        w.apply(
+            &ev(EventKind::SubagentEnded(SubagentInfo::default()), 2)
+                .with_agent("internal-1", None),
+        );
+        assert_eq!(w.agents().count(), 1);
+        assert_eq!(w.session("claude:s1").unwrap().agent_keys.len(), 1);
+    }
+
+    #[test]
+    fn waiting_for_input_has_its_own_activity() {
+        let mut w = WorldState::new();
+        w.apply(&ev(
+            EventKind::AgentWaiting(AgentWaiting {
+                reason: WaitingReason::Input,
+                message: None,
+            }),
+            1,
+        ));
+        assert_eq!(main_agent(&w).activity, Activity::WaitingInput);
+        w.apply(&ev(
+            EventKind::ToolStarted(tool("t1", "Read", ToolCategory::Read, "Read a")),
+            2,
+        ));
+        assert_eq!(main_agent(&w).activity, Activity::Reading);
     }
 
     #[test]

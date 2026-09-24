@@ -24,7 +24,7 @@ pub use batch::{Batcher, UiBatch};
 pub use capabilities::{Capabilities, CapabilityProfile, ImplementedFeatures, Support};
 pub use event::{AgentEvent, EventKind, EventSource, SessionMode, ToolCategory};
 pub use ids::*;
-pub use pipeline::{Pipeline, ProjectRoot};
+pub use pipeline::{Ingest, Pipeline, ProjectRoot};
 pub use provider::{
     AdapterContext, EventSink, ExternalSessionInfo, InstallationInfo, IntegrationState,
     IntegrationStatus, LaunchRequest, PermissionDecision, ProviderAdapter, ProviderDescriptor,

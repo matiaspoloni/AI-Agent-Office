@@ -159,6 +159,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ao-testkit"
+version = "0.1.0"
+dependencies = [
+ "ao-core",
+ "serde_json",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"

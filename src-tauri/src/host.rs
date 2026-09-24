@@ -7,7 +7,7 @@ use crate::prefs::Preferences;
 use ao_core::batch::{Batcher, UiBatch};
 use ao_core::event::{AgentEvent, EventKind, EventSource, SessionEnded, SessionMode};
 use ao_core::ids::{PermissionRequestId, ProjectId, ProviderId, SessionId};
-use ao_core::pipeline::{Pipeline, ProjectRoot};
+use ao_core::pipeline::{Ingest, Pipeline, ProjectRoot};
 use ao_core::provider::{
     AdapterContext, EventSink, LaunchRequest, PermissionDecision, SessionHandle, StopMode,
 };
@@ -184,23 +184,43 @@ impl Host {
         }
     }
 
+    /// Records an adapter/pipeline problem for Diagnostics.
+    pub fn record_provider_error(&self, provider: &str, component: &str, message: &str) {
+        tracing::warn!(target: "provider", provider, component, message, "provider error");
+        let mut errors = self.provider_errors.lock().expect("errors lock");
+        errors.push_back(ProviderErrorRecord {
+            at: now_ms(),
+            provider: provider.to_owned(),
+            component: component.to_owned(),
+            message: message.to_owned(),
+        });
+        while errors.len() > MAX_PROVIDER_ERRORS {
+            errors.pop_front();
+        }
+    }
+
     fn ingest(&self, event: AgentEvent) {
         self.ingested.fetch_add(1, Ordering::Relaxed);
         if let EventKind::ProviderError(err) = &event.kind {
-            let mut errors = self.provider_errors.lock().expect("errors lock");
-            errors.push_back(ProviderErrorRecord {
-                at: event.timestamp,
-                provider: event.provider.0.clone(),
-                component: err.component.clone(),
-                message: err.message.clone(),
-            });
-            while errors.len() > MAX_PROVIDER_ERRORS {
-                errors.pop_front();
-            }
+            self.record_provider_error(&event.provider.0, &err.component, &err.message);
         }
         let mut inner = self.inner.lock().expect("host lock");
-        let Some(event) = inner.pipeline.process(event) else {
-            return;
+        let event = match inner.pipeline.ingest(event) {
+            Ingest::Accepted(event) => event,
+            Ingest::Duplicate => return,
+            Ingest::Rejected {
+                provider,
+                event_type,
+                reason,
+            } => {
+                drop(inner);
+                self.record_provider_error(
+                    &provider,
+                    "pipeline",
+                    &format!("rejected {event_type}: {reason}"),
+                );
+                return;
+            }
         };
         let touched = inner.world.apply(&event);
         inner.batcher.note(&event, touched);
@@ -276,6 +296,10 @@ impl Host {
 
     pub fn duplicates(&self) -> u64 {
         self.inner.lock().expect("host lock").pipeline.duplicates()
+    }
+
+    pub fn rejected(&self) -> u64 {
+        self.inner.lock().expect("host lock").pipeline.rejected()
     }
 
     pub fn store_error(&self) -> Option<String> {

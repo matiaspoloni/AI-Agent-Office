@@ -17,6 +17,8 @@ pub enum Activity {
     RunningCommand,
     Testing,
     WaitingPermission,
+    /// The agent asked the user something and waits for an answer.
+    WaitingInput,
     Error,
     Done,
 }

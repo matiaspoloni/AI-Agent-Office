@@ -10,6 +10,7 @@ export const ACTIVITY_LABEL: Record<Activity, string> = {
   RUNNING_COMMAND: "Running command",
   TESTING: "Testing",
   WAITING_PERMISSION: "Waiting for permission",
+  WAITING_INPUT: "Waiting for your answer",
   ERROR: "Error",
   DONE: "Done",
 };
@@ -22,6 +23,7 @@ export const ACTIVITY_COLOR: Record<Activity, string> = {
   RUNNING_COMMAND: "#f2c94c",
   TESTING: "#7bdc6b",
   WAITING_PERMISSION: "#ff5c5c",
+  WAITING_INPUT: "#ff9f43",
   ERROR: "#ff3b3b",
   DONE: "#7bdc6b",
 };

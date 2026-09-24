@@ -305,12 +305,14 @@ function drawBubble(ctx: CanvasRenderingContext2D, entity: Entity, now: number) 
     RUNNING_COMMAND: "terminal",
     TESTING: "flask",
     WAITING_PERMISSION: "alert",
+    WAITING_INPUT: "question",
     ERROR: "error",
     DONE: "check",
   };
   const activity = entity.activity;
   if (activity === "IDLE" && entity.zone !== "lounge") return;
-  const bob = activity === "WAITING_PERMISSION" ? Math.round(Math.abs(Math.sin(now / 160)) * -3) : 0;
+  const waiting = activity === "WAITING_PERMISSION" || activity === "WAITING_INPUT";
+  const bob = waiting ? Math.round(Math.abs(Math.sin(now / 160)) * -3) : 0;
   const bx = Math.round(entity.x + 3);
   const by = Math.round(entity.y - 30 + bob);
   ctx.fillStyle = activity === "WAITING_PERMISSION" || activity === "ERROR" ? "#fff1f1" : "#ffffff";
@@ -389,7 +391,7 @@ export class OfficeRenderer {
     // Selection / alert rings under characters.
     for (const e of entities) {
       const selected = e.key === input.selectedKey;
-      const alert = e.activity === "WAITING_PERMISSION" || e.activity === "ERROR";
+      const alert = e.activity === "WAITING_PERMISSION" || e.activity === "WAITING_INPUT" || e.activity === "ERROR";
       if (!selected && !alert && e.key !== input.hoverKey) continue;
       ctx.fillStyle = alert ? "#ff4d4d" : selected ? "#f2c94c" : "#ffffff";
       ctx.globalAlpha = alert ? 0.35 + 0.2 * Math.sin(now / 150) : selected ? 0.6 : 0.3;

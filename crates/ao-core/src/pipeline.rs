@@ -4,9 +4,29 @@
 use crate::event::{AgentEvent, EventKind};
 use crate::ids::{session_key, ProjectId};
 use crate::sanitize::{sanitize_event, SanitizeLimits};
+use crate::time::now_ms;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 const DEDUPE_WINDOW: usize = 4096;
+/// Events stamped further in the future than this are re-stamped with "now".
+const MAX_CLOCK_SKEW_MS: i64 = 5 * 60 * 1000;
+/// 2000-01-01: anything older is a unit mix-up (seconds instead of ms).
+const MIN_TIMESTAMP_MS: i64 = 946_684_800_000;
+
+/// Result of running one event through the pipeline.
+// Short-lived return value, moved immediately; boxing would only add an allocation.
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum Ingest {
+    Accepted(AgentEvent),
+    Duplicate,
+    /// The event broke an invariant. It is dropped and reported in Diagnostics.
+    Rejected {
+        provider: String,
+        event_type: String,
+        reason: String,
+    },
+}
 
 /// A project known to Agent Office, used to map a session's cwd to a project.
 #[derive(Debug, Clone)]
@@ -44,6 +64,7 @@ pub struct Pipeline {
     projects: Vec<(ProjectId, String)>,
     session_projects: HashMap<String, ProjectId>,
     duplicates: u64,
+    rejected: u64,
 }
 
 impl Pipeline {
@@ -71,6 +92,10 @@ impl Pipeline {
 
     pub fn duplicates(&self) -> u64 {
         self.duplicates
+    }
+
+    pub fn rejected(&self) -> u64 {
+        self.rejected
     }
 
     pub fn resolve_project(&self, cwd: &str) -> Option<ProjectId> {
@@ -106,10 +131,30 @@ impl Pipeline {
         false
     }
 
-    /// Returns the cleaned event, or `None` if it is a duplicate.
+    /// Returns the cleaned event, or `None` if it is a duplicate or invalid.
     pub fn process(&mut self, event: AgentEvent) -> Option<AgentEvent> {
+        match self.ingest(event) {
+            Ingest::Accepted(event) => Some(event),
+            Ingest::Duplicate | Ingest::Rejected { .. } => None,
+        }
+    }
+
+    /// Validates, de-duplicates, sanitizes and enriches one event.
+    pub fn ingest(&mut self, mut event: AgentEvent) -> Ingest {
+        if let Err(reason) = event.validate() {
+            self.rejected += 1;
+            return Ingest::Rejected {
+                provider: event.provider.0.clone(),
+                event_type: event.type_name().to_owned(),
+                reason,
+            };
+        }
+        let now = now_ms();
+        if event.timestamp > now + MAX_CLOCK_SKEW_MS || event.timestamp < MIN_TIMESTAMP_MS {
+            event.timestamp = now;
+        }
         if self.is_duplicate(&event) {
-            return None;
+            return Ingest::Duplicate;
         }
         let mut event = sanitize_event(event, &self.limits);
 
@@ -127,7 +172,7 @@ impl Pipeline {
                 event.project_id = Some(project);
             }
         }
-        Some(event)
+        Ingest::Accepted(event)
     }
 }
 
@@ -224,6 +269,21 @@ mod tests {
         assert!(p.process(tool.clone()).is_some());
         assert!(p.process(tool).is_none());
         assert_eq!(p.duplicates(), 1);
+    }
+
+    #[test]
+    fn rejects_invalid_events_and_fixes_bad_clocks() {
+        let mut p = pipeline();
+        let mut bad = started("C:\\x");
+        bad.provider = "Not Valid".into();
+        assert!(matches!(p.ingest(bad), Ingest::Rejected { .. }));
+        assert_eq!(p.rejected(), 1);
+
+        let seconds_not_ms = started("C:\\x").at(1_700_000_000);
+        let Ingest::Accepted(fixed) = p.ingest(seconds_not_ms) else {
+            panic!()
+        };
+        assert!(fixed.timestamp > MIN_TIMESTAMP_MS);
     }
 
     #[test]

@@ -6,4 +6,9 @@ import type { ProviderId } from "./ProviderId";
 import type { RunningTool } from "./RunningTool";
 import type { SessionId } from "./SessionId";
 
-export type AgentState = { key: string, sessionKey: string, provider: ProviderId, sessionId: SessionId, agentId: AgentId, isMain: boolean, parentKey?: string, name: string, agentType?: string, activity: Activity, activitySince: number, currentAction?: string, runningTools: Array<RunningTool>, pendingPermission?: PermissionRequested, lastMessage?: string, lastError?: string, toolCalls: number, ended: boolean, endedAt?: number, };
+export type AgentState = { key: string, sessionKey: string, provider: ProviderId, sessionId: SessionId, agentId: AgentId, isMain: boolean, parentKey?: string, name: string, agentType?: string, activity: Activity, activitySince: number, currentAction?: string, runningTools: Array<RunningTool>, pendingPermission?: PermissionRequested, 
+/**
+ * When the pending permission was requested. Later work by the same agent
+ * proves the request was answered elsewhere (e.g. in the terminal).
+ */
+pendingPermissionAt?: number, lastMessage?: string, lastError?: string, toolCalls: number, ended: boolean, endedAt?: number, };
