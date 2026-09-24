@@ -32,7 +32,7 @@ Two integration modes exist for every provider:
 | --- | --- | --- |
 | Claude Code | `2.1.281` (installed in the research container) | `claude --help`, `claude agents --help`, `claude agents --json` executed; hooks reference and headless docs at `code.claude.com/docs/en/hooks` and `/headless`. **Phase 3:** hook payloads and stream-json lines captured from real runs (throw-away config folder), and one end-to-end run of the finished integration with the real CLI — see §3.5. |
 | OpenAI Codex CLI | `0.156.1` (npm `@openai/codex@latest`) | CLI help of every subcommand; `codex features list` (`hooks = stable`); app-server protocol generated locally with `codex app-server generate-ts` / `generate-json-schema`; hooks config, runner and schemas read from the `rust-v0.156.1` source. **Phase 4:** real app-server and hook traffic recorded with a local fake model (no account) — see §4.5. |
-| Cursor CLI (`agent`) | Not installable in the research container (download host blocked by the sandbox's network policy) | ACP schema from the official `@agentclientprotocol/sdk@1.5.0` package; Cursor docs (`cursor.com/docs/cli/acp`, `/docs/cli/reference/output-format`, `/docs/hooks`) via search snippets; community integration reports. **Every Cursor-specific claim below is marked "needs on-machine verification" until Phase 5 tests it on Windows.** |
+| Cursor CLI (`agent`) | Not installable in the research container: `cursor.com` (docs and downloads) is blocked by the sandbox's network policy, in Phase 0 and again in Phase 5 | ACP schema from the official `@agentclientprotocol/sdk@1.5.0` package; Cursor docs via search snippets; integrator reports (OpenHands, Hermes). **Phase 5:** the adapter was run against the **official ACP example agent** (an independent implementation) and all traffic of the end-to-end tests was validated against the official schema — see §5.5. **Every Cursor-specific claim is marked "needs on-machine verification"; the checklist is in ROADMAP §8.** |
 
 ---
 
@@ -41,9 +41,9 @@ Two integration modes exist for every provider:
 | Capability | Claude – managed | Claude – external | Codex – managed | Codex – external | Cursor – managed | Cursor – external |
 | --- | --- | --- | --- | --- | --- | --- |
 | Detect installation / version | Yes | Yes | Yes | Yes | Yes | Yes |
-| Launch session | Yes (`claude -p` stream-json) | n/a | Yes (`codex app-server`, experimental upstream) | n/a | Yes (`agent acp`) | n/a |
-| Observe (attach) | n/a | Yes (global hooks) | n/a | Partial (hooks need user trust) | n/a | Experimental (CLI fires a subset of hooks) |
-| List sessions | Yes | Yes (`claude agents --json`) | Yes (`thread/list`, `thread/loaded/list`) | No (`codex agents` is TUI-only) | Runtime (`session/list` if advertised) | No |
+| Launch session | Yes (`claude -p` stream-json) | n/a | Yes (`codex app-server`, experimental upstream) | n/a | Experimental (`agent acp`; implemented from the ACP spec, not yet run against a real Cursor) | n/a |
+| Observe (attach) | n/a | Yes (global hooks) | n/a | Partial (hooks need user trust) | n/a | Experimental upstream (CLI fires a subset of hooks); **not implemented** |
+| List sessions | Yes | Yes (`claude agents --json`) | Yes (`thread/list`, `thread/loaded/list`) | No (`codex agents` is TUI-only) | No (ACP `session/list` exists; not used yet) | No |
 | Stop | Yes (own process) | Partial (`claude stop <id>` for background sessions only) | Yes (`turn/interrupt`, own process) | No | Yes (`session/cancel`, own process) | No |
 | Send prompt | Yes (stream-json on stdin) | No | Yes (`turn/start`, `turn/steer`) | No | Yes (`session/prompt`) | No |
 | Structured events | Yes | Yes | Yes | Yes | Yes | Experimental |
@@ -56,7 +56,7 @@ Two integration modes exist for every provider:
 | Cost | Partial⁴ (estimate) | No | No | No | Runtime | No |
 | Model reported | Yes | Partial (`SessionStart.model`, not always) | Yes | Yes (hooks carry `model`) | Runtime | No |
 | Context compaction | Yes (`PreCompact`/`PostCompact`) | Yes | Yes (`thread/compacted`) | Yes | Runtime (`compaction_update`) | Experimental |
-| Resume / restart | Yes (`--resume <id>`) | n/a | Yes (`thread/resume`) | n/a | Runtime (`session/load`, `session/resume`) | n/a |
+| Resume / restart | Yes (`--resume <id>`) | n/a | Yes (`thread/resume`) | n/a | No (ACP `session/load` exists; not used yet) | n/a |
 
 Notes:
 
@@ -326,47 +326,101 @@ user to trust it again (`/hooks`); Diagnostics shows *Needs your action* until t
 | Mechanism | Use in Agent Office | Stability |
 | --- | --- | --- |
 | **`agent acp`** — Agent Client Protocol, JSON-RPC 2.0 over stdio | Primary managed integration. | Officially documented by Cursor (`/docs/cli/acp`). |
-| `agent -p --output-format stream-json` | One-shot fallback (`system/init`, `assistant`, `tool_call` started/completed, `result`). | Documented. |
-| Hooks (`~/.cursor/hooks.json`, `.cursor/hooks.json`, `version: 1`) | External sessions — **experimental**. Docs list `sessionStart`, `sessionEnd`, `preToolUse`, `postToolUse`, `postToolUseFailure`, `subagentStart`, `subagentStop`, `beforeShellExecution`, `afterShellExecution`, `beforeMCPExecution`, `afterMCPExecution`, `beforeReadFile`, `afterFileEdit`, `beforeSubmitPrompt`, `preCompact`, `stop`, `afterAgentResponse`, `afterAgentThought`. Community reports say the CLI fires only a subset. | Diagnostics records which events were actually observed per machine. |
+| `agent -p --output-format stream-json` | Not used (ACP covers managed sessions); a possible one-shot fallback. | Documented. |
+| Hooks (`~/.cursor/hooks.json`, `.cursor/hooks.json`, `version: 1`) | External sessions — **not implemented** (§5.5). Docs list `sessionStart`, `sessionEnd`, `preToolUse`, `postToolUse`, `postToolUseFailure`, `subagentStart`, `subagentStop`, `beforeShellExecution`, `afterShellExecution`, `beforeMCPExecution`, `afterMCPExecution`, `beforeReadFile`, `afterFileEdit`, `beforeSubmitPrompt`, `preCompact`, `stop`, `afterAgentResponse`, `afterAgentThought`. Community reports say the CLI fires only a subset. | Payloads not verifiable in the build environment. |
 
 ### 5.2 ACP surface used
 
-* Client → agent: `initialize` (protocol version + client capabilities; we declare
-  **no** `fs` / `terminal` client capabilities in the vertical slice, so the agent uses
-  its own tools), `authenticate` (Cursor advertises the `cursor_login` method; the user
-  logs in once with `agent login`), `session/new` (`cwd`, `mcpServers: []`),
-  `session/load` / `session/resume` (if `agentCapabilities` advertises them),
-  `session/prompt`, `session/cancel`, `session/set_mode`.
-* Agent → client notification `session/update` with `sessionUpdate` kinds:
-  `user_message_chunk`, `agent_message_chunk`, `agent_thought_chunk`, `tool_call`,
-  `tool_call_update`, `plan`, `current_mode_update`, `session_info_update`,
-  `usage_update`, `compaction_update`, `notice`, …
-* Tool kinds: `read`, `edit`, `delete`, `move`, `search`, `execute`, `think`,
-  `fetch`, `switch_mode`, `other`; status `pending`/`in_progress`/`completed`/`failed`.
-* Agent → client request `session/request_permission` with `options[]`, each with an
-  opaque `optionId` and a `kind` (`allow_once`, `allow_always`, `reject_once`,
-  `reject_always`). **We always answer by echoing the `optionId` of the option whose
-  `kind` matches the user's choice** — Cursor's ids are hyphenated (`allow-once`), so
-  hard-coding ids breaks.
-* `session/prompt` resolves with a `stopReason`: `end_turn`, `max_tokens`,
-  `max_turn_requests`, `refusal`, `cancelled`.
+Implemented in `ao-provider-cursor` (`src/acp.rs` maps messages, `src/lib.rs`
+drives the session) from the official schema of `@agentclientprotocol/sdk` 1.5.0,
+protocol version 1:
 
-### 5.3 Known quirks (from integrator reports, to verify in Phase 5)
+* Client → agent: `initialize` (protocol version 1; **no** `fs` / `terminal`
+  client capabilities, so the agent keeps using its own tools; `clientInfo`
+  `agent-office`), `authenticate` (see §5.3), `session/new` (`cwd`,
+  `mcpServers: []`), `session/set_config_option` (model), `session/set_model`
+  (older model selection, see §5.3), `session/set_mode`, `session/prompt`
+  (text only) and the `session/cancel` notification.
+* Agent → client notification `session/update`:
 
-* Cursor-specific extension requests (`cursor/ask_question`, `cursor/create_plan`,
-  `cursor/task`, `cursor/update_todos`) may be sent; an unknown request **must** get a
-  JSON-RPC "method not found" error immediately, otherwise the turn stalls.
-* If the client never answers `session/request_permission`, tool execution blocks —
-  the adapter always answers (user decision, timeout → `reject_once`).
+  | `sessionUpdate` | Unified event |
+  | --- | --- |
+  | `agent_message_chunk` | collected, one `agent.message` per text run (flushed before a tool starts and at the end of the turn) |
+  | `agent_thought_chunk` | `agent.thinking` ("Thinking"), once per run |
+  | `tool_call` / `tool_call_update` | `tool.started` / `tool.completed` / `tool.failed`; kind `execute` also `command.*` (command from `rawInput.command`, else the title; ACP has no exit code); completed `edit` → `file.created` (diff without `oldText`) or `file.modified`; `delete` → `file.deleted`; `read` → `file.read` |
+  | `plan` | `agent.thinking` "Plan: n/m steps done" |
+  | `current_mode_update`, `config_option_update` (model), `session_info_update` (title) | `session.updated` |
+  | `usage_update` (`used`, `size`, `cost`) | `usage.updated` (context tokens / window; cost only when the currency is USD) |
+  | `compaction_update` | "Compacting context", then `context.compacted` (or an error) |
+  | `notice` with severity `error` | recoverable `agent.error` |
+  | `user_message_chunk`, `available_commands_update`, unknown kinds | ignored |
+
+* Agent → client request `session/request_permission` → `permission.requested`
+  with the agent's options. **The answer echoes the `optionId` of the option
+  whose `kind` matches the decision** (approve → `allow_once`, approve for the
+  session → `allow_always`, reject → `reject_once`, each falling back to the
+  other variant of the same decision); ids are never hard-coded. An unanswered
+  request is answered with `reject_once` after the configured wait; stopping a
+  turn answers pending requests with `cancelled`, as ACP requires.
+* Any other agent → client request is answered **at once** with JSON-RPC
+  `-32601` ("method not found") and shown as a recoverable error on the agent,
+  so the turn never stalls.
+* `session/prompt` result: `stopReason` `end_turn` → idle; `cancelled` → idle
+  "Turn cancelled"; `max_tokens`, `max_turn_requests`, `refusal` → recoverable
+  error. `usage` (input/output/total/thought/cached tokens), when present, becomes
+  `usage.updated`. Tool calls still open at the end of a turn close as failed when
+  their outcome is known (cancelled, not allowed, turn stopped) and are otherwise
+  dropped without inventing a result.
+
+### 5.3 Cursor specifics (integrator reports — to verify on a real Cursor)
+
+| Report | How Agent Office handles it |
+| --- | --- |
+| `agent acp` starts the ACP server (executable `agent`, older name `cursor-agent`). | Detection tries `cursor-agent` first (`agent` is a generic name), then `agent`, also in `%LOCALAPPDATA%\cursor-agent`. |
+| `initialize` offers only the auth method `cursor_login` and no `agentInfo.name`; sessions stay unusable without an explicit `authenticate`. It answers at once when the user already ran `agent login`. | When `cursor_login` is offered, `authenticate` is called before `session/new` (wait up to 180 s). If login fails the launch error says to run `agent login`. Other agents authenticate only when `session/new` fails. `CURSOR_API_KEY` in the environment is Cursor's documented headless alternative; Agent Office never reads or stores it. |
+| `session/new` returns modes `agent` / `plan` / `ask`, config options for mode and model, and also the older `models` state (`currentModelId` `default[]` = Auto, ~36 models). | A requested model is looked up in the `model` config option (`session/set_config_option`) or, if only `models` exists, set with the older `session/set_model` (not in the 1.5.0 schema). Exact id or name first, then the base of ids with options (`composer-2.5` → `composer-2.5[fast=true]`). A model or mode that is not offered keeps Cursor's default and shows a warning on the agent. |
+| `session/set_mode` accepts `agent` and `ask`. | A mode is only sent when the agent announces it. The New agent dialog offers agent / plan / ask as hints. |
+| Permission option ids are hyphenated (`allow-once`), unlike other agents (`allow_once`). | Options are chosen by `kind`; ids are echoed. |
+| Extension requests `cursor/ask_question`, `cursor/create_plan`, `cursor/task`, `cursor/update_todos`, `cursor/generate_image` block the turn until answered. | Declined at once (`-32601`) and shown as "Cursor sent `cursor/…`, which Agent Office cannot handle yet". Their parameters are undocumented, so they are not interpreted. |
+| Login state lives in `~/.cursor`. | Agent Office never reads or writes it. |
 
 ### 5.4 Windows
 
 Cursor ships an official native PowerShell installer
 (`irm 'https://cursor.com/install?win32=true' | iex`). Older docs required WSL; native
-Windows support is recent, so Phase 5 must confirm executable name/location
-(`agent.exe`, `cursor-agent`, `%LOCALAPPDATA%`) on a real Windows 11 machine.
+Windows support is recent. `.cmd` / `.ps1` shims are handled by detection and process
+spawning as for Codex, but the executable name and location on Windows 11 must be
+confirmed on a real machine (ROADMAP §8).
 
----
+### 5.5 Implementation status (Phase 5) and how it was verified
+
+Implemented: detection, managed sessions over `agent acp` (launch, prompts one
+turn at a time, model and mode selection, permissions from the app with timeout,
+graceful stop = `session/cancel` + cancelled answers + close stdin, force stop =
+process tree), runtime usage / cost / model / compaction.
+
+Not implemented:
+
+* **External sessions (Cursor hooks).** Cursor documents a `hooks.json` with
+  `version: 1`, but its payload shapes, the events the CLI actually fires (reports
+  say only a subset) and how blocking hooks answer could not be read or tested:
+  the docs and the CLI download are blocked in the build environment. A mapping
+  written from guesses would be the fragile parsing the project rules forbid, so
+  Agent Office does **not** touch `~/.cursor/hooks.json` and shows no terminal
+  Cursor sessions. Cursor sessions launched from Agent Office are fully visible.
+* Subagents (no ACP concept), session listing and resume (`session/list`,
+  `session/load` exist in ACP but are not used yet), images in prompts, MCP
+  servers passed to the agent, Cursor's plan / question / todo extension requests.
+
+Verification done without a Cursor account or network:
+
+| Check | Result |
+| --- | --- |
+| Official ACP example agent (`@agentclientprotocol/sdk` 1.5.0 `dist/examples/agent.js`) driven by the adapter: approve, reject, cancel mid-turn, graceful stop | All passed. It showed that agents **reuse tool call ids across turns** (`call_1` every turn) and may leave a rejected tool without a final update; both are now handled (fixtures `fixtures/cursor/acp/*-sdk.json` keep its messages). |
+| Every message of the end-to-end tests (both directions: Agent Office requests and answers, agent responses and notifications) validated with the SDK's own zod schemas | 120 messages, 0 invalid. Not covered by the schema: `session/set_model` (older API) and `cursor/*` extension requests. |
+| `fake-cursor` (ACP per schema + the reports above) through the real host (`src-tauri/tests/cursor_e2e.rs`) | Streaming, usage, model/mode, approve / approve-for-session / reject, file events, commands, cancel with a pending permission, cancel of a long turn, eager login, failed login, older model selection, declined extension requests, prompt errors, unknown model / mode warnings. |
+
+What only a real Cursor on Windows 11 can confirm is listed in ROADMAP §8.
 
 ## 6. Cross-provider normalization rules
 

@@ -6,11 +6,13 @@ living pixel-art office. Each session is an employee: you can see who is coding,
 is running tests, who is waiting for your permission and who just hit an error, and
 you can act on them when the provider allows it.
 
-> **Status: early development (Phase 4 of 10).** The desktop shell, unified event
+> **Status: early development (Phase 5 of 10).** The desktop shell, unified event
 > pipeline, SQLite storage, provider detection, a clearly-labelled *demo* provider,
 > **Claude Code** and **Codex CLI** (sessions launched from the app, and sessions
-> in your own terminal through hooks) work. Cursor arrives in Phase 5. See
-> [docs/ROADMAP.md](docs/ROADMAP.md).
+> in your own terminal through hooks) work. **Cursor CLI** sessions launched from
+> the app are implemented as *experimental*: built from the official Agent Client
+> Protocol and tested without a real Cursor, which still has to be checked on
+> Windows 11. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## What it is
 
@@ -31,7 +33,7 @@ you can act on them when the provider allows it.
 | --- | --- | --- |
 | Claude Code | `claude -p` stream-json + hooks | Global hooks in `%USERPROFILE%\.claude\settings.json` (install/uninstall/repair from the app) |
 | OpenAI Codex CLI | `codex app-server` (JSON-RPC) | Hooks in `%USERPROFILE%\.codex\hooks.json` (needs one-time trust via `/hooks` in Codex) |
-| Cursor CLI | `agent acp` (Agent Client Protocol) | Experimental (Cursor CLI fires only some hooks) |
+| Cursor CLI | `agent acp` (Agent Client Protocol) — experimental; run `agent login` once first | Not yet (Cursor's hook format could not be verified) |
 
 The exact, honest list of what each provider supports is in
 [docs/PROVIDER_CAPABILITIES.md](docs/PROVIDER_CAPABILITIES.md). When a provider
@@ -104,7 +106,9 @@ More in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
   client-side estimate reported by Claude Code and is labelled as such.
 * File changes are attributed to an agent only when a tool call proves it; other
   repository changes are shown as unattributed.
-* Cursor CLI support needs on-machine verification on Windows (Phase 5).
+* Cursor CLI support is experimental until it is verified with a real Cursor on
+  Windows 11 (checklist in [docs/ROADMAP.md](docs/ROADMAP.md) §8). Cursor sessions
+  started in your own terminal are not shown yet.
 * Windows 11 x64 is the only packaged target for now; the code keeps OS-specific parts
   behind interfaces so macOS/Linux can be added later.
 

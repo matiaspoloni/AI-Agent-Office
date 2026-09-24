@@ -71,6 +71,11 @@ Rules:
   the adapter's own session can be stopped.
 * **Normalize tool categories** using the table in PROVIDER_CAPABILITIES.md §6.
 * **Usage/cost:** only report numbers the provider gives you. Mark estimates.
+* **JSON-RPC over stdio** (Codex app-server, any ACP agent): use `ao-jsonrpc`
+  (`RpcClient` over the `ManagedProcess`) and answer every server → client request,
+  even ones you do not support (`respond_error(id, -32601, …)`), or the agent may
+  wait forever. An ACP agent can reuse most of `ao-provider-cursor` (`acp.rs` is
+  agent-neutral).
 
 ## 4. Register it
 
@@ -115,9 +120,11 @@ in the provider's config in **exec form** (program + args, no shell).
   with `ao_testkit::fixtures::load_dir("<provider>/…")` and checked with
   `assert_events` (subset matching; ids and timestamps are ignored).
 * Protocol tests: a fake provider binary in `crates/ao-testkit/src/bin/` (see
-  `fake-claude.rs`) that implements the documented CLI surface and runs hooks like
-  the real CLI; build it from a test with `ao_testkit::bins::cargo_bin`. No real
-  accounts or network.
+  `fake-claude.rs`, `fake-codex.rs`, `fake-cursor.rs`) that implements the
+  documented CLI surface and runs hooks like the real CLI; build it from a test with
+  `ao_testkit::bins::cargo_bin`. No real accounts or network. When the provider
+  publishes a protocol schema, also validate recorded traffic against it
+  (DEVELOPMENT.md, *Re-recording provider fixtures*).
 * End-to-end: drive the real host with the fake binary and a temporary config folder
   (see `src-tauri/tests/claude_e2e.rs`).
 * Capability test: the declared `CapabilityProfile` matches the doc table.

@@ -49,7 +49,7 @@ state, database, UI — only understands this model. Rust definitions live in
 | `subagent.started` / `subagent.updated` / `subagent.ended` | `agentType`, `description`, `reason` | New character linked to its parent / walks out |
 | `git.branch_changed` / `git.commit_created` / `git.status_changed` | branch, sha/summary, dirty/staged/ahead/behind | Session git info (Phase 8) |
 | `context.compacted` | `text` | `THINKING` ("Compacting context") |
-| `usage.updated` | `inputTokens`, `outputTokens`, `cachedInputTokens`, `reasoningTokens`, `totalTokens`, `contextWindow`, `costUsd`, `costIsEstimate` | Session usage (cumulative, only reported values) |
+| `usage.updated` | `inputTokens`, `outputTokens`, `cachedInputTokens`, `reasoningTokens`, `totalTokens`, `contextWindow`, `contextTokens` (tokens currently in the context, ACP), `costUsd`, `costIsEstimate` | Session usage (cumulative, only reported values) |
 | `provider.error` | `component`, `message` | Diagnostics; last error on the agent if the session exists |
 
 ### Activities

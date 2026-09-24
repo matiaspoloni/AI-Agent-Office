@@ -49,7 +49,7 @@ then continue.
 | # | Risk | Impact | Mitigation |
 | --- | --- | --- | --- |
 | R1 | **Codex app-server is marked experimental** and its protocol changes often (0.156.x). | Managed Codex sessions break after a Codex update. | Mapping pinned to the tested 0.156.x (generated schema + recorded traffic), unknown messages ignored, other versions get a warning in Diagnostics, fixtures can be re-recorded without an account (DEVELOPMENT.md). |
-| R2 | **Cursor CLI could not be executed during research**; native Windows support is recent; hook coverage in the CLI is reported incomplete. | Cursor features may differ on real machines. | Runtime capability negotiation via ACP `initialize`; hooks marked experimental; Phase 5 includes a Windows verification checklist; Diagnostics records observed events. |
+| R2 | **Cursor CLI could not be executed during research or Phase 5** (`cursor.com` blocked in the build environment); native Windows support is recent; hook coverage in the CLI is reported incomplete. | Cursor features may differ on real machines. | ACP implemented from the official schema, tested against the official example agent and schema-validated; values the agent announces at runtime are used as announced; launch marked *Experimental*; hooks not implemented; manual Windows 11 checklist in §8. |
 | R3 | **Codex hook trust** requires a manual `/hooks` confirmation by the user, again after any change to the hook. | External Codex sessions stay invisible until trusted. | Implemented: status read from Codex (`hooks/list` `trustStatus`), *Needs your action* with the exact step in Diagnostics; our entries are only appended so the user's hooks keep their trust; trust is never written by Agent Office. |
 | R4 | Editing `~/.claude/settings.json` could damage user config. | Lost settings/plugins. | Parse-or-refuse, timestamped backup, atomic write (temp + rename), only touch entries carrying our marker, idempotent install, uninstall/repair, tests with real-world settings fixtures. |
 | R5 | A synchronous permission hook would hide the terminal prompt. | User confusion, stuck agents. | Observe-only by default; opt-in "answer from app" with bounded timeout and fallback to the terminal prompt. |
@@ -139,3 +139,65 @@ then continue.
   errors until the user stops the session.
 * Not implemented (not needed on 0.156.x): the `codex exec --json` fallback.
 * Next: Cursor (Phase 5).
+
+## 8. Phase 5 checklist
+
+- [x] `ao-jsonrpc`: the JSON-RPC client shared by Codex and Cursor (calls without a time limit for ACP prompt turns)
+- [x] ACP client for `agent acp`: initialize, `cursor_login` authentication, session/new, model (config option or older `session/set_model`), mode, prompt, cancel
+- [x] Permissions answered by option kind (ids echoed), timeout → reject, cancelled answers on stop; unknown agent requests declined at once
+- [x] Runtime values: context usage, USD cost, per-turn tokens, model, mode, title, compaction; `usageSnapshot.contextTokens`
+- [x] `fake-cursor` + end-to-end tests; fixtures from the official ACP example agent; traffic validated against the official schema
+- [x] Launch hints in *New agent* (modes agent / plan / ask, no fixed model list)
+- [ ] Cursor hooks (external sessions): **not implemented** — format not verifiable here (PROVIDER_CAPABILITIES §5.5)
+- [ ] Manual verification on Windows 11 with a real Cursor CLI (below)
+
+### Phase 5 findings
+
+* `cursor.com` (docs and CLI downloads) is blocked by the build environment's
+  network policy, so the real Cursor CLI could not be run. The adapter follows the
+  official ACP schema; Cursor-specific handling comes from integrator reports and
+  is marked *Experimental* in the app.
+* The official ACP example agent reuses tool call ids in every turn and leaves a
+  rejected tool without a final update: the mapper treats a new `tool_call` with a
+  finished id as a new call and closes open tools at the end of the turn.
+* Cursor reportedly needs `authenticate` (`cursor_login`) before sessions work and
+  offers both the ACP 1.x model config option and the older `session/set_model`.
+* An ACP prompt turn is one long request; a turn is freed *before* its end is
+  reported, so a new prompt sent right after "idle" is accepted.
+
+### Manual verification on Windows 11 (needs a Cursor account)
+
+Run with the installed Agent Office on a Windows 11 PC where the Cursor CLI is
+installed and `agent login` was done once in a terminal. Note the Cursor version
+(`agent --version`) next to each result.
+
+1. **Detection** — Diagnostics → Providers shows Cursor CLI *Installed* with a
+   version and the executable path (`agent.exe`, `agent.cmd`, `cursor-agent…`,
+   under `%LOCALAPPDATA%\cursor-agent` or elsewhere). Record the path.
+2. **Launch** — New agent → Cursor CLI, a project folder, no model, first prompt
+   "List the files in this folder". The character appears, works, and says a
+   message; the session shows a model name (Auto or similar).
+3. **Login** — Log out (`agent logout`), launch again: the error should mention
+   `agent login` (or Cursor opens its own login). Log back in afterwards.
+4. **Model** — Launch with model `gpt-5` (or another model name Cursor shows in
+   its own model picker). The session shows that model; an invented name shows the
+   warning "Cursor did not switch to model …".
+5. **Modes** — Launch with mode *plan* and with *ask*. Record which are accepted
+   and whether a warning appears.
+6. **Permission** — Prompt "Create a file hello.txt containing hi". A permission
+   request appears on the character with Cursor's options; *Approve* → the file is
+   created and a *file created/modified* event appears. Repeat with *Reject*: no
+   file, the tool shows "Not allowed" or Cursor's own message.
+7. **Command** — Prompt "Run `dir`" (approve): a command appears in the timeline.
+8. **Stop** — During a long prompt press *Stop*: the turn ends as cancelled and
+   the session ends "stopped by Agent Office"; Task Manager shows no leftover
+   `agent` / `node` process from that session. *Force stop* also ends it.
+9. **Extension requests** — Ask Cursor to "make a plan first" or a question that
+   makes it ask you something. If a "Cursor sent `cursor/…`" warning appears, note
+   the method name; the turn must continue, not hang.
+10. **Usage** — Record whether usage (context tokens) and cost appear; if not, the
+    panel must say "Unavailable" / "Not reported yet", never a made-up number.
+11. **Logs** — Diagnostics → *Run diagnostics*, and keep
+    `%LOCALAPPDATA%\AgentOffice\logs\providers.log.*` with the findings (start
+    the app with `AGENT_OFFICE_LOG=info,provider=debug` for more detail; check the
+    file for anything private before sharing it).

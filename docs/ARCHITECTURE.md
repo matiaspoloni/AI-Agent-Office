@@ -97,7 +97,8 @@ AI-Agent-Office/
 │  ├─ ao-ipc/              # local IPC (named pipe / Unix socket) + token, shared by app and relay
 │  ├─ ao-hook-relay/       # hook relay (`agent-office hook …`) + standalone binary for tests
 │  ├─ ao-config/           # safe edits of provider config files (backup, atomic write)
-│  ├─ ao-testkit/          # fixture harness, fake provider CLIs (fake-claude, fake-codex), cargo_bin helper
+│  ├─ ao-jsonrpc/          # JSON-RPC 2.0 client over a managed process's stdio (Codex app-server, ACP)
+│  ├─ ao-testkit/          # fixture harness, fake provider CLIs (fake-claude, fake-codex, fake-cursor), cargo_bin helper
 │  ├─ ao-git/              # GitService (git.exe porcelain v2)                   [Phase 8]
 │  └─ providers/
 │     ├─ ao-provider-claude/

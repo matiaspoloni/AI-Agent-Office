@@ -48,9 +48,11 @@ crates/ao-process     process trees of managed agents (Job Objects / process gro
 crates/ao-ipc         local IPC between the hook relay and the app (named pipe / Unix socket)
 crates/ao-hook-relay  `agent-office hook <provider>` relay + standalone `agent-office-hook` binary
 crates/ao-config      safe edits of provider config files (parse-or-refuse, backups, atomic write)
-crates/ao-testkit     fixture harness, fake CLIs (`fake-claude`, `fake-codex`, `ao-fake-child`), cargo_bin
+crates/ao-jsonrpc     JSON-RPC 2.0 over a managed process's stdio (Codex app-server, ACP agents)
+crates/ao-testkit     fixture harness, fake CLIs (`fake-claude`, `fake-codex`, `fake-cursor`, `ao-fake-child`), cargo_bin
 crates/providers/*    one crate per provider (claude, codex, cursor, demo)
-fixtures/             provider payloads used by mapping tests (`-real` = captured from a real CLI)
+fixtures/             provider payloads used by mapping tests (`-real` = captured from a real CLI,
+                      `-sdk` = the official ACP example agent, `-schema` = written from a schema)
 scripts/              cross-platform Node scripts (smoke test, installer collection)
 docs/                 architecture, capabilities, roadmap, security, this file
 ```
@@ -111,7 +113,9 @@ control agents or run diagnostics.
   new payload shape you see in Diagnostics → *Hook bridge*. Codex fixtures live in
   `fixtures/codex/hooks` (one payload each) and `fixtures/codex/appserver` (a
   *sequence* of app-server messages fed through the stateful mapper, approval
-  requests included).
+  requests included). Cursor fixtures (`fixtures/cursor/acp`) are ACP message
+  sequences with two test steps: `answered` (Agent Office answered a permission)
+  and `turnEnded` (the `session/prompt` result).
 * **End-to-end** (`src-tauri/tests/claude_e2e.rs`): the real host, IPC server and
   relay driven by `fake-claude`, a stand-in for the `claude` CLI that runs configured
   hooks exactly like Claude Code (exec form, JSON on stdin, async/sync). It covers a
@@ -123,6 +127,12 @@ control agents or run diagnostics.
   speaks the app-server protocol and runs hooks through the shell like Codex
   (`cmd.exe /C` on Windows), only once they are "trusted" (a `fake-trust-all`
   file in its `CODEX_HOME` stands in for `/hooks`).
+  `src-tauri/tests/cursor_e2e.rs` drives `fake-cursor`, an ACP agent written from
+  the official schema plus the Cursor behaviour integrators report (`cursor_login`,
+  hyphenated permission ids, `cursor/*` requests, both model APIs). Marker files
+  in the project folder switch it to "logged out", "login fails" or "older model
+  API"; words in the prompt pick a scripted turn (`permission`, `edit`, `plan`,
+  `wait`, `fail`).
 
 ### Re-recording provider fixtures
 
@@ -137,6 +147,13 @@ configuration folders, never a personal account:
   message). `codex app-server` is driven over stdio and a hook handler that
   appends its stdin to a file records the hook payloads. Nothing reaches
   OpenAI and no account is needed.
+* **Cursor**: not possible in the build environment (`cursor.com` is blocked).
+  `*-sdk.json` fixtures copy the messages of the official ACP example agent
+  (`@agentclientprotocol/sdk`, `dist/examples/agent.js`). To check ACP traffic
+  against the official schema, record both directions of a session (for example
+  with a wrapper script that `tee`s the agent's stdin and stdout) and parse each
+  message with the SDK's `dist/schema/zod.gen.js` schemas. With a real Cursor,
+  record the same way and add `*-real.json` fixtures.
 * **Claude Code**: a temporary `CLAUDE_CONFIG_DIR`. Hook payloads and
   `stream-json` shapes can be captured this way; a real prompt needs an
   authenticated CLI and **costs tokens**, so it is never part of the tests.

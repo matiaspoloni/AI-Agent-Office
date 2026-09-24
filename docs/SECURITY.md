@@ -61,6 +61,14 @@ reads that trust status (by starting `codex app-server` briefly and asking
 `hooks/list`) but never writes it. Like any Codex start, that short run may let
 Codex contact its own services; Agent Office sends it nothing but the request.
 
+Managed Cursor sessions run `agent acp` in the project folder. Agent Office
+declares no file-system or terminal capabilities to the agent (Cursor uses its own
+tools, under its own permission checks), passes no MCP servers, and answers
+Cursor's own extension requests with "not supported". Login stays Cursor's own:
+Agent Office calls the `cursor_login` method, which uses the login the user made
+with `agent login`, and never reads `~/.cursor` or `CURSOR_API_KEY`. Nothing is
+written to Cursor's configuration.
+
 Managed Claude sessions get a per-session settings file in
 `%LOCALAPPDATA%\AgentOffice\sessions\`. It contains only the relay command and is
 deleted when the session ends. Session discovery runs the official, read-only
