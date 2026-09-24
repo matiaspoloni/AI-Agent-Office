@@ -1,0 +1,22 @@
+{
+  "description": "PreCompact (fields from the hooks input schema) shows compaction",
+  "input": {
+    "session_id": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "turn_id": "t1",
+    "transcript_path": null,
+    "cwd": "/home/u/proj",
+    "hook_event_name": "PreCompact",
+    "model": "gpt-test",
+    "trigger": "auto"
+  },
+  "expected": [
+    {
+      "type": "agent.thinking",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "text": "Compacting context (auto)"
+      }
+    }
+  ]
+}

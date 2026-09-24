@@ -1,0 +1,473 @@
+{
+  "description": "spawn_agent creates a child thread; its notifications carry the child threadId (real; no thread/started is sent for it)",
+  "context": {
+    "rootThread": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "cwd": "/home/u/proj"
+  },
+  "input": [
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "collabAgentToolCall",
+          "id": "call_spawn_1",
+          "tool": "spawnAgent",
+          "status": "inProgress",
+          "senderThreadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+          "receiverThreadIds": [],
+          "prompt": "Count the files",
+          "model": "",
+          "reasoningEffort": "medium",
+          "agentsStates": {}
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "startedAtMs": 1790246782965
+      },
+      "emittedAtMs": 1790246782967
+    },
+    {
+      "method": "thread/status/changed",
+      "params": {
+        "threadId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+        "status": {
+          "type": "idle"
+        }
+      },
+      "emittedAtMs": 1790246782998
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "collabAgentToolCall",
+          "id": "call_spawn_1",
+          "tool": "spawnAgent",
+          "status": "completed",
+          "senderThreadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+          "receiverThreadIds": [
+            "01a0d306-07f7-7b93-8d2c-89cba5048ea5"
+          ],
+          "prompt": "Count the files",
+          "model": "gpt-test",
+          "reasoningEffort": "medium",
+          "agentsStates": {
+            "01a0d306-07f7-7b93-8d2c-89cba5048ea5": {
+              "status": "pendingInit",
+              "message": null
+            }
+          }
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "completedAtMs": 1790246783000
+      },
+      "emittedAtMs": 1790246783015
+    },
+    {
+      "method": "thread/status/changed",
+      "params": {
+        "threadId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+        "status": {
+          "type": "active",
+          "activeFlags": []
+        }
+      },
+      "emittedAtMs": 1790246783023
+    },
+    {
+      "method": "turn/started",
+      "params": {
+        "threadId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+        "turn": {
+          "id": "01a0d306-0816-7e93-a932-63476fd77899",
+          "items": [],
+          "itemsView": "notLoaded",
+          "status": "inProgress",
+          "error": null,
+          "startedAt": 1790246783,
+          "completedAt": null,
+          "durationMs": null
+        }
+      },
+      "emittedAtMs": 1790246783023
+    },
+    {
+      "method": "thread/tokenUsage/updated",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "tokenUsage": {
+          "total": {
+            "totalTokens": 4390,
+            "inputTokens": 4300,
+            "cachedInputTokens": 300,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 90,
+            "reasoningOutputTokens": 21
+          },
+          "last": {
+            "totalTokens": 1620,
+            "inputTokens": 1600,
+            "cachedInputTokens": 100,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 20,
+            "reasoningOutputTokens": 7
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      "emittedAtMs": 1790246783028
+    },
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "agentMessage",
+          "id": "msg_4",
+          "text": "All done.",
+          "phase": null,
+          "memoryCitation": null,
+          "delivery": null,
+          "questions": null
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "startedAtMs": 1790246783047
+      },
+      "emittedAtMs": 1790246783047
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "agentMessage",
+          "id": "msg_4",
+          "text": "All done.",
+          "phase": null,
+          "memoryCitation": null,
+          "delivery": null,
+          "questions": null
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "completedAtMs": 1790246783047
+      },
+      "emittedAtMs": 1790246783050
+    },
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "userMessage",
+          "id": "01a0d306-084e-7ec0-bd33-322ab7e9f116",
+          "clientId": null,
+          "content": [
+            {
+              "type": "text",
+              "text": "Count the files",
+              "text_elements": []
+            }
+          ]
+        },
+        "threadId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+        "turnId": "01a0d306-0816-7e93-a932-63476fd77899",
+        "startedAtMs": 1790246783055
+      },
+      "emittedAtMs": 1790246783055
+    },
+    {
+      "method": "thread/tokenUsage/updated",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "tokenUsage": {
+          "total": {
+            "totalTokens": 6202,
+            "inputTokens": 6100,
+            "cachedInputTokens": 400,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 102,
+            "reasoningOutputTokens": 28
+          },
+          "last": {
+            "totalTokens": 1812,
+            "inputTokens": 1800,
+            "cachedInputTokens": 100,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 12,
+            "reasoningOutputTokens": 7
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      "emittedAtMs": 1790246783055
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "userMessage",
+          "id": "01a0d306-084e-7ec0-bd33-322ab7e9f116",
+          "clientId": null,
+          "content": [
+            {
+              "type": "text",
+              "text": "Count the files",
+              "text_elements": []
+            }
+          ]
+        },
+        "threadId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+        "turnId": "01a0d306-0816-7e93-a932-63476fd77899",
+        "completedAtMs": 1790246783055
+      },
+      "emittedAtMs": 1790246783059
+    },
+    {
+      "method": "thread/status/changed",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "status": {
+          "type": "idle"
+        }
+      },
+      "emittedAtMs": 1790246783064
+    },
+    {
+      "method": "turn/completed",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turn": {
+          "id": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+          "items": [
+            {
+              "type": "agentMessage",
+              "id": "msg_4",
+              "text": "All done.",
+              "phase": null,
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            }
+          ],
+          "itemsView": "summary",
+          "status": "completed",
+          "error": null,
+          "startedAt": 1790246782,
+          "completedAt": 1790246783,
+          "durationMs": 439
+        }
+      },
+      "emittedAtMs": 1790246783064
+    },
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "agentMessage",
+          "id": "msg_5",
+          "text": "All done.",
+          "phase": null,
+          "memoryCitation": null,
+          "delivery": null,
+          "questions": null
+        },
+        "threadId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+        "turnId": "01a0d306-0816-7e93-a932-63476fd77899",
+        "startedAtMs": 1790246783075
+      },
+      "emittedAtMs": 1790246783076
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "agentMessage",
+          "id": "msg_5",
+          "text": "All done.",
+          "phase": null,
+          "memoryCitation": null,
+          "delivery": null,
+          "questions": null
+        },
+        "threadId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+        "turnId": "01a0d306-0816-7e93-a932-63476fd77899",
+        "completedAtMs": 1790246783075
+      },
+      "emittedAtMs": 1790246783077
+    },
+    {
+      "method": "thread/tokenUsage/updated",
+      "params": {
+        "threadId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+        "turnId": "01a0d306-0816-7e93-a932-63476fd77899",
+        "tokenUsage": {
+          "total": {
+            "totalTokens": 1812,
+            "inputTokens": 1800,
+            "cachedInputTokens": 100,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 12,
+            "reasoningOutputTokens": 7
+          },
+          "last": {
+            "totalTokens": 1812,
+            "inputTokens": 1800,
+            "cachedInputTokens": 100,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 12,
+            "reasoningOutputTokens": 7
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      "emittedAtMs": 1790246783081
+    },
+    {
+      "method": "thread/status/changed",
+      "params": {
+        "threadId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+        "status": {
+          "type": "idle"
+        }
+      },
+      "emittedAtMs": 1790246783091
+    },
+    {
+      "method": "turn/completed",
+      "params": {
+        "threadId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+        "turn": {
+          "id": "01a0d306-0816-7e93-a932-63476fd77899",
+          "items": [
+            {
+              "type": "agentMessage",
+              "id": "msg_5",
+              "text": "All done.",
+              "phase": null,
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            }
+          ],
+          "itemsView": "summary",
+          "status": "completed",
+          "error": null,
+          "startedAt": 1790246783,
+          "completedAt": 1790246783,
+          "durationMs": 89
+        }
+      },
+      "emittedAtMs": 1790246783091
+    }
+  ],
+  "expected": [
+    {
+      "type": "tool.started",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "toolCallId": "call_spawn_1",
+        "toolName": "collabAgentToolCall",
+        "category": "subagent",
+        "title": "Spawn agent: Count the files"
+      }
+    },
+    {
+      "type": "subagent.started",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+      "payload": {
+        "description": "Count the files"
+      }
+    },
+    {
+      "type": "tool.completed",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "toolCallId": "call_spawn_1",
+        "toolName": "collabAgentToolCall",
+        "category": "subagent"
+      }
+    },
+    {
+      "type": "agent.thinking",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+      "payload": {
+        "text": "Working"
+      }
+    },
+    {
+      "type": "usage.updated",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "inputTokens": 4300,
+        "totalTokens": 4390,
+        "contextWindow": 258400
+      }
+    },
+    {
+      "type": "agent.message",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "text": "All done."
+      }
+    },
+    {
+      "type": "usage.updated",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "inputTokens": 6100,
+        "totalTokens": 6202
+      }
+    },
+    {
+      "type": "prompt.submitted",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+      "payload": {
+        "text": "Count the files"
+      }
+    },
+    {
+      "type": "agent.idle",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "text": "Turn finished — waiting for your next prompt"
+      }
+    },
+    {
+      "type": "agent.message",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+      "payload": {
+        "text": "All done."
+      }
+    },
+    {
+      "type": "usage.updated",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "inputTokens": 7900,
+        "outputTokens": 114,
+        "totalTokens": 8014
+      }
+    },
+    {
+      "type": "agent.idle",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+      "payload": {
+        "text": "Turn finished — waiting for your next prompt"
+      }
+    }
+  ]
+}

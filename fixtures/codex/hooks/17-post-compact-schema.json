@@ -1,0 +1,22 @@
+{
+  "description": "PostCompact (hooks input schema) records the compaction",
+  "input": {
+    "session_id": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "turn_id": "t1",
+    "transcript_path": null,
+    "cwd": "/home/u/proj",
+    "hook_event_name": "PostCompact",
+    "model": "gpt-test",
+    "trigger": "manual"
+  },
+  "expected": [
+    {
+      "type": "context.compacted",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "text": "manual"
+      }
+    }
+  ]
+}

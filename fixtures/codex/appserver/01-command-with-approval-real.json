@@ -1,0 +1,584 @@
+{
+  "description": "A turn that runs a shell command after approval (codex-cli 0.156.1 app-server, fake model)",
+  "context": {
+    "rootThread": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "cwd": "/home/u/proj"
+  },
+  "input": [
+    {
+      "method": "warning",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "message": "clamping SessionEnd hook timeout to 3s in /home/u/.codex/hooks.json"
+      },
+      "emittedAtMs": 1790246782620
+    },
+    {
+      "method": "warning",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "message": "clamping Interrupt hook timeout to 3s in /home/u/.codex/hooks.json"
+      },
+      "emittedAtMs": 1790246782620
+    },
+    {
+      "method": "warning",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "message": "Model metadata for `gpt-test` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+      },
+      "emittedAtMs": 1790246782623
+    },
+    {
+      "method": "thread/status/changed",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "status": {
+          "type": "active",
+          "activeFlags": []
+        }
+      },
+      "emittedAtMs": 1790246782654
+    },
+    {
+      "method": "turn/started",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turn": {
+          "id": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+          "items": [],
+          "itemsView": "notLoaded",
+          "status": "inProgress",
+          "error": null,
+          "startedAt": 1790246782,
+          "completedAt": null,
+          "durationMs": null
+        }
+      },
+      "emittedAtMs": 1790246782654
+    },
+    {
+      "method": "hook/started",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "run": {
+          "id": "session-start:5:/home/u/.codex/hooks.json",
+          "eventName": "sessionStart",
+          "handlerType": "command",
+          "executionMode": "sync",
+          "scope": "thread",
+          "sourcePath": "/home/u/.codex/hooks.json",
+          "source": "user",
+          "displayOrder": 5,
+          "status": "running",
+          "statusMessage": null,
+          "startedAt": 1790246782,
+          "completedAt": null,
+          "durationMs": null,
+          "entries": []
+        }
+      },
+      "emittedAtMs": 1790246782673
+    },
+    {
+      "method": "hook/completed",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "run": {
+          "id": "session-start:5:/home/u/.codex/hooks.json",
+          "eventName": "sessionStart",
+          "handlerType": "command",
+          "executionMode": "sync",
+          "scope": "thread",
+          "sourcePath": "/home/u/.codex/hooks.json",
+          "source": "user",
+          "displayOrder": 5,
+          "status": "completed",
+          "statusMessage": null,
+          "startedAt": 1790246782,
+          "completedAt": 1790246782,
+          "durationMs": 6,
+          "entries": []
+        }
+      },
+      "emittedAtMs": 1790246782678
+    },
+    {
+      "method": "hook/started",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "run": {
+          "id": "user-prompt-submit:7:/home/u/.codex/hooks.json",
+          "eventName": "userPromptSubmit",
+          "handlerType": "command",
+          "executionMode": "sync",
+          "scope": "turn",
+          "sourcePath": "/home/u/.codex/hooks.json",
+          "source": "user",
+          "displayOrder": 7,
+          "status": "running",
+          "statusMessage": null,
+          "startedAt": 1790246782,
+          "completedAt": null,
+          "durationMs": null,
+          "entries": []
+        }
+      },
+      "emittedAtMs": 1790246782681
+    },
+    {
+      "method": "hook/completed",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "run": {
+          "id": "user-prompt-submit:7:/home/u/.codex/hooks.json",
+          "eventName": "userPromptSubmit",
+          "handlerType": "command",
+          "executionMode": "sync",
+          "scope": "turn",
+          "sourcePath": "/home/u/.codex/hooks.json",
+          "source": "user",
+          "displayOrder": 7,
+          "status": "completed",
+          "statusMessage": null,
+          "startedAt": 1790246782,
+          "completedAt": 1790246782,
+          "durationMs": 5,
+          "entries": []
+        }
+      },
+      "emittedAtMs": 1790246782684
+    },
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "userMessage",
+          "id": "01a0d306-06dc-73b2-b167-b1059ae66a58",
+          "clientId": null,
+          "content": [
+            {
+              "type": "text",
+              "text": "say hi",
+              "text_elements": []
+            }
+          ]
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "startedAtMs": 1790246782685
+      },
+      "emittedAtMs": 1790246782685
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "userMessage",
+          "id": "01a0d306-06dc-73b2-b167-b1059ae66a58",
+          "clientId": null,
+          "content": [
+            {
+              "type": "text",
+              "text": "say hi",
+              "text_elements": []
+            }
+          ]
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "completedAtMs": 1790246782685
+      },
+      "emittedAtMs": 1790246782688
+    },
+    {
+      "method": "hook/started",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "run": {
+          "id": "pre-tool-use:0:/home/u/.codex/hooks.json:call_exec_1",
+          "eventName": "preToolUse",
+          "handlerType": "command",
+          "executionMode": "sync",
+          "scope": "turn",
+          "sourcePath": "/home/u/.codex/hooks.json",
+          "source": "user",
+          "displayOrder": 0,
+          "status": "running",
+          "statusMessage": null,
+          "startedAt": 1790246782,
+          "completedAt": null,
+          "durationMs": null,
+          "entries": []
+        }
+      },
+      "emittedAtMs": 1790246782710
+    },
+    {
+      "method": "hook/completed",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "run": {
+          "id": "pre-tool-use:0:/home/u/.codex/hooks.json:call_exec_1",
+          "eventName": "preToolUse",
+          "handlerType": "command",
+          "executionMode": "sync",
+          "scope": "turn",
+          "sourcePath": "/home/u/.codex/hooks.json",
+          "source": "user",
+          "displayOrder": 0,
+          "status": "completed",
+          "statusMessage": null,
+          "startedAt": 1790246782,
+          "completedAt": 1790246782,
+          "durationMs": 5,
+          "entries": []
+        }
+      },
+      "emittedAtMs": 1790246782726
+    },
+    {
+      "method": "hook/started",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "run": {
+          "id": "permission-request:1:/home/u/.codex/hooks.json:call_exec_1",
+          "eventName": "permissionRequest",
+          "handlerType": "command",
+          "executionMode": "sync",
+          "scope": "turn",
+          "sourcePath": "/home/u/.codex/hooks.json",
+          "source": "user",
+          "displayOrder": 1,
+          "status": "running",
+          "statusMessage": null,
+          "startedAt": 1790246782,
+          "completedAt": null,
+          "durationMs": null,
+          "entries": []
+        }
+      },
+      "emittedAtMs": 1790246782729
+    },
+    {
+      "method": "hook/completed",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "run": {
+          "id": "permission-request:1:/home/u/.codex/hooks.json:call_exec_1",
+          "eventName": "permissionRequest",
+          "handlerType": "command",
+          "executionMode": "sync",
+          "scope": "turn",
+          "sourcePath": "/home/u/.codex/hooks.json",
+          "source": "user",
+          "displayOrder": 1,
+          "status": "completed",
+          "statusMessage": null,
+          "startedAt": 1790246782,
+          "completedAt": 1790246782,
+          "durationMs": 4,
+          "entries": []
+        }
+      },
+      "emittedAtMs": 1790246782733
+    },
+    {
+      "method": "thread/status/changed",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "status": {
+          "type": "active",
+          "activeFlags": [
+            "waitingOnApproval"
+          ]
+        }
+      },
+      "emittedAtMs": 1790246782733
+    },
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "commandExecution",
+          "id": "call_exec_1",
+          "pluginId": null,
+          "scriptPath": null,
+          "command": "/bin/bash -lc 'echo hello > out.txt && cat out.txt'",
+          "cwd": "/home/u/proj",
+          "processId": null,
+          "source": "agent",
+          "status": "inProgress",
+          "commandActions": [
+            {
+              "type": "unknown",
+              "command": "echo hello > out.txt && cat out.txt"
+            }
+          ],
+          "aggregatedOutput": null,
+          "exitCode": null,
+          "durationMs": null
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "startedAtMs": 1790246782734
+      },
+      "emittedAtMs": 1790246782734
+    },
+    {
+      "method": "item/commandExecution/requestApproval",
+      "id": 0,
+      "params": {
+        "kind": "command",
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "itemId": "call_exec_1",
+        "startedAtMs": 1790246782733,
+        "environmentId": "local",
+        "command": "/bin/bash -lc 'echo hello > out.txt && cat out.txt'",
+        "cwd": "/home/u/proj",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "echo hello > out.txt && cat out.txt"
+          }
+        ],
+        "proposedExecpolicyAmendment": [
+          "/bin/bash",
+          "-lc",
+          "echo hello > out.txt && cat out.txt"
+        ],
+        "availableDecisions": [
+          "accept",
+          {
+            "acceptWithExecpolicyAmendment": {
+              "execpolicy_amendment": [
+                "/bin/bash",
+                "-lc",
+                "echo hello > out.txt && cat out.txt"
+              ]
+            }
+          },
+          "cancel"
+        ]
+      }
+    },
+    {
+      "method": "serverRequest/resolved",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "requestId": 0
+      },
+      "emittedAtMs": 1790246782735
+    },
+    {
+      "method": "thread/status/changed",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "status": {
+          "type": "active",
+          "activeFlags": []
+        }
+      },
+      "emittedAtMs": 1790246782735
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "commandExecution",
+          "id": "call_exec_1",
+          "pluginId": null,
+          "scriptPath": null,
+          "command": "/bin/bash -lc 'echo hello > out.txt && cat out.txt'",
+          "cwd": "/home/u/proj",
+          "processId": "19432",
+          "source": "unifiedExecStartup",
+          "status": "completed",
+          "commandActions": [
+            {
+              "type": "unknown",
+              "command": "echo hello > out.txt && cat out.txt"
+            }
+          ],
+          "aggregatedOutput": "hello\n",
+          "exitCode": 0,
+          "durationMs": 0
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "completedAtMs": 1790246782859
+      },
+      "emittedAtMs": 1790246782862
+    },
+    {
+      "method": "hook/started",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "run": {
+          "id": "post-tool-use:2:/home/u/.codex/hooks.json:call_exec_1",
+          "eventName": "postToolUse",
+          "handlerType": "command",
+          "executionMode": "sync",
+          "scope": "turn",
+          "sourcePath": "/home/u/.codex/hooks.json",
+          "source": "user",
+          "displayOrder": 2,
+          "status": "running",
+          "statusMessage": null,
+          "startedAt": 1790246782,
+          "completedAt": null,
+          "durationMs": null,
+          "entries": []
+        }
+      },
+      "emittedAtMs": 1790246782867
+    },
+    {
+      "method": "hook/completed",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "run": {
+          "id": "post-tool-use:2:/home/u/.codex/hooks.json:call_exec_1",
+          "eventName": "postToolUse",
+          "handlerType": "command",
+          "executionMode": "sync",
+          "scope": "turn",
+          "sourcePath": "/home/u/.codex/hooks.json",
+          "source": "user",
+          "displayOrder": 2,
+          "status": "completed",
+          "statusMessage": null,
+          "startedAt": 1790246782,
+          "completedAt": 1790246782,
+          "durationMs": 5,
+          "entries": []
+        }
+      },
+      "emittedAtMs": 1790246782870
+    },
+    {
+      "method": "thread/tokenUsage/updated",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "tokenUsage": {
+          "total": {
+            "totalTokens": 1230,
+            "inputTokens": 1200,
+            "cachedInputTokens": 100,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 30,
+            "reasoningOutputTokens": 7
+          },
+          "last": {
+            "totalTokens": 1230,
+            "inputTokens": 1200,
+            "cachedInputTokens": 100,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 30,
+            "reasoningOutputTokens": 7
+          },
+          "modelContextWindow": 258400
+        }
+      },
+      "emittedAtMs": 1790246782874
+    }
+  ],
+  "expected": [
+    {
+      "type": "agent.thinking",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "text": "Working"
+      }
+    },
+    {
+      "type": "prompt.submitted",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "text": "say hi"
+      }
+    },
+    {
+      "type": "tool.started",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "toolCallId": "call_exec_1",
+        "toolName": "commandExecution",
+        "category": "execute",
+        "title": "echo hello > out.txt && cat out.txt"
+      }
+    },
+    {
+      "type": "command.started",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "commandId": "call_exec_1",
+        "command": "echo hello > out.txt && cat out.txt",
+        "cwd": "/home/u/proj"
+      }
+    },
+    {
+      "type": "permission.requested",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "requestId": "codex-0",
+        "toolName": "commandExecution",
+        "description": "Run: echo hello > out.txt && cat out.txt",
+        "canResolve": true
+      }
+    },
+    {
+      "type": "command.completed",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "commandId": "call_exec_1",
+        "command": "echo hello > out.txt && cat out.txt",
+        "exitCode": 0,
+        "durationMs": 0
+      }
+    },
+    {
+      "type": "tool.completed",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "toolCallId": "call_exec_1",
+        "toolName": "commandExecution",
+        "category": "execute",
+        "durationMs": 0
+      }
+    },
+    {
+      "type": "usage.updated",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "inputTokens": 1200,
+        "outputTokens": 30,
+        "cachedInputTokens": 100,
+        "reasoningTokens": 7,
+        "totalTokens": 1230,
+        "contextWindow": 258400,
+        "costIsEstimate": false
+      }
+    }
+  ]
+}

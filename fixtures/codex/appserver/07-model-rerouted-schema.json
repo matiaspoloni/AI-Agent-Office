@@ -1,0 +1,29 @@
+{
+  "description": "model/rerouted updates the session model (schema)",
+  "context": {
+    "rootThread": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "cwd": "/home/u/proj"
+  },
+  "input": [
+    {
+      "method": "model/rerouted",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "t1",
+        "fromModel": "a",
+        "toModel": "b",
+        "reason": "highRiskCyberActivity"
+      }
+    }
+  ],
+  "expected": [
+    {
+      "type": "session.updated",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "model": "b"
+      }
+    }
+  ]
+}

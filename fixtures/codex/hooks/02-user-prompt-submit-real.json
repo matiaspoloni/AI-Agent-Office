@@ -1,0 +1,23 @@
+{
+  "description": "UserPromptSubmit (real) records the prompt",
+  "input": {
+    "session_id": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "turn_id": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+    "transcript_path": "/home/u/.codex/sessions/2026/09/24/rollout-2026-09-24T10-46-22-01a0d306-068d-7902-acce-33776a2cf8f9.jsonl",
+    "cwd": "/home/u/proj",
+    "hook_event_name": "UserPromptSubmit",
+    "model": "gpt-test",
+    "permission_mode": "default",
+    "prompt": "say hi"
+  },
+  "expected": [
+    {
+      "type": "prompt.submitted",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "text": "say hi"
+      }
+    }
+  ]
+}

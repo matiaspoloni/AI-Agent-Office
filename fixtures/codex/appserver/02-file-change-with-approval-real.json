@@ -1,0 +1,110 @@
+{
+  "description": "apply_patch becomes a fileChange item with its own approval request (real)",
+  "context": {
+    "rootThread": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "cwd": "/home/u/proj"
+  },
+  "input": [
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "fileChange",
+          "id": "call_patch_1",
+          "changes": [
+            {
+              "path": "/home/u/proj/hello.txt",
+              "kind": {
+                "type": "add"
+              },
+              "diff": "hi from codex\n"
+            }
+          ],
+          "status": "inProgress"
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "startedAtMs": 1790246782897
+      },
+      "emittedAtMs": 1790246782898
+    },
+    {
+      "method": "item/fileChange/requestApproval",
+      "id": 1,
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "itemId": "call_patch_1",
+        "startedAtMs": 1790246782906,
+        "reason": null,
+        "grantRoot": null
+      }
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "fileChange",
+          "id": "call_patch_1",
+          "changes": [
+            {
+              "path": "/home/u/proj/hello.txt",
+              "kind": {
+                "type": "add"
+              },
+              "diff": "hi from codex\n"
+            }
+          ],
+          "status": "completed"
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+        "completedAtMs": 1790246782937
+      },
+      "emittedAtMs": 1790246782939
+    }
+  ],
+  "expected": [
+    {
+      "type": "tool.started",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "toolCallId": "call_patch_1",
+        "toolName": "fileChange",
+        "category": "edit",
+        "title": "Edit: add hello.txt"
+      }
+    },
+    {
+      "type": "permission.requested",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "requestId": "codex-1",
+        "toolName": "fileChange",
+        "description": "Apply changes: add hello.txt",
+        "canResolve": true
+      }
+    },
+    {
+      "type": "file.created",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "path": "/home/u/proj/hello.txt",
+        "toolCallId": "call_patch_1"
+      }
+    },
+    {
+      "type": "tool.completed",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "toolCallId": "call_patch_1",
+        "toolName": "fileChange",
+        "category": "edit"
+      }
+    }
+  ]
+}

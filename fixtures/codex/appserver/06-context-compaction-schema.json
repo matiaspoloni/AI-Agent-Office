@@ -1,0 +1,35 @@
+{
+  "description": "A contextCompaction item records a compaction (schema); the deprecated thread/compacted is ignored",
+  "context": {
+    "rootThread": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "cwd": "/home/u/proj"
+  },
+  "input": [
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "contextCompaction",
+          "id": "c1"
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "t1",
+        "completedAtMs": 1
+      }
+    },
+    {
+      "method": "thread/compacted",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "t1"
+      }
+    }
+  ],
+  "expected": [
+    {
+      "type": "context.compacted",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9"
+    }
+  ]
+}

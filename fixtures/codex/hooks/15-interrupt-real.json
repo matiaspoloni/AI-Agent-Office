@@ -1,0 +1,22 @@
+{
+  "description": "Interrupt (real, fired when a turn is interrupted) idles the agent",
+  "input": {
+    "session_id": "01a0d308-00d9-7012-ba25-17cf003bd837",
+    "turn_id": "01a0d308-00ea-7790-8512-3d2488327ee6",
+    "transcript_path": "/home/u/.codex/sessions/2026/09/24/rollout-2026-09-24T10-48-32-01a0d308-00d9-7012-ba25-17cf003bd837.jsonl",
+    "cwd": "/home/u/proj",
+    "hook_event_name": "Interrupt",
+    "model": "gpt-test",
+    "permission_mode": "default"
+  },
+  "expected": [
+    {
+      "type": "agent.idle",
+      "sessionId": "01a0d308-00d9-7012-ba25-17cf003bd837",
+      "agentId": "01a0d308-00d9-7012-ba25-17cf003bd837",
+      "payload": {
+        "text": "Turn interrupted"
+      }
+    }
+  ]
+}

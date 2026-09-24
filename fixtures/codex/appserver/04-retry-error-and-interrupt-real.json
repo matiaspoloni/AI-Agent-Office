@@ -1,0 +1,97 @@
+{
+  "description": "Network retries are recoverable errors; an interrupted turn idles the agent; warnings are ignored (real)",
+  "context": {
+    "rootThread": "01a0d308-00d9-7012-ba25-17cf003bd837"
+  },
+  "input": [
+    {
+      "method": "remoteControl/status/changed",
+      "params": {
+        "status": "disabled",
+        "serverName": "vm",
+        "installationId": "037fdb5b-62f9-460f-a602-bf0fe212ad03",
+        "environmentId": null
+      },
+      "emittedAtMs": 1790246912203
+    },
+    {
+      "method": "warning",
+      "params": {
+        "threadId": "01a0d308-00d9-7012-ba25-17cf003bd837",
+        "message": "clamping SessionEnd hook timeout to 3s in /home/u/.codex/hooks.json"
+      },
+      "emittedAtMs": 1790246912233
+    },
+    {
+      "method": "warning",
+      "params": {
+        "threadId": "01a0d308-00d9-7012-ba25-17cf003bd837",
+        "message": "clamping Interrupt hook timeout to 3s in /home/u/.codex/hooks.json"
+      },
+      "emittedAtMs": 1790246912233
+    },
+    {
+      "method": "warning",
+      "params": {
+        "threadId": "01a0d308-00d9-7012-ba25-17cf003bd837",
+        "message": "Model metadata for `gpt-test` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+      },
+      "emittedAtMs": 1790246912236
+    },
+    {
+      "method": "error",
+      "params": {
+        "error": {
+          "message": "Reconnecting... waiting for network",
+          "codexErrorInfo": {
+            "responseStreamDisconnected": {
+              "httpStatusCode": null
+            }
+          },
+          "additionalDetails": "Connection failed: error sending request",
+          "misalignment": null
+        },
+        "willRetry": true,
+        "threadId": "01a0d308-00d9-7012-ba25-17cf003bd837",
+        "turnId": "01a0d308-00ea-7790-8512-3d2488327ee6"
+      },
+      "emittedAtMs": 1790246912307
+    },
+    {
+      "method": "turn/completed",
+      "params": {
+        "threadId": "01a0d308-00d9-7012-ba25-17cf003bd837",
+        "turn": {
+          "id": "01a0d308-00ea-7790-8512-3d2488327ee6",
+          "items": [],
+          "itemsView": "notLoaded",
+          "status": "interrupted",
+          "error": null,
+          "startedAt": 1790246912,
+          "completedAt": 1790246912,
+          "durationMs": 185
+        }
+      },
+      "emittedAtMs": 1790246912425
+    }
+  ],
+  "expected": [
+    {
+      "type": "agent.error",
+      "sessionId": "01a0d308-00d9-7012-ba25-17cf003bd837",
+      "agentId": "01a0d308-00d9-7012-ba25-17cf003bd837",
+      "payload": {
+        "message": "Reconnecting... waiting for network (Connection failed: error sending request)",
+        "recoverable": true
+      }
+    },
+    {
+      "type": "agent.idle",
+      "sessionId": "01a0d308-00d9-7012-ba25-17cf003bd837",
+      "agentId": "01a0d308-00d9-7012-ba25-17cf003bd837",
+      "payload": {
+        "text": "Turn interrupted"
+      }
+    }
+  ]
+}

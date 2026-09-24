@@ -1,0 +1,42 @@
+{
+  "description": "A failed turn reports its error (shape from the generated app-server schema)",
+  "context": {
+    "rootThread": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "cwd": "/home/u/proj"
+  },
+  "input": [
+    {
+      "method": "turn/completed",
+      "params": {
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turn": {
+          "id": "t9",
+          "items": [],
+          "itemsView": "notLoaded",
+          "status": "failed",
+          "error": {
+            "message": "Your usage limit has been reached",
+            "codexErrorInfo": "usageLimitExceeded",
+            "additionalDetails": null,
+            "misalignment": null
+          },
+          "startedAt": 1,
+          "completedAt": 2,
+          "durationMs": 1000
+        }
+      }
+    }
+  ],
+  "expected": [
+    {
+      "type": "agent.error",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "message": "Your usage limit has been reached",
+        "errorType": "usageLimitExceeded",
+        "recoverable": false
+      }
+    }
+  ]
+}

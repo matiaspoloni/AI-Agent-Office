@@ -1,0 +1,8 @@
+{
+  "description": "Events Agent Office does not know are ignored",
+  "input": {
+    "session_id": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "hook_event_name": "SomethingNew"
+  },
+  "expected": []
+}

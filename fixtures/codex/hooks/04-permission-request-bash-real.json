@@ -1,0 +1,35 @@
+{
+  "description": "PermissionRequest (real, no tool_use_id) asks for approval with the id Agent Office assigned",
+  "context": {
+    "permission": [
+      "perm-test",
+      false
+    ]
+  },
+  "input": {
+    "session_id": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "turn_id": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+    "transcript_path": "/home/u/.codex/sessions/2026/09/24/rollout-2026-09-24T10-46-22-01a0d306-068d-7902-acce-33776a2cf8f9.jsonl",
+    "cwd": "/home/u/proj",
+    "hook_event_name": "PermissionRequest",
+    "model": "gpt-test",
+    "permission_mode": "default",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "echo hello > out.txt && cat out.txt"
+    }
+  },
+  "expected": [
+    {
+      "type": "permission.requested",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "requestId": "perm-test",
+        "toolName": "Bash",
+        "description": "Run: echo hello > out.txt && cat out.txt",
+        "canResolve": false
+      }
+    }
+  ]
+}

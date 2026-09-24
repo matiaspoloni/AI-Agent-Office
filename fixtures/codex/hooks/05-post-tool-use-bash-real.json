@@ -1,0 +1,39 @@
+{
+  "description": "PostToolUse for Bash (real; tool_response is the output text, no exit code)",
+  "input": {
+    "session_id": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "turn_id": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+    "transcript_path": "/home/u/.codex/sessions/2026/09/24/rollout-2026-09-24T10-46-22-01a0d306-068d-7902-acce-33776a2cf8f9.jsonl",
+    "cwd": "/home/u/proj",
+    "hook_event_name": "PostToolUse",
+    "model": "gpt-test",
+    "permission_mode": "default",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "echo hello > out.txt && cat out.txt"
+    },
+    "tool_response": "hello\n",
+    "tool_use_id": "call_exec_1"
+  },
+  "expected": [
+    {
+      "type": "command.completed",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "commandId": "call_exec_1",
+        "command": "echo hello > out.txt && cat out.txt"
+      }
+    },
+    {
+      "type": "tool.completed",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "toolCallId": "call_exec_1",
+        "toolName": "Bash",
+        "category": "execute"
+      }
+    }
+  ]
+}

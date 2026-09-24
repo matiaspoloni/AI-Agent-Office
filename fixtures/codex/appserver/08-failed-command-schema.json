@@ -1,0 +1,99 @@
+{
+  "description": "A command that exits non-zero fails the command and the tool (schema)",
+  "context": {
+    "rootThread": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "cwd": "/home/u/proj"
+  },
+  "input": [
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "commandExecution",
+          "id": "c2",
+          "command": "/bin/bash -lc 'cargo test'",
+          "cwd": "/home/u/proj",
+          "processId": null,
+          "source": "agent",
+          "status": "inProgress",
+          "commandActions": [
+            {
+              "type": "unknown",
+              "command": "cargo test"
+            }
+          ],
+          "aggregatedOutput": null,
+          "exitCode": null,
+          "durationMs": null
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "t1",
+        "startedAtMs": 1
+      }
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "commandExecution",
+          "id": "c2",
+          "command": "/bin/bash -lc 'cargo test'",
+          "cwd": "/home/u/proj",
+          "processId": "5",
+          "source": "agent",
+          "status": "failed",
+          "commandActions": [
+            {
+              "type": "unknown",
+              "command": "cargo test"
+            }
+          ],
+          "aggregatedOutput": "error: 1 test failed",
+          "exitCode": 101,
+          "durationMs": 900
+        },
+        "threadId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+        "turnId": "t1",
+        "completedAtMs": 2
+      }
+    }
+  ],
+  "expected": [
+    {
+      "type": "tool.started",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "toolName": "commandExecution",
+        "title": "cargo test"
+      }
+    },
+    {
+      "type": "command.started",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "command": "cargo test"
+      }
+    },
+    {
+      "type": "command.failed",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "command": "cargo test",
+        "exitCode": 101,
+        "durationMs": 900
+      }
+    },
+    {
+      "type": "tool.failed",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "toolName": "commandExecution",
+        "durationMs": 900
+      }
+    }
+  ]
+}

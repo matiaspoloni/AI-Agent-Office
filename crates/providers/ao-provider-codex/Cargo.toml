@@ -1,15 +1,22 @@
 [package]
 name = "ao-provider-codex"
-description = "Agent Office provider adapter: codex"
+description = "Agent Office provider adapter: OpenAI Codex CLI (app-server JSON-RPC, hooks)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+ao-config.workspace = true
 ao-core.workspace = true
 ao-detect.workspace = true
+ao-process.workspace = true
 async-trait.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, features = ["sync", "time", "rt", "macros"] }
+tracing.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+ao-testkit.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }

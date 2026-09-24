@@ -1,0 +1,25 @@
+{
+  "description": "UserPromptSubmit inside a subagent (real) is attributed to the subagent",
+  "input": {
+    "session_id": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "turn_id": "01a0d306-0816-7e93-a932-63476fd77899",
+    "agent_id": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+    "agent_type": "default",
+    "transcript_path": "/home/u/.codex/sessions/2026/09/24/rollout-2026-09-24T10-46-22-01a0d306-07f7-7b93-8d2c-89cba5048ea5.jsonl",
+    "cwd": "/home/u/proj",
+    "hook_event_name": "UserPromptSubmit",
+    "model": "gpt-test",
+    "permission_mode": "default",
+    "prompt": "Count the files"
+  },
+  "expected": [
+    {
+      "type": "prompt.submitted",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-07f7-7b93-8d2c-89cba5048ea5",
+      "payload": {
+        "text": "Count the files"
+      }
+    }
+  ]
+}

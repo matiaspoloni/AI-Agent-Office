@@ -1,0 +1,20 @@
+{
+  "description": "SessionEnd (real) ends the session",
+  "input": {
+    "session_id": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "transcript_path": "/home/u/.codex/sessions/2026/09/24/rollout-2026-09-24T10-46-22-01a0d306-068d-7902-acce-33776a2cf8f9.jsonl",
+    "cwd": "/home/u/proj",
+    "hook_event_name": "SessionEnd",
+    "reason": "other"
+  },
+  "expected": [
+    {
+      "type": "session.ended",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "reason": "other"
+      }
+    }
+  ]
+}

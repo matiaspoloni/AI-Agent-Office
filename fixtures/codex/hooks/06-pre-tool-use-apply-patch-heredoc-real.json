@@ -1,0 +1,37 @@
+{
+  "description": "apply_patch invoked through the shell (real) is still a Bash tool call",
+  "input": {
+    "session_id": "01a0d306-068d-7902-acce-33776a2cf8f9",
+    "turn_id": "01a0d306-069d-7031-96cb-2eec9a4542c8",
+    "transcript_path": "/home/u/.codex/sessions/2026/09/24/rollout-2026-09-24T10-46-22-01a0d306-068d-7902-acce-33776a2cf8f9.jsonl",
+    "cwd": "/home/u/proj",
+    "hook_event_name": "PreToolUse",
+    "model": "gpt-test",
+    "permission_mode": "default",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "apply_patch <<'EOF'\n*** Begin Patch\n*** Add File: hello.txt\n+hi from codex\n*** End Patch\nEOF\n"
+    },
+    "tool_use_id": "call_patch_1"
+  },
+  "expected": [
+    {
+      "type": "tool.started",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "toolCallId": "call_patch_1",
+        "toolName": "Bash",
+        "category": "execute"
+      }
+    },
+    {
+      "type": "command.started",
+      "sessionId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "agentId": "01a0d306-068d-7902-acce-33776a2cf8f9",
+      "payload": {
+        "commandId": "call_patch_1"
+      }
+    }
+  ]
+}
