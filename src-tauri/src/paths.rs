@@ -12,14 +12,11 @@ pub struct AppPaths {
 }
 
 impl AppPaths {
-    /// `%LOCALAPPDATA%\AgentOffice` on Windows, `$XDG_DATA_HOME/AgentOffice`
-    /// (or `~/.local/share/AgentOffice`) elsewhere. `AGENT_OFFICE_DATA_DIR`
-    /// overrides it (tests, portable installs).
+    /// `%LOCALAPPDATA%\AgentOffice` on Windows (see `ao_ipc::paths`);
+    /// `AGENT_OFFICE_DATA_DIR` overrides it (tests, portable installs).
+    /// The hook relay resolves the same folder to find the IPC token.
     pub fn resolve() -> Self {
-        let data_dir = std::env::var_os("AGENT_OFFICE_DATA_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| default_base().join("AgentOffice"));
-        Self::at(data_dir)
+        Self::at(ao_ipc::paths::resolve_data_dir())
     }
 
     pub fn at(data_dir: PathBuf) -> Self {
@@ -29,26 +26,6 @@ impl AppPaths {
             data_dir,
         }
     }
-}
-
-fn default_base() -> PathBuf {
-    if cfg!(windows) {
-        if let Some(local) = std::env::var_os("LOCALAPPDATA") {
-            return PathBuf::from(local);
-        }
-    }
-    if let Some(xdg) = std::env::var_os("XDG_DATA_HOME") {
-        return PathBuf::from(xdg);
-    }
-    ao_detect::home_dir()
-        .map(|h| {
-            if cfg!(target_os = "macos") {
-                h.join("Library").join("Application Support")
-            } else {
-                h.join(".local").join("share")
-            }
-        })
-        .unwrap_or_else(std::env::temp_dir)
 }
 
 #[derive(Debug, Clone, Serialize, TS)]

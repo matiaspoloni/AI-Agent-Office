@@ -14,6 +14,9 @@ version = "0.1.0"
 dependencies = [
  "ao-core",
  "ao-detect",
+ "ao-hook-relay",
+ "ao-ipc",
+ "ao-process",
  "ao-provider-claude",
  "ao-provider-codex",
  "ao-provider-cursor",
@@ -96,6 +99,38 @@ dependencies = [
  "tokio",
  "tracing",
  "which",
+]
+
+[[package]]
+name = "ao-hook-relay"
+version = "0.1.0"
+dependencies = [
+ "ao-ipc",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "ao-ipc"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "ao-process"
+version = "0.1.0"
+dependencies = [
+ "ao-core",
+ "ao-testkit",
+ "libc",
+ "tokio",
+ "tracing",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

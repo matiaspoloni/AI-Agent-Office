@@ -1,0 +1,22 @@
+[package]
+name = "ao-ipc"
+description = "Local IPC between the hook relay and the Agent Office app (named pipe / Unix socket, token-authenticated)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+# Async server used by the app. The relay only needs the blocking client.
+server = ["dep:tokio"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+tokio = { workspace = true, optional = true, features = ["net", "io-util", "rt", "time", "sync", "macros"] }
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "net"] }

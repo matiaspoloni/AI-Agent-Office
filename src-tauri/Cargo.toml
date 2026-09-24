@@ -18,6 +18,9 @@ tauri-build = { version = "2", features = [] }
 ao-core.workspace = true
 ao-store.workspace = true
 ao-detect.workspace = true
+ao-hook-relay.workspace = true
+ao-ipc = { workspace = true, features = ["server"] }
+ao-process.workspace = true
 ao-provider-claude.workspace = true
 ao-provider-codex.workspace = true
 ao-provider-cursor.workspace = true
