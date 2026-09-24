@@ -1,0 +1,15 @@
+[package]
+name = "ao-provider-claude"
+description = "Agent Office provider adapter: claude"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+ao-core.workspace = true
+ao-detect.workspace = true
+async-trait.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
