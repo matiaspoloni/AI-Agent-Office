@@ -23,4 +23,15 @@ export const LAUNCH_HINTS: Record<string, LaunchHints> = {
       { value: "bypassPermissions", label: "bypassPermissions — no checks at all (dangerous)" },
     ],
   },
+  // `thread/start.approvalPolicy` (AskForApproval in the app-server protocol of
+  // codex-cli 0.156.1); descriptions from `codex --help` where it lists them.
+  // Codex documents no model aliases, so none are suggested.
+  codex: {
+    models: [],
+    permissionModes: [
+      { value: "untrusted", label: "untrusted — ask before commands Codex does not consider safe" },
+      { value: "on-request", label: "on-request — the model decides when to ask for approval" },
+      { value: "never", label: "never — never ask; failures go straight back to the model" },
+    ],
+  },
 };

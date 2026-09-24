@@ -2,6 +2,8 @@
 //! `fake-claude` (a stand-in for the `claude` CLI). No real account, no
 //! network, and the user's own Claude configuration is never touched.
 
+mod common;
+
 use agent_office_lib::host::{Host, HostOptions, IntegrationAction};
 use agent_office_lib::paths::AppPaths;
 use agent_office_lib::prefs::Preferences;
@@ -10,40 +12,15 @@ use ao_core::ids::{ProviderId, SessionId};
 use ao_core::provider::{
     IntegrationState, LaunchRequest, PermissionDecision, RelayCommand, StopMode,
 };
-use ao_core::world::{AgentState, SessionStatus, WorldSnapshot};
+use ao_core::world::SessionStatus;
 use ao_provider_claude::ClaudeOptions;
+use ao_provider_codex::CodexOptions;
 use ao_testkit::bins::cargo_bin;
+use common::{main_agent, wait_for, wait_listening, TempDir};
 use serde_json::{json, Value};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
-
-struct TempDir(PathBuf);
-
-impl TempDir {
-    fn new(name: &str) -> Self {
-        let nanos = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let dir =
-            std::env::temp_dir().join(format!("ao-e2e-{name}-{}-{nanos}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
-        Self(dir)
-    }
-
-    fn sub(&self, name: &str) -> PathBuf {
-        let dir = self.0.join(name);
-        std::fs::create_dir_all(&dir).unwrap();
-        dir
-    }
-}
-
-impl Drop for TempDir {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
+use std::time::Duration;
 
 fn claude() -> ProviderId {
     ProviderId::new("claude")
@@ -61,46 +38,12 @@ fn options(data_dir: &Path, config_dir: &Path) -> HostOptions {
             config_dir: Some(config_dir.to_path_buf()),
             discovery_interval: Duration::from_secs(3600),
         },
+        // Codex is not under test here: point it at nothing.
+        codex: CodexOptions {
+            executable: Some(config_dir.join("no-codex")),
+            config_dir: Some(config_dir.join("no-codex-home")),
+        },
     }
-}
-
-async fn wait_for<T>(
-    what: &str,
-    host: &Host,
-    mut check: impl FnMut(&WorldSnapshot) -> Option<T>,
-) -> T {
-    let deadline = Instant::now() + Duration::from_secs(30);
-    loop {
-        host.flush();
-        let snapshot = host.snapshot();
-        if let Some(value) = check(&snapshot) {
-            return value;
-        }
-        assert!(
-            Instant::now() < deadline,
-            "timed out waiting for {what}; state: {snapshot:#?}"
-        );
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
-}
-
-async fn wait_listening(host: &Host) {
-    let deadline = Instant::now() + Duration::from_secs(10);
-    while !host.hook_status().listening {
-        assert!(
-            Instant::now() < deadline,
-            "hook bridge did not start: {:?}",
-            host.hook_status()
-        );
-        tokio::time::sleep(Duration::from_millis(20)).await;
-    }
-}
-
-fn main_agent<'a>(snapshot: &'a WorldSnapshot, session: &str) -> Option<&'a AgentState> {
-    snapshot
-        .agents
-        .iter()
-        .find(|a| a.session_id.0 == session && a.is_main)
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

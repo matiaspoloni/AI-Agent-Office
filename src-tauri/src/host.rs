@@ -19,6 +19,7 @@ use ao_core::time::now_ms;
 use ao_core::world::{SessionStatus, WorldSnapshot, WorldState};
 use ao_ipc::{HookOrigin, HookRequest, HookResponse};
 use ao_provider_claude::ClaudeOptions;
+use ao_provider_codex::CodexOptions;
 use ao_provider_demo::DemoAdapter;
 use ao_store::writer::{StoreWriter, WriteOp};
 use ao_store::{NewProject, Project, Store};
@@ -43,6 +44,7 @@ pub struct HostOptions {
     /// Command agent CLIs run to reach Agent Office (`None`: hooks disabled).
     pub relay: Option<RelayCommand>,
     pub claude: ClaudeOptions,
+    pub codex: CodexOptions,
 }
 
 impl HostOptions {
@@ -66,6 +68,7 @@ impl HostOptions {
         Self {
             relay,
             claude: ClaudeOptions::default(),
+            codex: CodexOptions::default(),
         }
     }
 }
@@ -128,7 +131,8 @@ impl Host {
     pub fn start(paths: AppPaths, options: HostOptions) -> Arc<Host> {
         let (sink, mut rx) = EventSink::new(65_536);
         let demo = Arc::new(DemoAdapter::new());
-        let registry = crate::providers::build_registry(demo.clone(), options.claude);
+        let registry =
+            crate::providers::build_registry(demo.clone(), options.claude, options.codex);
         let endpoint = ao_ipc::Endpoint::for_data_dir(&paths.data_dir);
         let (reader, writer_store, store_error) = open_store(&paths);
         let prefs = Preferences::load(&reader);
@@ -754,6 +758,10 @@ mod tests {
                 executable: Some("/nonexistent/claude".into()),
                 config_dir: Some(std::env::temp_dir().join("ao-host-test-no-claude-config")),
                 ..Default::default()
+            },
+            codex: CodexOptions {
+                executable: Some("/nonexistent/codex".into()),
+                config_dir: Some(std::env::temp_dir().join("ao-host-test-no-codex-home")),
             },
         }
     }

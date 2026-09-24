@@ -61,7 +61,13 @@ export function NewAgentDialog({ onClose }: { onClose: () => void }) {
         <h3>New agent</h3>
         <label>
           Provider
-          <select value={provider} onChange={(e) => setProvider(e.target.value)}>
+          <select
+            value={provider}
+            onChange={(e) => {
+              setProvider(e.target.value);
+              setPermissionMode("");
+            }}
+          >
             {options.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.info?.descriptor.displayName ?? o.id}
