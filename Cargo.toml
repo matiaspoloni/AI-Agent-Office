@@ -1,6 +1,14 @@
 [workspace]
 resolver = "2"
-members = ["crates/ao-core", "crates/ao-store"]
+members = [
+  "crates/ao-core",
+  "crates/ao-store",
+  "crates/ao-detect",
+  "crates/providers/ao-provider-claude",
+  "crates/providers/ao-provider-codex",
+  "crates/providers/ao-provider-cursor",
+  "crates/providers/ao-provider-demo",
+]
 
 [workspace.package]
 version = "0.1.0"
