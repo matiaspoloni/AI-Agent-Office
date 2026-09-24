@@ -204,9 +204,13 @@ impl AgentState {
         self.finished_tools.push_back(id.to_owned());
     }
 
-    /// Clears a pending permission when later activity shows it was answered elsewhere.
+    /// Clears an observe-only permission request when later work shows it was
+    /// answered in the agent's own UI. Requests Agent Office can answer are
+    /// only cleared by their explicit resolution: hooks run concurrently, so
+    /// activity can arrive out of order and prove nothing about them.
     fn clear_answered_permission(&mut self, at: i64) {
-        if self.pending_permission.is_some() && self.pending_permission_at.is_some_and(|t| at > t) {
+        let observe_only = self.pending_permission.as_ref().is_some_and(|p| !p.can_resolve);
+        if observe_only && self.pending_permission_at.is_some_and(|t| at > t) {
             self.pending_permission = None;
             self.pending_permission_at = None;
             if matches!(self.activity, Activity::WaitingPermission) {
@@ -471,10 +475,11 @@ impl WorldState {
         };
         touched.agents.insert(akey.clone());
         let at = e.timestamp;
+        // A tool *starting* proves nothing: the PreToolUse of the very tool
+        // that asked for permission may be delivered after the request.
         if matches!(
             e.kind,
-            EventKind::ToolStarted(_)
-                | EventKind::ToolCompleted(_)
+            EventKind::ToolCompleted(_)
                 | EventKind::ToolFailed(_)
                 | EventKind::CommandCompleted(_)
                 | EventKind::CommandFailed(_)
@@ -1025,13 +1030,48 @@ mod tests {
             1,
         ));
         assert!(main_agent(&w).pending_permission.is_some());
+        // Nor does one with a newer timestamp (concurrent hooks reorder).
+        w.apply(&ev(
+            EventKind::ToolStarted(tool("t1", "Bash", ToolCategory::Execute, "rm -rf build")),
+            3,
+        ));
+        assert!(main_agent(&w).pending_permission.is_some());
         // The tool finishing afterwards proves the user answered in the terminal.
         w.apply(&ev(
             EventKind::ToolCompleted(done("t1", "Bash", ToolCategory::Execute)),
-            3,
+            4,
         ));
         assert!(main_agent(&w).pending_permission.is_none());
         assert_ne!(main_agent(&w).activity, Activity::WaitingPermission);
+    }
+
+    #[test]
+    fn answerable_permission_waits_for_its_resolution() {
+        let mut w = WorldState::new();
+        let request = PermissionRequested {
+            request_id: "perm-1".into(),
+            tool_name: Some("Bash".into()),
+            description: "Run: cargo test".into(),
+            can_resolve: true,
+            options: vec![],
+        };
+        w.apply(&ev(EventKind::PermissionRequested(request), 2));
+        // Out-of-order activity from concurrent hooks.
+        w.apply(&ev(
+            EventKind::ToolCompleted(done("t0", "Read", ToolCategory::Read)),
+            3,
+        ));
+        w.apply(&ev(EventKind::PromptSubmitted(PromptSubmitted { text: None }), 4));
+        assert!(main_agent(&w).pending_permission.is_some());
+        w.apply(&ev(
+            EventKind::PermissionApproved(PermissionResolved {
+                request_id: "perm-1".into(),
+                resolved_by: PermissionResolver::App,
+                message: None,
+            }),
+            5,
+        ));
+        assert!(main_agent(&w).pending_permission.is_none());
     }
 
     #[test]
