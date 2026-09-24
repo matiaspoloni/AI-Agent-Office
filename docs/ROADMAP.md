@@ -63,7 +63,18 @@ then continue.
 
 ## 4. Phase 1 checklist
 
-- [ ] Cargo workspace + `ao-core`, `ao-store`, `ao-detect`, provider crates (detection only), demo provider
-- [ ] Tauri 2 app wiring: state, commands, event channel with batching, logging
-- [ ] React shell: Office canvas (minimal), Command Center, Projects, Diagnostics, Agent panel
-- [ ] Unit tests (Rust + Vitest), GitHub Actions for Windows build/test
+- [x] Cargo workspace + `ao-core`, `ao-store`, `ao-detect`, provider crates (detection only), demo provider
+- [x] Tauri 2 app wiring: host runtime, commands, event channel with 100 ms batching, rolling logs, headless `--smoke-test`
+- [x] React shell: Office canvas, Command Center, Projects, Diagnostics, Agent panel, New Agent dialog
+- [x] Unit tests (Rust + Vitest), GitHub Actions for Linux checks and Windows build/test/installer
+
+### Phase 1 findings
+
+* `CapabilityProfile` gained an `implemented` block so the UI can distinguish
+  "the provider supports it" from "this build supports it" (no fake buttons).
+* The browser preview replays batches recorded from Rust, avoiding a duplicated
+  TypeScript reducer.
+* The seat allocator needed overflow spots and a final any-free-seat fallback to
+  hold 20 sessions + 50 subagents (caught by a unit test).
+* Real providers are detection-only in this phase; launching/observing them is
+  Phases 3–5 as planned. The demo provider exercises the full UI path meanwhile.

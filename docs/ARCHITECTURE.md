@@ -118,22 +118,22 @@ See [ADDING_A_PROVIDER.md](ADDING_A_PROVIDER.md).
 
 ```rust
 #[async_trait]
-pub trait ProviderAdapter: Send + Sync {
-    fn descriptor(&self) -> ProviderDescriptor;          // id, display name, accent, badge
-    fn capabilities(&self) -> CapabilityProfile;         // managed + external, honest values
-    async fn detect_installation(&self) -> Result<InstallationInfo, ProviderError>;
-    async fn get_version(&self) -> Result<Option<String>, ProviderError>;
+pub trait ProviderAdapter: Send + Sync + 'static {
+    fn descriptor(&self) -> ProviderDescriptor;          // id, display name, accent, badge, simulated?
+    fn capabilities(&self) -> CapabilityProfile;         // managed + external + what this build implements
+    async fn detect_installation(&self) -> InstallationInfo;   // never fails: errors are reported inside
+    async fn get_version(&self) -> Option<String>;
     async fn launch_session(&self, req: LaunchRequest, ctx: AdapterContext) -> Result<SessionHandle, ProviderError>;
     async fn attach_to_session(&self, id: &SessionId, ctx: AdapterContext) -> Result<(), ProviderError>;
     async fn stop_session(&self, id: &SessionId, mode: StopMode) -> Result<(), ProviderError>;
     async fn send_prompt(&self, id: &SessionId, prompt: &str) -> Result<(), ProviderError>;
     async fn resolve_permission(&self, id: &SessionId, request: &PermissionRequestId, decision: PermissionDecision) -> Result<(), ProviderError>;
     async fn list_sessions(&self) -> Result<Vec<ExternalSessionInfo>, ProviderError>;
-    async fn integration_status(&self) -> Result<IntegrationStatus, ProviderError>;
-    async fn install_integration(&self) -> Result<IntegrationReport, ProviderError>;
-    async fn uninstall_integration(&self) -> Result<IntegrationReport, ProviderError>;
-    async fn repair_integration(&self) -> Result<IntegrationReport, ProviderError>;
-    async fn handle_hook(&self, input: HookEnvelope) -> Result<HookOutcome, ProviderError>;
+    async fn integration_status(&self) -> IntegrationStatus;
+    async fn install_integration(&self) -> Result<IntegrationStatus, ProviderError>;
+    async fn uninstall_integration(&self) -> Result<IntegrationStatus, ProviderError>;
+    async fn repair_integration(&self) -> Result<IntegrationStatus, ProviderError>;
+    // Phase 3 adds: async fn handle_hook(&self, input: HookEnvelope) -> Result<HookOutcome, ProviderError>;
 }
 ```
 
@@ -152,8 +152,19 @@ pub struct Capabilities {
         tool_events, file_events, command_events, permissions, subagents,
         usage, cost, model, context_compaction, resume: Support,
 }
-pub struct CapabilityProfile { pub managed: Capabilities, pub external: Capabilities, pub notes: Vec<String> }
+pub struct CapabilityProfile {
+    pub managed: Capabilities,
+    pub external: Capabilities,
+    pub implemented: ImplementedFeatures, // detection / managed / external / integration setup
+    pub notes: Vec<String>,
+}
 ```
+
+`capabilities` describes what the **provider** offers; `implemented` says what
+**this build** of Agent Office can already use. The host refuses an action (and
+the UI disables its button with the reason) unless both are true. This keeps
+unfinished phases honest: e.g. Claude managed sessions are `Supported` by Claude
+Code but not implemented until Phase 3.
 
 The UI enables a button only when the relevant capability of the *session's mode*
 is available. Runtime-negotiated values (ACP `initialize`) are stored per session.
@@ -204,6 +215,13 @@ reducer (`ao_core::session::apply`). Activity shown in the office:
 | `DONE` | `session.ended` (brief animation, then the character leaves) |
 
 ## 5. Integration channels
+
+### 5.0 Browser preview
+
+`npm run dev:web` runs the UI without the desktop shell. Instead of a second
+TypeScript implementation of the reducer, it replays UI batches **recorded by the
+Rust demo provider on a virtual clock** (`src/ipc/preview-recording.json`). The
+preview is clearly labelled and cannot control agents.
 
 ### 5.1 UI ↔ core: Tauri IPC only
 

@@ -56,7 +56,7 @@ Windows), and the Tauri prerequisites for Windows (WebView2, Visual Studio Build
 npm install
 npm run dev        # start the desktop app with hot reload
 npm run test       # Rust + UI tests
-npm run build      # produce the Windows installer (NSIS) under src-tauri/target
+npm run build      # Windows installer → dist-installer\AgentOfficeSetup.exe
 ```
 
 `npm run dev:web` starts only the UI in a browser with a replayed demo timeline —
