@@ -353,17 +353,53 @@ propagated as panics.
 
 ## 10. Office visualization
 
-* Data-driven layout (`OfficeLayout`): `rooms` (desks, meeting, QA, terminal area,
-  lounge, CEO office), `furniture`, `decorations`, and `seats`. The same model will
-  later support moving furniture, `OfficeUpgrade`, `Perk` and unlockables — only the
-  data types exist now; no economy.
-* Characters are procedurally drawn pixel sprites (original art, no third-party logos),
-  tinted with the provider accent and labelled with a badge.
-* Placement: activity → zone (coding/reading/thinking → desk, running command →
-  terminal area, testing → QA, idle → lounge). Subagents spawn next to their parent,
-  are linked by a thin line, and walk out when they end.
-* The renderer runs its own `requestAnimationFrame` loop reading a snapshot of the
-  store; React re-renders only side panels.
+Code: `src/office/` — `layout.ts` (data), `scene.ts` (placement and movement, no
+drawing), `sprites.ts` (pixel art), `renderer.ts` (Canvas 2D), `teams.ts`
+(project grouping), `OfficeView.tsx` (frame loop, hover card, keyboard, legend).
+
+* **Data-driven layout** (`OfficeLayout`): `rooms` (open space, meeting room, QA
+  lab, terminal room, lounge, CEO office), `furniture`, `decorations`, `seats` and
+  `pods` (rows of desks a project team shares). `validateLayout` checks ids, walls,
+  overlaps and that every seat can be reached from the entrance, so an edited or
+  saved layout can be refused before use. The same model will later support moving
+  furniture, `OfficeUpgrade`, `Perk` and unlockables (types only, no economy); the
+  `layouts` table in SQLite is reserved for saved layouts.
+* **Placement** (`OfficeScene`, pure and unit-tested):
+  * activity → zone: coding / reading / thinking / waiting → own desk, running a
+    command → terminal room, testing → QA lab, idle → lounge, finished → exit;
+  * each project team gets a pod (first free row; teams share when all rows are
+    taken); a lead keeps its desk while it visits other rooms; subagents take the
+    free desk nearest their lead and overflow into the meeting room;
+  * a character changes room only after the new activity lasted
+    `ZONE_SETTLE_MS` (1.5 s), so short tool calls do not make it run back and forth;
+  * finished agents celebrate for 1.8 s, walk to the door and fade out.
+* **Teams**: the session's project (resolved by the core, else the registered
+  project whose folder contains the session's folder), else the folder name.
+* **Characters**: original 12 × 16 pixel sprites composed from a hair style, a
+  torso pose and legs (`characterRows`), cached per look and pose. Poses per
+  activity: typing (two frames), reading a sheet, hand on chin, raised hand
+  (waiting), hands on the head with a drop of sweat (error), coffee (idle),
+  celebrating, walking. Looks are derived from the agent key; the shirt is the
+  provider's accent color (lighter for subagents), the badge its short name. No
+  third-party logos.
+* **Signals**: bubbles (always for leads and anyone needing attention, for other
+  subagents only when their team is focused), a thought cloud for thinking,
+  screens that show code / a document / a terminal / an alert / an error for the
+  person using them, pulsing red rings for attention, confetti when done,
+  dotted lead → subagent links (always in a small office, only for the focused
+  team when busy), the CEO desk's inbox counting pending approvals.
+* **Interaction**: hover (or arrow keys on the focused canvas) shows a card with
+  name, provider, project, status, elapsed time and current action; click or
+  Enter opens the agent panel; Escape clears; **Legend** explains the symbols.
+* **Rendering**: its own `requestAnimationFrame` loop reads the store with
+  `getState()` (React never re-renders the canvas), draws at 60 fps while someone
+  walks and 30 fps when the office is calm, caches the static floor, character
+  frames, looks and text widths.
+* **Budget**: 20 sessions + 50 subagents. Measured with
+  `scripts/office-bench.mjs` on the preview's stress test (headless Chromium, 4
+  vCPU, software rendering): about 1 ms per frame on average, 1.5 ms at the 95th
+  percentile, 59–60 fps drawn, both at 1600 × 1000 and at 1920 × 1080 × 2
+  (HiDPI). The frame budget at 60 fps is 16.7 ms.
 
 ## 11. Security summary
 

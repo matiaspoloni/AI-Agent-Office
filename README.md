@@ -6,7 +6,7 @@ living pixel-art office. Each session is an employee: you can see who is coding,
 is running tests, who is waiting for your permission and who just hit an error, and
 you can act on them when the provider allows it.
 
-> **Status: early development (Phase 5 of 10).** The desktop shell, unified event
+> **Status: early development (Phase 6 of 10).** The desktop shell, unified event
 > pipeline, SQLite storage, provider detection, a clearly-labelled *demo* provider,
 > **Claude Code** and **Codex CLI** (sessions launched from the app, and sessions
 > in your own terminal through hooks) work. **Cursor CLI** sessions launched from
@@ -14,11 +14,21 @@ you can act on them when the provider allows it.
 > Protocol and tested without a real Cursor, which still has to be checked on
 > Windows 11. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
+![The office with the built-in demo: each person is a simulated agent session](docs/images/office.png)
+
 ## What it is
 
 * A **pixel-art office** where every agent session is a character, subagents are
   extra employees linked to their lead, and rooms reflect activity (desks, terminal
   area, QA, meeting room, lounge, CEO office).
+* **Reading the office:** each project gets its own row of desks with a name plate,
+  and subagents sit next to their lead (a lighter shirt of the same color). What a
+  character does shows in its pose and on its screen: typing code, reading, a
+  thought cloud, a raised hand with a red **!** when it needs your permission,
+  hands on the head after an error. Long commands send it to the terminal room,
+  tests to the QA lab, waiting for a prompt to the lounge. Hover a character (or
+  use the arrow keys) for a summary, click it for the full panel; **Legend**
+  explains every symbol.
 * A **Command Center** view: active agents, waiting approvals, errors, completed
   tasks, projects, branches, tool calls and token usage.
 * A **provider-agnostic platform**: every provider is an adapter that turns its
@@ -91,7 +101,8 @@ npm run build      # Windows installer → dist-installer\AgentOfficeSetup.exe
 ```
 
 `npm run dev:web` starts only the UI in a browser with a replayed demo timeline —
-useful for UI work without the desktop shell.
+useful for UI work without the desktop shell. Add `?stress` to its address for
+20 simulated sessions with 50 subagents.
 
 More in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
@@ -109,6 +120,9 @@ More in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 * Cursor CLI support is experimental until it is verified with a real Cursor on
   Windows 11 (checklist in [docs/ROADMAP.md](docs/ROADMAP.md) §8). Cursor sessions
   started in your own terminal are not shown yet.
+* The office layout is fixed for now (four project rows of six desks; more projects
+  share rows). Moving furniture and unlocking objects are planned; the layout is
+  already plain data for that.
 * Windows 11 x64 is the only packaged target for now; the code keeps OS-specific parts
   behind interfaces so macOS/Linux can be added later.
 

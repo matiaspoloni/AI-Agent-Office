@@ -201,3 +201,35 @@ installed and `agent login` was done once in a terminal. Note the Cursor version
     `%LOCALAPPDATA%\AgentOffice\logs\providers.log.*` with the findings (start
     the app with `AGENT_OFFICE_LOG=info,provider=debug` for more detail; check the
     file for anything private before sharing it).
+
+## 9. Phase 6 checklist
+
+- [x] Project rows ("pods") with name plates; subagents sit next to their lead, overflow into the meeting room
+- [x] Calm movement: a room change needs the new activity to last 1.5 s
+- [x] Poses per activity (typing, reading, thinking, raised hand, worried, coffee, celebrating, walking), four hair styles, lighter shirts for subagents
+- [x] Screens show the work (code, document, terminal, alert, error); thought cloud; confetti when done; fade-out at the door
+- [x] Hover card, keyboard navigation (arrows, Enter, Escape), legend; name tags kept on screen
+- [x] `validateLayout` for layouts; tests for layout, scene, sprites, teams, renderer and stress generator
+- [x] Stress test in the preview (`/?stress`: 20 sessions + 50 subagents) and `scripts/office-bench.mjs`
+- [x] 30 fps when nothing walks, 60 fps otherwise
+- [ ] Confirm the frame cost on a mid-range Windows laptop (`npm run build:ui`, then the bench script)
+
+### Phase 6 findings
+
+* Characters used to walk to another room on every tool call; with real agents
+  that alternate reading, commands and edits every second the office looked
+  chaotic. The settle delay keeps them at their desk for quick commands.
+* Subagents are easiest to read next to their lead; the old meeting-room
+  placement made the lead → subagent lines cross the whole office. Lines are now
+  drawn for the focused team only once the office holds more than 16 agents.
+* Frame cost for 70 agents is about 1 ms (p95 1.5 ms) in headless Chromium in
+  the build container, far under the 16.7 ms of a 60 fps frame; most time goes
+  to canvas drawing, the scene logic is well under a millisecond.
+* Two existing defects surfaced while running the whole test suite and were
+  fixed: `ao-process` reported a killed process tree as "exited with an error"
+  when the exit was noticed before the kill request (the kill intent is now
+  recorded before signalling; a new test fails 4/4 with the old code), and two
+  host tests could share a temporary folder when they started in the same
+  millisecond.
+* Not done (later phases): layout editor and saved layouts, furniture moves and
+  unlockables (data types exist), provider-specific sprites.

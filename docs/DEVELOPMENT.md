@@ -28,6 +28,7 @@ on Ubuntu: `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindica
 | `npm run test` | All Rust tests (`cargo test --workspace`) + UI tests (Vitest) |
 | `npm run lint` | TypeScript typecheck, `cargo fmt --check`, `cargo clippy -D warnings` |
 | `npm run smoke` | Headless smoke test of the desktop binary (`--smoke-test`); `SMOKE_KEEP_REPORT=<file>` keeps the report |
+| `npm run bench:office` | Frame cost of the office with 20 sessions + 50 subagents (needs Playwright; see *Office*) |
 | `npm run bindings` | Regenerate TypeScript types from Rust (`src/bindings/`) |
 | `npm run preview:record` | Regenerate the browser-preview timeline from the Rust demo provider |
 
@@ -53,7 +54,7 @@ crates/ao-testkit     fixture harness, fake CLIs (`fake-claude`, `fake-codex`, `
 crates/providers/*    one crate per provider (claude, codex, cursor, demo)
 fixtures/             provider payloads used by mapping tests (`-real` = captured from a real CLI,
                       `-sdk` = the official ACP example agent, `-schema` = written from a schema)
-scripts/              cross-platform Node scripts (smoke test, installer collection)
+scripts/              cross-platform Node scripts (smoke test, office benchmark, installer collection)
 docs/                 architecture, capabilities, roadmap, security, this file
 ```
 
@@ -85,6 +86,37 @@ accounts. In the desktop app press **Demo office**.
 `npm run dev:web` replays `src/ipc/preview-recording.json`, recorded by the same
 Rust code on a virtual clock (`npm run preview:record`). The preview cannot
 control agents or run diagnostics.
+
+## Office (src/office)
+
+| File | Role |
+| --- | --- |
+| `layout.ts` | Rooms, furniture, seats and desk pods as data; `buildGrid`, `findPath`, `validateLayout` |
+| `scene.ts` | Where every agent should be: seats, project pods, settle delay, walking, exit (no drawing, unit-tested) |
+| `sprites.ts` | Pixel characters composed from hair style + pose + legs; icons; cached canvases |
+| `renderer.ts` | Canvas 2D drawing: floor layer, y-sorted furniture and characters, bubbles, screens, tags, plates |
+| `teams.ts` | Which project team an agent belongs to (project, else folder) |
+| `OfficeView.tsx` | Frame loop (60 fps while walking, 30 fps when calm), hover card, keyboard, legend |
+
+To add a pose, add its torso/legs/patch to `POSES` in `sprites.ts` and pick it in
+`frameFor` (renderer); `sprites.test.ts` checks every frame's size and colors.
+New furniture is a `FurnitureKind` plus a case in `drawFurniture`;
+`validateLayout` must stay empty for the default layout (tested).
+
+**Stress test and benchmark.** `npm run dev:web`, then open `/?stress`: 20
+simulated sessions with 50 subagents that keep changing activity (demo
+provider, labelled SIM). To measure the frame cost:
+
+```powershell
+npm run build:ui
+npm run bench:office                                      # 1600 × 1000, 10 s
+npm run bench:office -- --width 1920 --height 1080 --dpr 2
+```
+
+It needs Playwright with Chromium (`npm i -g playwright`, then
+`npx playwright install chromium`, or `PLAYWRIGHT_MODULE=<path to playwright/index.mjs>`).
+It prints the frames drawn per second and the cost per frame; a frame fits a
+60 fps display when the 95th percentile stays well under 16.7 ms.
 
 ## Data, logs, overrides
 
@@ -160,8 +192,11 @@ configuration folders, never a personal account:
 
 When a new CLI version changes a shape, re-record, update the fixture and the
 mapping together, and note the finding in PROVIDER_CAPABILITIES.md.
-* **UI tests** (Vitest): scene/seat allocation incl. 20 sessions + 50 subagents,
-  path finding, store merging, timestamp shifting, capability gating.
+* **UI tests** (Vitest): office layout validation, scene placement (project
+  pods, subagents next to their lead, settle delay, exit) incl. 20 sessions + 50
+  subagents and a logic speed check, sprite frames, team grouping, the renderer
+  against a stand-in canvas, the stress generator, path finding, store merging,
+  timestamp shifting, capability gating.
 * **Smoke test**: `npm run smoke` runs the real binary headless with a temporary
   data folder; CI runs it on `windows-latest`.
 * Provider tests must never need real accounts: use fixtures and fake binaries
