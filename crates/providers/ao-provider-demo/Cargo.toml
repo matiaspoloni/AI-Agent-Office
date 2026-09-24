@@ -16,4 +16,8 @@ tracing.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+# Only used by the preview recorder example to embed provider descriptors.
+ao-provider-claude.workspace = true
+ao-provider-codex.workspace = true
+ao-provider-cursor.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "test-util"] }

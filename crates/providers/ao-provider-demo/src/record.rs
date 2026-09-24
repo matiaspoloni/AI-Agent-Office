@@ -26,6 +26,9 @@ pub struct PreviewFrame {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PreviewRecording {
+    /// Provider descriptors/capabilities, filled in by the recorder example.
+    #[serde(default)]
+    pub providers: Vec<ao_core::registry::ProviderInfo>,
     pub base_ms: i64,
     pub duration_ms: i64,
     pub frames: Vec<PreviewFrame>,
@@ -97,6 +100,7 @@ pub fn record_office(duration_ms: i64) -> PreviewRecording {
         });
     }
     PreviewRecording {
+        providers: Vec::new(),
         base_ms: RECORDING_BASE_MS,
         duration_ms,
         frames,

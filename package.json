@@ -1,0 +1,43 @@
+{
+  "name": "agent-office",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pixel-art office for your AI coding agents (Claude Code, Codex CLI, Cursor CLI)",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tauri dev",
+    "dev:web": "vite",
+    "build": "tauri build && node scripts/collect-installer.mjs",
+    "build:ui": "tsc --noEmit && vite build",
+    "preview:record": "cargo run -q -p ao-provider-demo --example record_preview -- src/ipc/preview-recording.json 90",
+    "bindings": "cargo test -q -p ao-core -p ao-store --lib export_bindings",
+    "test": "npm run test:rust && npm run test:ui",
+    "test:rust": "cargo test --workspace",
+    "test:ui": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit && cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "smoke": "node scripts/smoke.mjs",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/plugin-dialog": "^2.7.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.1.0",
+    "jsdom": "^26.0.0",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.0"
+  }
+}
