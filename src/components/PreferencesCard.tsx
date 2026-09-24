@@ -57,7 +57,8 @@ export function PreferencesCard({ onSaved }: { onSaved?: () => void }) {
               <small className="muted">
                 {" "}
                 — the agent waits for Approve/Reject in Agent Office; its own prompt appears only if you don't answer in
-                time. Off: Agent Office only shows the request.
+                time. Off: Agent Office only shows the request. With Codex, changing this (or the wait below) updates one
+                hook, which Codex asks you to trust again in /hooks.
               </small>
             </span>
           </label>

@@ -313,6 +313,10 @@ Approval answers:
 | External | *Answer permission requests of external sessions* **off** (default) | Observe only: the request is shown; answer it in Codex. |
 | External | on | The `PermissionRequest` hook waits for Approve / Reject in the app; no answer in time → Codex asks in its own UI. |
 
+Switching this setting (or the wait time while it is on) rewrites the
+`PermissionRequest` hook, so Codex marks that one hook as modified and asks the
+user to trust it again (`/hooks`); Diagnostics shows *Needs your action* until then.
+
 ---
 
 ## 5. Cursor CLI (`agent`, formerly `cursor-agent`)
