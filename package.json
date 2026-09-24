@@ -21,6 +21,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit && cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings",
     "smoke": "node scripts/smoke.mjs",
+    "bench:office": "node scripts/office-bench.mjs",
     "tauri": "tauri"
   },
   "dependencies": {

@@ -3,6 +3,7 @@ import { AgentPanel } from "./components/AgentPanel";
 import { NewAgentDialog } from "./components/NewAgentDialog";
 import { type Backend, errorMessage, getBackend } from "./ipc/backend";
 import { BackendContext } from "./ipc/BackendContext";
+import { stressRequested } from "./ipc/stressFlag";
 import { OfficeView } from "./office/OfficeView";
 import { type View, useOfficeStore } from "./state/store";
 import { CommandCenter } from "./views/CommandCenter";
@@ -129,8 +130,14 @@ export default function App() {
 
         {backend.kind === "preview" && (
           <div className="banner">
-            Browser preview — replaying a recorded, simulated demo. Run <code>npm run dev</code> for the desktop app with
-            real providers.
+            {stressRequested() ? (
+              <>Stress test — 20 simulated sessions with 50 subagents that keep changing activity. Nothing here is real.</>
+            ) : (
+              <>
+                Browser preview — replaying a recorded, simulated demo. Run <code>npm run dev</code> for the desktop app
+                with real providers.
+              </>
+            )}
           </div>
         )}
 

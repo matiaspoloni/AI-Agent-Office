@@ -9,6 +9,7 @@ import type { Project } from "../bindings/Project";
 import type { ProviderInfo } from "../bindings/ProviderInfo";
 import type { UiBatch } from "../bindings/UiBatch";
 import type { Backend } from "./backend";
+import { stressRequested } from "./stressFlag";
 import { shiftBatch } from "./timeshift";
 
 interface PreviewRecording {
@@ -19,6 +20,8 @@ interface PreviewRecording {
 }
 
 const PROJECTS_KEY = "agent-office.preview.projects";
+const STRESS_TICK_MS = 400;
+
 const LOOP_GAP_MS = 4_000;
 const PREVIEW_ONLY =
   "Not available in the browser preview. Run the desktop app (npm run dev) to control agents.";
@@ -55,13 +58,22 @@ export async function createPreviewBackend(): Promise<Backend> {
     timers.push(window.setTimeout(playLoop, recording.durationMs + LOOP_GAP_MS));
   };
 
+  const playStress = async () => {
+    const { StressOffice } = await import("./stress");
+    const office = new StressOffice();
+    listener?.(office.start(Date.now()));
+    timers.push(window.setInterval(() => listener?.(office.tick(Date.now())), STRESS_TICK_MS));
+  };
+
   return {
     kind: "preview",
     appInfo: async () => null,
     async subscribe(onBatch) {
       listener = onBatch;
       timers.forEach((t) => window.clearTimeout(t));
-      playLoop();
+      timers = [];
+      if (stressRequested()) void playStress();
+      else playLoop();
       const initial: InitialState = { snapshot: { sessions: [], agents: [] }, providers: recording.providers };
       return initial;
     },
