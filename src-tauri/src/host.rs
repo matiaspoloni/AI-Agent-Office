@@ -752,8 +752,12 @@ mod tests {
         AppPaths::at(std::env::temp_dir().join(format!("ao-host-test-{}", uuid_like())))
     }
 
+    /// Unique per call: tests run in parallel and may start in the same
+    /// millisecond; a shared folder would let one test delete another's data.
     fn uuid_like() -> String {
-        format!("{}-{}", std::process::id(), now_ms())
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        format!("{}-{}-{n}", std::process::id(), now_ms())
     }
 
     /// No relay, and a Claude executable that does not exist, so tests never
@@ -836,6 +840,15 @@ mod tests {
         );
 
         let _ = std::fs::remove_dir_all(paths.data_dir);
+    }
+
+    #[test]
+    fn test_folders_are_unique_within_one_millisecond() {
+        // Two tests starting together once shared a folder (and a database):
+        // one waited 10 s on the other's lock and lost its data.
+        let a = temp_paths();
+        let b = temp_paths();
+        assert_ne!(a.data_dir, b.data_dir);
     }
 
     #[tokio::test(flavor = "multi_thread")]
