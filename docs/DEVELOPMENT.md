@@ -47,7 +47,8 @@ crates/ao-detect      executable discovery + version probing
 crates/ao-process     process trees of managed agents (Job Objects / process groups)
 crates/ao-ipc         local IPC between the hook relay and the app (named pipe / Unix socket)
 crates/ao-hook-relay  `agent-office hook <provider>` relay + standalone `agent-office-hook` binary
-crates/ao-testkit     fixture harness, fake CLIs (`fake-claude`, `ao-fake-child`), cargo_bin
+crates/ao-config      safe edits of provider config files (parse-or-refuse, backups, atomic write)
+crates/ao-testkit     fixture harness, fake CLIs (`fake-claude`, `fake-codex`, `ao-fake-child`), cargo_bin
 crates/providers/*    one crate per provider (claude, codex, cursor, demo)
 fixtures/             provider payloads used by mapping tests (`-real` = captured from a real CLI)
 scripts/              cross-platform Node scripts (smoke test, installer collection)
@@ -107,7 +108,10 @@ control agents or run diagnostics.
 * **Mapping fixtures**: every file in `fixtures/claude/hooks` and
   `fixtures/claude/stream` is an input plus the expected unified events
   (`crates/providers/ao-provider-claude/tests/fixtures.rs`). Add a fixture for every
-  new payload shape you see in Diagnostics → *Hook bridge*.
+  new payload shape you see in Diagnostics → *Hook bridge*. Codex fixtures live in
+  `fixtures/codex/hooks` (one payload each) and `fixtures/codex/appserver` (a
+  *sequence* of app-server messages fed through the stateful mapper, approval
+  requests included).
 * **End-to-end** (`src-tauri/tests/claude_e2e.rs`): the real host, IPC server and
   relay driven by `fake-claude`, a stand-in for the `claude` CLI that runs configured
   hooks exactly like Claude Code (exec form, JSON on stdin, async/sync). It covers a
@@ -115,6 +119,30 @@ control agents or run diagnostics.
   (install over existing settings, answering an external permission, observe-only
   mode, uninstall restoring the file). The user's real Claude configuration is
   never used: tests point the adapter at a temporary config folder.
+  `src-tauri/tests/codex_e2e.rs` does the same for Codex with `fake-codex`, which
+  speaks the app-server protocol and runs hooks through the shell like Codex
+  (`cmd.exe /C` on Windows), only once they are "trusted" (a `fake-trust-all`
+  file in its `CODEX_HOME` stands in for `/hooks`).
+
+### Re-recording provider fixtures
+
+The `*-real.json` fixtures come from real CLIs run against throw-away
+configuration folders, never a personal account:
+
+* **Codex**: a temporary `CODEX_HOME` whose `config.toml` defines a model
+  provider with `base_url = "http://127.0.0.1:<port>/v1"`, `wire_api =
+  "responses"`, pointing at a small local server that streams scripted
+  Responses API events (an `exec_command` call, an `apply_patch` via
+  `exec_command`, a namespaced `multi_agent_v1.spawn_agent` call, then a
+  message). `codex app-server` is driven over stdio and a hook handler that
+  appends its stdin to a file records the hook payloads. Nothing reaches
+  OpenAI and no account is needed.
+* **Claude Code**: a temporary `CLAUDE_CONFIG_DIR`. Hook payloads and
+  `stream-json` shapes can be captured this way; a real prompt needs an
+  authenticated CLI and **costs tokens**, so it is never part of the tests.
+
+When a new CLI version changes a shape, re-record, update the fixture and the
+mapping together, and note the finding in PROVIDER_CAPABILITIES.md.
 * **UI tests** (Vitest): scene/seat allocation incl. 20 sessions + 50 subagents,
   path finding, store merging, timestamp shifting, capability gating.
 * **Smoke test**: `npm run smoke` runs the real binary headless with a temporary

@@ -6,10 +6,10 @@ living pixel-art office. Each session is an employee: you can see who is coding,
 is running tests, who is waiting for your permission and who just hit an error, and
 you can act on them when the provider allows it.
 
-> **Status: early development (Phase 3 of 10).** The desktop shell, unified event
-> pipeline, SQLite storage, provider detection, a clearly-labelled *demo* provider and
-> **Claude Code** (sessions launched from the app, and sessions in your own terminal
-> through hooks) work. Codex and Cursor sessions arrive in Phases 4–5. See
+> **Status: early development (Phase 4 of 10).** The desktop shell, unified event
+> pipeline, SQLite storage, provider detection, a clearly-labelled *demo* provider,
+> **Claude Code** and **Codex CLI** (sessions launched from the app, and sessions
+> in your own terminal through hooks) work. Cursor arrives in Phase 5. See
 > [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## What it is
@@ -61,9 +61,20 @@ Permission prompts of sessions in your own terminal are only *shown* by default.
 on *Answer permission requests of external sessions* in Diagnostics → Settings to
 answer them from the app (Claude shows its own prompt if you don't answer in time).
 
-**Before uninstalling Agent Office**, press **Uninstall** next to Claude Code in
-Diagnostics so Claude stops calling it (the installer will do this automatically in
-a later phase).
+## Watching Codex CLI
+
+1. In **Diagnostics**, press **Install hooks** next to Codex CLI (confirm). Agent
+   Office adds its entries at the end of `%USERPROFILE%\.codex\hooks.json`.
+2. Codex asks you to review new hooks: open `codex`, type `/hooks` and trust the
+   Agent Office entries. Until then Diagnostics shows *Needs your action* and
+   Codex runs none of them.
+3. Sessions you start with `codex` now appear in the office. **New agent** →
+   Codex CLI launches a session from the app, with Approve / Reject for its
+   commands and file changes.
+
+**Before uninstalling Agent Office**, press **Uninstall** next to Claude Code and
+Codex CLI in Diagnostics so they stop calling it (the installer will do this
+automatically in a later phase).
 
 ## Quick start (development build)
 

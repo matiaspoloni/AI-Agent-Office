@@ -53,6 +53,14 @@ Hook payloads can contain prompts, file paths, commands and tool output. The rel
 sends them only to the local app over the pipe above; the app applies redaction and
 size limits before anything is stored, and nothing leaves the machine.
 
+Codex runs hook commands through a shell (`cmd.exe` on Windows). Agent Office
+quotes its own path for that shell and refuses to install when the path holds
+characters `cmd.exe` would still interpret inside quotes (`"`, `%`). Codex
+hooks only run after the user trusts them in Codex (`/hooks`); Agent Office
+reads that trust status (by starting `codex app-server` briefly and asking
+`hooks/list`) but never writes it. Like any Codex start, that short run may let
+Codex contact its own services; Agent Office sends it nothing but the request.
+
 Managed Claude sessions get a per-session settings file in
 `%LOCALAPPDATA%\AgentOffice\sessions\`. It contains only the relay command and is
 deleted when the session ends. Session discovery runs the official, read-only
@@ -61,8 +69,9 @@ deleted when the session ends. Session discovery runs the official, read-only
 ## Hooks and trust
 
 * Claude Code user-level hooks always run; Agent Office's entry is visible in `/hooks`.
-* Codex requires the user to trust hooks (`/hooks`); Agent Office never bypasses it for
-  external sessions.
+* Codex requires the user to trust hooks (`/hooks`); Agent Office never bypasses it
+  and never edits trust state. Its entries are appended after the user's, so
+  existing hooks keep their trust.
 * Hooks from repositories (`.claude/settings.json`, `.codex/hooks.json`,
   `.cursor/hooks.json`) are never written by Agent Office.
 

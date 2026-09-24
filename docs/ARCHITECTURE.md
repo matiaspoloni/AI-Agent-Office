@@ -96,7 +96,8 @@ AI-Agent-Office/
 │  ├─ ao-process/          # owns managed agents' process trees (Job Objects / process groups)
 │  ├─ ao-ipc/              # local IPC (named pipe / Unix socket) + token, shared by app and relay
 │  ├─ ao-hook-relay/       # hook relay (`agent-office hook …`) + standalone binary for tests
-│  ├─ ao-testkit/          # fixture harness, fake provider CLIs (fake-claude), cargo_bin helper
+│  ├─ ao-config/           # safe edits of provider config files (backup, atomic write)
+│  ├─ ao-testkit/          # fixture harness, fake provider CLIs (fake-claude, fake-codex), cargo_bin helper
 │  ├─ ao-git/              # GitService (git.exe porcelain v2)                   [Phase 8]
 │  └─ providers/
 │     ├─ ao-provider-claude/
@@ -275,8 +276,12 @@ also supports `http` hooks; we do not use them to avoid a listening port.)
 | Provider | Process | Protocol |
 | --- | --- | --- |
 | Claude | `claude -p --input-format stream-json --output-format stream-json --verbose --session-id <uuid> --settings <hooks-json>` | stream-json on stdio + hooks via relay (permissions answered via `PermissionRequest` hook) |
-| Codex | `codex app-server` (stdio) | JSON-RPC 2.0, protocol v2 |
+| Codex | `codex app-server` (stdio), one process and one root thread per session | JSON-RPC 2.0 (protocol v2); approvals are server→client requests answered from the UI; subagents are child threads |
 | Cursor | `agent acp` | ACP JSON-RPC 2.0 |
+
+Codex managed sessions need no hooks: the app-server protocol reports
+everything, including approvals. Codex still runs the user's own hooks inside
+those sessions, so the Codex adapter ignores hook calls for threads it manages.
 
 Claude managed sessions always get their own hooks through a per-session
 `--settings` file (origin `managed`, permission requests answered from the app).

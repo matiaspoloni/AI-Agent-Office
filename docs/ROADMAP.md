@@ -36,7 +36,7 @@ then continue.
 | **1 – Desktop shell + core** | Cargo workspace, Tauri 2 app, React/Vite UI shell (Office, Command Center, Projects, Diagnostics views), `ao-core` event model + capabilities + adapter trait + registry + event bus + session reducer, `ao-store` SQLite + migrations + projects/sessions/events/preferences, `ao-detect`, provider descriptors with detection only, clearly-labelled Demo provider, UI batching channel, minimal office canvas, Windows CI build | `npm run test` green; `npm run build` produces an NSIS installer in CI on `windows-latest`; demo agents move in the office |
 | **2 – Unified events** | Ingest pipeline (dedupe, redaction, truncation), per-session event log, ts-rs bindings, event-mapping test harness with fixtures | Mapping tests for every event type; 10 000-event load test without UI stalls |
 | **3 – Claude adapter** | `ao-ipc` + hook relay (the app executable in `hook` mode); install/uninstall/repair/status of global hooks (merge, dedupe, backup, atomic write); external sessions via hooks; `claude agents --json` listing; managed sessions via `claude -p` stream-json + per-session `--settings`; approvals via `PermissionRequest` | Settings merge tests (existing hooks, plugins, invalid JSON, re-install idempotency); relay tests; managed session driven by a fake `claude` binary |
-| **4 – Codex adapter** | app-server JSON-RPC client, thread/turn lifecycle, approvals, token usage, subagents; external hooks in `~/.codex/hooks.json` + trust status via `hooks/list`; `exec --json` fallback | Protocol tests against a fake app-server replaying recorded JSON-RPC; version pin checks |
+| **4 – Codex adapter** | app-server JSON-RPC client, thread/turn lifecycle, approvals, token usage, subagents; external hooks in `~/.codex/hooks.json` + trust status via `hooks/list` | Protocol tests against a fake app-server replaying recorded JSON-RPC; version pin checks |
 | **5 – Cursor adapter** | ACP client (initialize/authenticate/session/new/prompt/cancel/request_permission, unknown-method handling), runtime capabilities; hooks as experimental; on-machine verification on Windows | ACP tests with a fake agent; manual verification checklist executed on Windows 11 |
 | **6 – Office visualization** | Pixel sprites + animations per activity, zones, subagent spawn/leave, badges, selection, performance budget | 20 sessions + 50 subagents at 60 fps on a mid-range laptop |
 | **7 – Process management** | `ao-process`: Job Objects, graceful stop, force kill, exit/stall/restart detection, `.cmd` shim handling, PID-reuse guard | Process tests on Windows CI with a fake agent (tree kill, no foreign kill) |
@@ -48,14 +48,14 @@ then continue.
 
 | # | Risk | Impact | Mitigation |
 | --- | --- | --- | --- |
-| R1 | **Codex app-server is marked experimental** and its protocol changes often (0.156.x). | Managed Codex sessions break after a Codex update. | Pin tested version range, contract tests from `generate-json-schema`, tolerant deserialization (unknown fields/variants ignored), fallback to `codex exec --json`, clear Diagnostics message. |
+| R1 | **Codex app-server is marked experimental** and its protocol changes often (0.156.x). | Managed Codex sessions break after a Codex update. | Mapping pinned to the tested 0.156.x (generated schema + recorded traffic), unknown messages ignored, other versions get a warning in Diagnostics, fixtures can be re-recorded without an account (DEVELOPMENT.md). |
 | R2 | **Cursor CLI could not be executed during research**; native Windows support is recent; hook coverage in the CLI is reported incomplete. | Cursor features may differ on real machines. | Runtime capability negotiation via ACP `initialize`; hooks marked experimental; Phase 5 includes a Windows verification checklist; Diagnostics records observed events. |
-| R3 | **Codex hook trust** requires a manual `/hooks` confirmation by the user. | External Codex sessions stay invisible until trusted. | Status via `hooks/list` `trustStatus`; UI explains the one-time step; never bypass trust for external sessions. |
+| R3 | **Codex hook trust** requires a manual `/hooks` confirmation by the user, again after any change to the hook. | External Codex sessions stay invisible until trusted. | Implemented: status read from Codex (`hooks/list` `trustStatus`), *Needs your action* with the exact step in Diagnostics; our entries are only appended so the user's hooks keep their trust; trust is never written by Agent Office. |
 | R4 | Editing `~/.claude/settings.json` could damage user config. | Lost settings/plugins. | Parse-or-refuse, timestamped backup, atomic write (temp + rename), only touch entries carrying our marker, idempotent install, uninstall/repair, tests with real-world settings fixtures. |
 | R5 | A synchronous permission hook would hide the terminal prompt. | User confusion, stuck agents. | Observe-only by default; opt-in "answer from app" with bounded timeout and fallback to the terminal prompt. |
 | R6 | Windows process trees (`.cmd` shims, `node` children, shells spawned by agents). | Orphans or wrong process killed. | Job Objects per managed session, kill only our jobs, PID + creation-time guard. |
 | R7 | Hook latency slows the agent. | Worse agent UX. | Relay is the native app exe in `hook` mode (≈25 ms per call in a debug build when the app is closed), async hooks for non-decision events, 300 ms connect timeout, exit 0 when the app is closed. |
-| R13 | App uninstalled while hooks remain in `~/.claude/settings.json`. | Claude reports a failing hook command on every event. | Phase 10: the NSIS uninstaller runs the hook removal first; until then Diagnostics → *Uninstall* must be used before removing the app (documented in the README). |
+| R13 | App uninstalled while hooks remain in `~/.claude/settings.json` or `~/.codex/hooks.json`. | The agent reports a failing hook command on every event. | Phase 10: the NSIS uninstaller runs the hook removal first; until then Diagnostics → *Uninstall* must be used before removing the app (documented in the README). |
 | R8 | Event floods (streaming deltas, command output). | UI jank, DB growth. | Batching (100 ms), UI never re-renders per token, output truncation, retention, virtualized lists. |
 | R9 | Windows toast click-activation is limited in the Tauri notification plugin on desktop. | Click-to-open may not work in MVS. | Use WinRT toast activation (`tauri-winrt-notification`) in Phase 9; fall back to focusing the app. |
 | R10 | Unsigned installer triggers SmartScreen. | Install friction. | Document; add signing step once a certificate exists. |
@@ -113,3 +113,29 @@ then continue.
   session) matched the fake-claude tests. That check ran two tiny real prompts; the
   automated tests never use a real account.
 * Next: Codex (Phase 4). Hook removal in the uninstaller moves to Phase 10 (risk R13).
+
+## 7. Phase 4 checklist
+
+- [x] `ao-config`: one safe config-file editor shared by the adapters
+- [x] JSON-RPC client for `codex app-server` (responses, notifications, server requests)
+- [x] Managed sessions: thread start, prompts (`turn/start`, `turn/steer`), interrupt, graceful and force stop
+- [x] Approvals from the app: commands, file changes, extra permissions; timeout declines
+- [x] Subagents as characters (child threads), token usage per session (no cost), errors and retries
+- [x] Version check against the tested 0.156.x
+- [x] External sessions through `hooks.json`: shell-quoted relay command, append-only edits, uninstall, trust status from `hooks/list`, optional permission answers
+- [x] Fixtures recorded from the real CLI with a local fake model; `fake-codex` for end-to-end tests; the finished adapter checked against the real binary
+
+### Phase 4 findings
+
+* A Codex hook `command` is a shell line, unlike Claude's exec form: paths are
+  quoted per shell and paths `cmd.exe` cannot carry safely (`"`, `%`) are refused.
+* Codex keys hook trust on the hook's position, so editing a user's
+  `hooks.json` must never shift existing entries (append-only, placeholders on
+  removal).
+* Subagent threads are only announced by the parent's `spawnAgent` item;
+  there is no `thread/started` for them.
+* Token usage is reported per thread; a session's usage is the sum.
+* The app-server keeps retrying without network: the office shows recoverable
+  errors until the user stops the session.
+* Not implemented (not needed on 0.156.x): the `codex exec --json` fallback.
+* Next: Cursor (Phase 5).

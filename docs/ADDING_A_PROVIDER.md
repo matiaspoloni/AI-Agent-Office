@@ -98,10 +98,14 @@ in the provider's config in **exec form** (program + args, no shell).
 * The host counts every call per provider/event for Diagnostics, so new payload shapes
   are visible on real machines — turn them into fixtures.
 * Implement `integration_status`, `install_integration`, `uninstall_integration` and
-  `repair_integration` with: parse-or-refuse, timestamped backup, atomic write,
-  ownership of our entries only (recognise them by program name + provider argument),
-  idempotency and de-duplication. `crates/providers/ao-provider-claude/src/settings.rs`
-  is the reference implementation.
+  `repair_integration` with: parse-or-refuse, timestamped backup, atomic write
+  (all three come from `ao_config::JsonConfigFile`), ownership of our entries only
+  (recognise them by program name + provider argument), idempotency and
+  de-duplication. Check how the provider runs the command: Claude takes
+  program + args (no quoting), Codex takes a shell line (quote per shell). If the
+  provider asks the user to trust hooks, read that status from the provider and
+  report *Needs your action*; never write trust state. References:
+  `ao-provider-claude/src/settings.rs`, `ao-provider-codex/src/settings.rs`.
 * Preferences arrive in `configure(&ProviderSettings)`; background work (e.g. polling
   an official listing command) starts in `start(ctx)`.
 
