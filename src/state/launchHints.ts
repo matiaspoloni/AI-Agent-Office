@@ -7,6 +7,8 @@ export interface LaunchHints {
   models: string[];
   /** Values for the permission mode selector; empty = no selector. */
   permissionModes: { value: string; label: string }[];
+  /** Shown under the selector. */
+  note?: string;
 }
 
 export const LAUNCH_HINTS: Record<string, LaunchHints> = {
@@ -33,5 +35,19 @@ export const LAUNCH_HINTS: Record<string, LaunchHints> = {
       { value: "on-request", label: "on-request — the model decides when to ask for approval" },
       { value: "never", label: "never — never ask; failures go straight back to the model" },
     ],
+  },
+  // ACP session modes are announced by the agent when a session starts. The
+  // Cursor CLI describes Agent, Plan and Ask modes; these ids are assumptions
+  // (not verified on a real install), so the adapter applies one only if the
+  // running Cursor announces it and warns otherwise. Models are announced at
+  // runtime too, so none are suggested.
+  cursor: {
+    models: [],
+    permissionModes: [
+      { value: "agent", label: "agent — full agent" },
+      { value: "plan", label: "plan — plan before changing files" },
+      { value: "ask", label: "ask — answer questions without changing files" },
+    ],
+    note: "Applied only if your Cursor version offers this mode; otherwise Cursor's default is used and the agent shows a warning.",
   },
 };

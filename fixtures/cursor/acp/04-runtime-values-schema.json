@@ -1,0 +1,330 @@
+{
+  "description": "Usage, cost, mode, model, title, plan and compaction updates (shapes from the ACP 1.5.0 schema; usage/cost/compaction are UNSTABLE there)",
+  "context": {
+    "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+    "cwd": "/work"
+  },
+  "input": [
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "agent_thought_chunk",
+          "content": {
+            "type": "text",
+            "text": "Let me think"
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "agent_thought_chunk",
+          "content": {
+            "type": "text",
+            "text": " about it"
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "plan",
+          "entries": [
+            {
+              "content": "Read",
+              "priority": "high",
+              "status": "completed"
+            },
+            {
+              "content": "Fix",
+              "priority": "high",
+              "status": "in_progress"
+            },
+            {
+              "content": "Test",
+              "priority": "low",
+              "status": "pending"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "current_mode_update",
+          "currentModeId": "plan"
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "config_option_update",
+          "configOptions": [
+            {
+              "id": "model",
+              "name": "Model",
+              "category": "model",
+              "type": "select",
+              "currentValue": "m2",
+              "options": [
+                {
+                  "value": "m1",
+                  "name": "Model One"
+                },
+                {
+                  "value": "m2",
+                  "name": "Model Two"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "session_info_update",
+          "title": "Fix the login bug"
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "usage_update",
+          "used": 53000,
+          "size": 200000,
+          "cost": {
+            "amount": 0.42,
+            "currency": "USD"
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "usage_update",
+          "used": 54000,
+          "size": 200000,
+          "cost": {
+            "amount": 35.5,
+            "currency": "EUR"
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "compaction_update",
+          "compactionId": "c1",
+          "status": "started"
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "compaction_update",
+          "compactionId": "c1",
+          "status": "completed"
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "available_commands_update",
+          "availableCommands": [
+            {
+              "name": "web",
+              "description": "Search the web"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "user_message_chunk",
+          "content": {
+            "type": "text",
+            "text": "echo of the prompt"
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "agent_message_chunk",
+          "content": {
+            "type": "text",
+            "text": "Done."
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "t9",
+          "title": "Search for callers",
+          "kind": "search",
+          "status": "in_progress"
+        }
+      }
+    },
+    {
+      "turnEnded": {
+        "stopReason": "max_tokens",
+        "usage": {
+          "inputTokens": 1000,
+          "outputTokens": 200,
+          "totalTokens": 1300,
+          "thoughtTokens": 100,
+          "cachedReadTokens": 400
+        }
+      }
+    }
+  ],
+  "expected": [
+    {
+      "type": "agent.thinking",
+      "payload": {
+        "text": "Thinking"
+      },
+      "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99"
+    },
+    {
+      "type": "agent.thinking",
+      "payload": {
+        "text": "Plan: 1/3 steps done"
+      }
+    },
+    {
+      "type": "session.updated",
+      "payload": {
+        "permissionMode": "plan"
+      }
+    },
+    {
+      "type": "session.updated",
+      "payload": {
+        "model": "Model Two"
+      }
+    },
+    {
+      "type": "session.updated",
+      "payload": {
+        "title": "Fix the login bug"
+      }
+    },
+    {
+      "type": "usage.updated",
+      "payload": {
+        "contextWindow": 200000,
+        "contextTokens": 53000,
+        "costUsd": 0.42,
+        "costIsEstimate": false
+      }
+    },
+    {
+      "type": "usage.updated",
+      "payload": {
+        "contextWindow": 200000,
+        "contextTokens": 54000,
+        "costIsEstimate": false
+      }
+    },
+    {
+      "type": "agent.thinking",
+      "payload": {
+        "text": "Compacting context"
+      }
+    },
+    {
+      "type": "context.compacted",
+      "payload": {}
+    },
+    {
+      "type": "agent.message",
+      "payload": {
+        "text": "Done."
+      }
+    },
+    {
+      "type": "tool.started",
+      "payload": {
+        "toolCallId": "t9",
+        "toolName": "search",
+        "category": "search",
+        "title": "Search for callers"
+      }
+    },
+    {
+      "type": "usage.updated",
+      "payload": {
+        "inputTokens": 1000,
+        "outputTokens": 200,
+        "cachedInputTokens": 400,
+        "reasoningTokens": 100,
+        "totalTokens": 1300,
+        "costIsEstimate": false
+      }
+    },
+    {
+      "type": "tool.failed",
+      "payload": {
+        "toolCallId": "t9",
+        "toolName": "search",
+        "category": "search",
+        "detail": "Stopped: the model reached its maximum number of tokens"
+      }
+    },
+    {
+      "type": "agent.error",
+      "payload": {
+        "message": "Stopped: the model reached its maximum number of tokens",
+        "errorType": "max_tokens",
+        "recoverable": true
+      }
+    }
+  ]
+}

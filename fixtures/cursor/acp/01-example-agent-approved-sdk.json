@@ -1,0 +1,270 @@
+{
+  "description": "Messages from the official ACP example agent (@agentclientprotocol/sdk 1.5.0, dist/examples/agent.js): read, then an edit approved with `allow`",
+  "context": {
+    "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+    "cwd": "/project"
+  },
+  "input": [
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "agent_message_chunk",
+          "content": {
+            "type": "text",
+            "text": "I'll help you with that. Let me start by reading some files to understand the current situation."
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "call_1",
+          "title": "Reading project files",
+          "kind": "read",
+          "status": "pending",
+          "locations": [
+            {
+              "path": "/project/README.md"
+            }
+          ],
+          "rawInput": {
+            "path": "/project/README.md"
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "tool_call_update",
+          "toolCallId": "call_1",
+          "status": "completed",
+          "content": [
+            {
+              "type": "content",
+              "content": {
+                "type": "text",
+                "text": "# My Project\n\nThis is a sample project..."
+              }
+            }
+          ],
+          "rawOutput": {
+            "content": "# My Project\n\nThis is a sample project..."
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "agent_message_chunk",
+          "content": {
+            "type": "text",
+            "text": " Now I understand the project structure. I need to make some changes to improve it."
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "call_2",
+          "title": "Modifying critical configuration file",
+          "kind": "edit",
+          "status": "pending",
+          "locations": [
+            {
+              "path": "/project/config.json"
+            }
+          ],
+          "rawInput": {
+            "path": "/project/config.json",
+            "content": "{\"database\": {\"host\": \"new-host\"}}"
+          }
+        }
+      }
+    },
+    {
+      "id": 0,
+      "method": "session/request_permission",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "toolCall": {
+          "toolCallId": "call_2",
+          "title": "Modifying critical configuration file",
+          "kind": "edit",
+          "status": "pending",
+          "locations": [
+            {
+              "path": "/home/user/project/config.json"
+            }
+          ],
+          "rawInput": {
+            "path": "/home/user/project/config.json",
+            "content": "{\"database\": {\"host\": \"new-host\"}}"
+          }
+        },
+        "options": [
+          {
+            "kind": "allow_once",
+            "name": "Allow this change",
+            "optionId": "allow"
+          },
+          {
+            "kind": "reject_once",
+            "name": "Skip this change",
+            "optionId": "reject"
+          }
+        ]
+      }
+    },
+    {
+      "answered": {
+        "requestId": "acp-0",
+        "approved": true
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "tool_call_update",
+          "toolCallId": "call_2",
+          "status": "completed",
+          "rawOutput": {
+            "success": true,
+            "message": "Configuration updated"
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "agent_message_chunk",
+          "content": {
+            "type": "text",
+            "text": " Perfect! I've successfully updated the configuration. The changes have been applied."
+          }
+        }
+      }
+    },
+    {
+      "turnEnded": {
+        "stopReason": "end_turn"
+      }
+    }
+  ],
+  "expected": [
+    {
+      "type": "agent.message",
+      "payload": {
+        "text": "I'll help you with that. Let me start by reading some files to understand the current situation."
+      },
+      "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99"
+    },
+    {
+      "type": "tool.started",
+      "payload": {
+        "toolCallId": "call_1",
+        "toolName": "read",
+        "category": "read",
+        "title": "Reading project files"
+      }
+    },
+    {
+      "type": "file.read",
+      "payload": {
+        "path": "/project/README.md",
+        "toolCallId": "call_1"
+      }
+    },
+    {
+      "type": "tool.completed",
+      "payload": {
+        "toolCallId": "call_1",
+        "toolName": "read",
+        "category": "read"
+      }
+    },
+    {
+      "type": "agent.message",
+      "payload": {
+        "text": "Now I understand the project structure. I need to make some changes to improve it."
+      }
+    },
+    {
+      "type": "tool.started",
+      "payload": {
+        "toolCallId": "call_2",
+        "toolName": "edit",
+        "category": "edit",
+        "title": "Modifying critical configuration file"
+      }
+    },
+    {
+      "type": "permission.requested",
+      "payload": {
+        "requestId": "acp-0",
+        "toolName": "edit",
+        "description": "Modifying critical configuration file: /home/user/project/config.json",
+        "canResolve": true,
+        "options": [
+          {
+            "id": "allow",
+            "kind": "allowOnce",
+            "label": "Allow this change"
+          },
+          {
+            "id": "reject",
+            "kind": "rejectOnce",
+            "label": "Skip this change"
+          }
+        ]
+      }
+    },
+    {
+      "type": "file.modified",
+      "payload": {
+        "path": "/home/user/project/config.json",
+        "toolCallId": "call_2"
+      }
+    },
+    {
+      "type": "tool.completed",
+      "payload": {
+        "toolCallId": "call_2",
+        "toolName": "edit",
+        "category": "edit"
+      }
+    },
+    {
+      "type": "agent.message",
+      "payload": {
+        "text": "Perfect! I've successfully updated the configuration. The changes have been applied."
+      }
+    },
+    {
+      "type": "agent.idle",
+      "payload": {
+        "text": "Turn finished — waiting for your next prompt"
+      }
+    }
+  ]
+}

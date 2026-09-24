@@ -1,0 +1,81 @@
+{
+  "description": "Messages from the official ACP example agent (@agentclientprotocol/sdk 1.5.0, dist/examples/agent.js): cancelled while the read is pending",
+  "context": {
+    "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+    "cwd": "/project"
+  },
+  "input": [
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "agent_message_chunk",
+          "content": {
+            "type": "text",
+            "text": "I'll help you with that. Let me start by reading some files to understand the current situation."
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "call_1",
+          "title": "Reading project files",
+          "kind": "read",
+          "status": "pending",
+          "locations": [
+            {
+              "path": "/project/README.md"
+            }
+          ],
+          "rawInput": {
+            "path": "/project/README.md"
+          }
+        }
+      }
+    },
+    {
+      "turnEnded": {
+        "stopReason": "cancelled"
+      }
+    }
+  ],
+  "expected": [
+    {
+      "type": "agent.message",
+      "payload": {
+        "text": "I'll help you with that. Let me start by reading some files to understand the current situation."
+      },
+      "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99"
+    },
+    {
+      "type": "tool.started",
+      "payload": {
+        "toolCallId": "call_1",
+        "toolName": "read",
+        "category": "read",
+        "title": "Reading project files"
+      }
+    },
+    {
+      "type": "tool.failed",
+      "payload": {
+        "toolCallId": "call_1",
+        "toolName": "read",
+        "category": "read",
+        "detail": "Cancelled"
+      }
+    },
+    {
+      "type": "agent.idle",
+      "payload": {
+        "text": "Turn cancelled"
+      }
+    }
+  ]
+}

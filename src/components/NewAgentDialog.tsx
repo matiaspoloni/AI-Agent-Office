@@ -140,6 +140,7 @@ export function NewAgentDialog({ onClose }: { onClose: () => void }) {
             </select>
             <small className="muted">
               Permission requests appear on the agent in the office; answer them with Approve or Reject.
+              {hints.note && ` ${hints.note}`}
             </small>
           </label>
         )}

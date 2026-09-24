@@ -15,6 +15,7 @@ use ao_core::provider::{
 use ao_core::world::SessionStatus;
 use ao_provider_claude::ClaudeOptions;
 use ao_provider_codex::CodexOptions;
+use ao_provider_cursor::CursorOptions;
 use ao_testkit::bins::cargo_bin;
 use common::{main_agent, wait_for, wait_listening, TempDir};
 use serde_json::{json, Value};
@@ -42,6 +43,9 @@ fn options(data_dir: &Path, config_dir: &Path) -> HostOptions {
         codex: CodexOptions {
             executable: Some(config_dir.join("no-codex")),
             config_dir: Some(config_dir.join("no-codex-home")),
+        },
+        cursor: CursorOptions {
+            executable: Some(config_dir.join("no-cursor")),
         },
     }
 }

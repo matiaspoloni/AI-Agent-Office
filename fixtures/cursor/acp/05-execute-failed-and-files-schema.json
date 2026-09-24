@@ -1,0 +1,221 @@
+{
+  "description": "A failing command, a created file and a deleted file (ACP 1.5.0 schema shapes)",
+  "context": {
+    "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+    "cwd": "/work"
+  },
+  "input": [
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "t1",
+          "title": "Run tests",
+          "kind": "execute",
+          "status": "in_progress",
+          "rawInput": {
+            "command": "cargo test --all"
+          }
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "tool_call_update",
+          "toolCallId": "t1",
+          "status": "failed",
+          "content": [
+            {
+              "type": "content",
+              "content": {
+                "type": "text",
+                "text": "error: 2 tests failed\nmore output"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "t2",
+          "title": "Write notes.md",
+          "kind": "edit",
+          "status": "in_progress",
+          "content": [
+            {
+              "type": "diff",
+              "path": "/work/notes.md",
+              "oldText": null,
+              "newText": "# Notes"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "tool_call_update",
+          "toolCallId": "t2",
+          "status": "completed"
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "t3",
+          "title": "Delete old.txt",
+          "kind": "delete",
+          "status": "pending",
+          "locations": [
+            {
+              "path": "/work/old.txt"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "tool_call_update",
+          "toolCallId": "t3",
+          "status": "completed"
+        }
+      }
+    },
+    {
+      "method": "session/update",
+      "params": {
+        "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99",
+        "update": {
+          "sessionUpdate": "notice",
+          "severity": "error",
+          "title": "Rate limited, retrying"
+        }
+      }
+    },
+    {
+      "turnEnded": {
+        "stopReason": "end_turn"
+      }
+    }
+  ],
+  "expected": [
+    {
+      "type": "tool.started",
+      "payload": {
+        "toolCallId": "t1",
+        "toolName": "execute",
+        "category": "execute",
+        "title": "Run tests"
+      },
+      "sessionId": "4f3c2a1b0e9d8c7b6a5f4e3d2c1b0a99"
+    },
+    {
+      "type": "command.started",
+      "payload": {
+        "commandId": "t1",
+        "command": "cargo test --all",
+        "cwd": "/work"
+      }
+    },
+    {
+      "type": "command.failed",
+      "payload": {
+        "commandId": "t1",
+        "command": "cargo test --all",
+        "error": "error: 2 tests failed"
+      }
+    },
+    {
+      "type": "tool.failed",
+      "payload": {
+        "toolCallId": "t1",
+        "toolName": "execute",
+        "category": "execute",
+        "detail": "error: 2 tests failed"
+      }
+    },
+    {
+      "type": "tool.started",
+      "payload": {
+        "toolCallId": "t2",
+        "toolName": "edit",
+        "category": "edit",
+        "title": "Write notes.md"
+      }
+    },
+    {
+      "type": "file.created",
+      "payload": {
+        "path": "/work/notes.md",
+        "toolCallId": "t2"
+      }
+    },
+    {
+      "type": "tool.completed",
+      "payload": {
+        "toolCallId": "t2",
+        "toolName": "edit",
+        "category": "edit"
+      }
+    },
+    {
+      "type": "tool.started",
+      "payload": {
+        "toolCallId": "t3",
+        "toolName": "delete",
+        "category": "edit",
+        "title": "Delete old.txt"
+      }
+    },
+    {
+      "type": "file.deleted",
+      "payload": {
+        "path": "/work/old.txt",
+        "toolCallId": "t3"
+      }
+    },
+    {
+      "type": "tool.completed",
+      "payload": {
+        "toolCallId": "t3",
+        "toolName": "delete",
+        "category": "edit"
+      }
+    },
+    {
+      "type": "agent.error",
+      "payload": {
+        "message": "Rate limited, retrying",
+        "errorType": "notice",
+        "recoverable": true
+      }
+    },
+    {
+      "type": "agent.idle",
+      "payload": {
+        "text": "Turn finished — waiting for your next prompt"
+      }
+    }
+  ]
+}

@@ -190,8 +190,13 @@ version = "0.1.0"
 dependencies = [
  "ao-core",
  "ao-detect",
+ "ao-jsonrpc",
+ "ao-process",
+ "ao-testkit",
  "async-trait",
+ "serde_json",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
