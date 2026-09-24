@@ -1,6 +1,9 @@
 import { Fragment, useEffect, useState } from "react";
 import type { Capabilities } from "../bindings/Capabilities";
 import type { DiagnosticsReport } from "../bindings/DiagnosticsReport";
+import type { ExternalSessionInfo } from "../bindings/ExternalSessionInfo";
+import { IntegrationControls } from "../components/IntegrationControls";
+import { PreferencesCard } from "../components/PreferencesCard";
 import { errorMessage } from "../ipc/backend";
 import { useBackend } from "../ipc/BackendContext";
 import { formatDuration, formatTime, SUPPORT_LABEL } from "../state/format";
@@ -20,6 +23,15 @@ export function DiagnosticsView() {
   const pushToast = useOfficeStore((s) => s.pushToast);
   const [report, setReport] = useState<DiagnosticsReport | null>(null);
   const [running, setRunning] = useState(false);
+  const [listed, setListed] = useState<{ provider: string; sessions: ExternalSessionInfo[] } | null>(null);
+
+  const listSessions = async (provider: string) => {
+    try {
+      setListed({ provider, sessions: await backend.listExternalSessions(provider) });
+    } catch (error) {
+      pushToast("error", `Could not list sessions: ${errorMessage(error)}`);
+    }
+  };
 
   const run = async () => {
     setRunning(true);
@@ -58,6 +70,8 @@ export function DiagnosticsView() {
         {report && <span className="muted small">Last run {formatTime(report.generatedAt)}</span>}
       </div>
 
+      <PreferencesCard onSaved={run} />
+
       {report && (
         <>
           <section className="card">
@@ -69,7 +83,7 @@ export function DiagnosticsView() {
                   <th>Installed</th>
                   <th>Version</th>
                   <th>Executable</th>
-                  <th>Integration</th>
+                  <th>Hooks</th>
                   <th>Implemented in this build</th>
                 </tr>
               </thead>
@@ -91,22 +105,103 @@ export function DiagnosticsView() {
                       <td>{installation.version ?? installation.versionOutput ?? "—"}</td>
                       <td className="mono small">{installation.executablePath ?? "—"}</td>
                       <td>
-                        {integration.state}
-                        {integration.details.map((d) => (
-                          <div key={d} className="muted small">
-                            {d}
-                          </div>
-                        ))}
+                        <IntegrationControls
+                          provider={provider.descriptor.id}
+                          name={provider.descriptor.displayName}
+                          status={integration}
+                        />
                       </td>
                       <td className="small">
                         detection {impl.detection ? "✔" : "✖"} · managed {impl.managedSessions ? "✔" : "✖"} · external{" "}
                         {impl.externalSessions ? "✔" : "✖"}
+                        {impl.externalSessions &&
+                          installation.installed &&
+                          provider.capabilities.external.listSessions !== "unsupported" && (
+                            <div>
+                              <button className="btn small" onClick={() => listSessions(provider.descriptor.id)}>
+                                List running sessions
+                              </button>
+                            </div>
+                          )}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          </section>
+
+          {listed && (
+            <section className="card">
+              <h3>
+                Sessions reported by {report.providers.find((p) => p.provider.descriptor.id === listed.provider)?.provider.descriptor.displayName}
+              </h3>
+              {listed.sessions.length === 0 && <p className="muted">No running sessions.</p>}
+              {listed.sessions.length > 0 && (
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Session</th>
+                      <th>Name</th>
+                      <th>Folder</th>
+                      <th>Status</th>
+                      <th>PID</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listed.sessions.map((s) => (
+                      <tr key={s.sessionId}>
+                        <td className="mono small">{s.sessionId}</td>
+                        <td>{s.title ?? "—"}</td>
+                        <td className="mono small">{s.cwd ?? "—"}</td>
+                        <td>{s.status ?? "—"}</td>
+                        <td>{s.pid ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+          )}
+
+          <section className="card">
+            <h3>Hook bridge</h3>
+            <p>
+              <Status ok={report.hooks.listening}>{report.hooks.listening ? "Listening" : "Not listening"}</Status>
+              {report.hooks.error && <span className="bad-text"> {report.hooks.error}</span>}
+            </p>
+            <p className="small">
+              Local endpoint <span className="mono">{report.hooks.endpoint}</span> (named pipe / socket, never a network
+              port)
+            </p>
+            <p className="small">
+              Relay command <span className="mono">{report.hooks.relayCommand ?? "unavailable"}</span>{" "}
+              {report.hooks.relayCommand && !report.hooks.relayExists && <span className="bad-text">(file missing)</span>}
+            </p>
+            {report.hooks.events.length === 0 ? (
+              <p className="muted small">No hook events received since Agent Office started.</p>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Provider</th>
+                    <th>Hook event</th>
+                    <th>Received</th>
+                    <th>Last</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.hooks.events.map((e) => (
+                    <tr key={`${e.provider}/${e.event}`}>
+                      <td>{e.provider}</td>
+                      <td className="mono small">{e.event}</td>
+                      <td>{e.count}</td>
+                      <td>{formatTime(e.lastAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </section>
 
           <section className="card">

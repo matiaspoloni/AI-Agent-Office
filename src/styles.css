@@ -598,6 +598,29 @@ textarea {
   color: var(--text);
 }
 
+label.check {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--text);
+}
+
+label.check input {
+  margin-top: 2px;
+}
+
+.integration {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+}
+
+.integration .button-row,
+.integration .notice .button-row {
+  margin-top: 4px;
+}
+
 .input-row {
   display: flex;
   gap: 6px;

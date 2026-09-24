@@ -3,7 +3,9 @@ import { open } from "@tauri-apps/plugin-dialog";
 import type { AgentEvent } from "../bindings/AgentEvent";
 import type { AppInfo } from "../bindings/AppInfo";
 import type { DiagnosticsReport } from "../bindings/DiagnosticsReport";
+import type { ExternalSessionInfo } from "../bindings/ExternalSessionInfo";
 import type { InitialState } from "../bindings/InitialState";
+import type { IntegrationStatus } from "../bindings/IntegrationStatus";
 import type { Preferences } from "../bindings/Preferences";
 import type { Project } from "../bindings/Project";
 import type { SessionHandle } from "../bindings/SessionHandle";
@@ -37,5 +39,7 @@ export function createTauriBackend(): Backend {
     recentEvents: (sessionKey, limit) => invoke<AgentEvent[]>("recent_events", { sessionKey, limit }),
     getPreferences: () => invoke<Preferences>("get_preferences"),
     setPreferences: (preferences) => invoke<Preferences>("set_preferences", { preferences }),
+    integrationAction: (provider, action) => invoke<IntegrationStatus>("integration_action", { provider, action }),
+    listExternalSessions: (provider) => invoke<ExternalSessionInfo[]>("list_external_sessions", { provider }),
   };
 }

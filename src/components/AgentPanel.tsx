@@ -168,7 +168,11 @@ export function AgentPanel() {
           ) : (
             <p className="muted small">
               Answer this in the agent's own terminal.{" "}
-              {perms.reason || "Agent Office cannot answer this request."}
+              {!perms.enabled
+                ? perms.reason
+                : session.mode === "external"
+                  ? "To answer from here, turn on “Answer permission requests of external sessions” in Diagnostics → Settings."
+                  : "Agent Office cannot answer this request."}
             </p>
           )}
         </div>

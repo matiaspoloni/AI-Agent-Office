@@ -5,7 +5,10 @@
 import type { AgentEvent } from "../bindings/AgentEvent";
 import type { AppInfo } from "../bindings/AppInfo";
 import type { DiagnosticsReport } from "../bindings/DiagnosticsReport";
+import type { ExternalSessionInfo } from "../bindings/ExternalSessionInfo";
 import type { InitialState } from "../bindings/InitialState";
+import type { IntegrationAction } from "../bindings/IntegrationAction";
+import type { IntegrationStatus } from "../bindings/IntegrationStatus";
 import type { LaunchRequest } from "../bindings/LaunchRequest";
 import type { NewProject } from "../bindings/NewProject";
 import type { PermissionDecision } from "../bindings/PermissionDecision";
@@ -39,6 +42,10 @@ export interface Backend {
   recentEvents(sessionKey: string, limit?: number): Promise<AgentEvent[]>;
   getPreferences(): Promise<Preferences | null>;
   setPreferences(preferences: Preferences): Promise<Preferences>;
+  /** Install / repair / uninstall / check a provider's hook integration. */
+  integrationAction(provider: string, action: IntegrationAction): Promise<IntegrationStatus>;
+  /** Sessions reported by the provider's official listing command. */
+  listExternalSessions(provider: string): Promise<ExternalSessionInfo[]>;
 }
 
 export function isDesktop(): boolean {

@@ -1,7 +1,7 @@
 // Cross-platform smoke test: builds the desktop binary, runs it headless with
 // `--smoke-test` against a throw-away data folder, and checks the report.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -20,11 +20,20 @@ let ok = result.status === 0;
 try {
   const report = JSON.parse(readFileSync(join(dataDir, "smoke-report.json"), "utf8"));
   const providers = report.providers.map((p) => `${p.provider.descriptor.id}:${p.installation.installed ? "installed" : "missing"}`);
-  console.log(`database ok=${report.database.ok} · providers ${providers.join(", ")} · git ${report.git.installed ? "yes" : "no"}`);
-  ok = ok && report.database.ok && report.providers.length >= 4;
+  console.log(
+    `database ok=${report.database.ok} · hook bridge ${report.hooks.listening ? "listening" : "DOWN"} on ${report.hooks.endpoint} · providers ${providers.join(", ")} · git ${report.git.installed ? "yes" : "no"}`,
+  );
+  ok = ok && report.database.ok && report.hooks.listening && report.providers.length >= 4;
 } catch (error) {
   console.error(`Could not read smoke report: ${error.message}`);
   ok = false;
+}
+if (process.env.SMOKE_KEEP_REPORT) {
+  try {
+    writeFileSync(process.env.SMOKE_KEEP_REPORT, readFileSync(join(dataDir, "smoke-report.json")));
+  } catch {
+    // best effort
+  }
 }
 rmSync(dataDir, { recursive: true, force: true });
 console.log(ok ? "SMOKE TEST PASSED" : "SMOKE TEST FAILED");

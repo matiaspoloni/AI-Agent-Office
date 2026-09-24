@@ -36,11 +36,15 @@ pub fn smoke_test() -> i32 {
         let _ = std::fs::write(&report_path, &json);
         println!("{json}");
         let sessions = host.snapshot().sessions.len();
-        let ok = report.backend.ok && report.database.ok && sessions >= handles.len();
+        let ok = report.backend.ok
+            && report.database.ok
+            && report.hooks.listening
+            && sessions >= handles.len();
         eprintln!(
-            "smoke test: {} (database ok: {}, demo sessions: {sessions}/{})",
+            "smoke test: {} (database ok: {}, hook bridge listening: {}, demo sessions: {sessions}/{})",
             if ok { "PASS" } else { "FAIL" },
             report.database.ok,
+            report.hooks.listening,
             handles.len()
         );
         if ok {

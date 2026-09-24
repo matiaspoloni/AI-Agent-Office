@@ -113,5 +113,9 @@ export async function createPreviewBackend(): Promise<Backend> {
     recentEvents: async () => [],
     getPreferences: async () => null,
     setPreferences: async (preferences: Preferences) => preferences,
+    integrationAction: async () => {
+      throw new Error(PREVIEW_ONLY);
+    },
+    listExternalSessions: async () => [],
   };
 }
