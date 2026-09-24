@@ -1,13 +1,26 @@
 // Canvas 2D renderer for the office. Static floors/walls are cached in an
 // offscreen layer; furniture and characters are y-sorted every frame so
-// seated characters are correctly occluded by their desks.
+// seated characters are correctly occluded by their desks. Character frames
+// are cached per look (see sprites.ts), so a frame costs a few drawImage
+// calls per character.
 
 import type { Activity } from "../bindings/Activity";
 import type { AgentState } from "../bindings/AgentState";
 import type { ProviderInfo } from "../bindings/ProviderInfo";
 import { type Furniture, type OfficeLayout, TILE } from "./layout";
-import type { Entity, OfficeScene } from "./scene";
-import { CHARACTER_FRAMES, type CharacterFrame, characterPalette, ICON_PALETTE, ICONS, spriteCanvas } from "./sprites";
+import { EXIT_FADE_MS, type Entity, type OfficeScene } from "./scene";
+import {
+  type CharacterFrame,
+  type CharacterLook,
+  characterCanvas,
+  characterLook,
+  hashString,
+  ICON_PALETTE,
+  ICONS,
+  SPRITE_H,
+  SPRITE_W,
+  spriteCanvas,
+} from "./sprites";
 
 export interface Hitbox {
   key: string;
@@ -27,6 +40,8 @@ export interface RenderInput {
   pendingApprovals: number;
   now: number;
 }
+
+const ATTENTION: ReadonlySet<Activity> = new Set(["WAITING_PERMISSION", "WAITING_INPUT", "ERROR"]);
 
 const FLOORS: Record<string, (ctx: CanvasRenderingContext2D, x: number, y: number) => void> = {
   wood(ctx, x, y) {
@@ -117,7 +132,6 @@ function drawStatic(layout: OfficeLayout, scene: OfficeScene): HTMLCanvasElement
       }
     }
   }
-  // Wall clock and poster decorations.
   for (const d of layout.decorations) {
     const x = d.x * TILE;
     const y = d.y * TILE;
@@ -142,10 +156,80 @@ function drawStatic(layout: OfficeLayout, scene: OfficeScene): HTMLCanvasElement
   return canvas;
 }
 
-function drawFurniture(ctx: CanvasRenderingContext2D, f: Furniture, now: number, lit: Activity | null) {
+/** What a screen shows for the activity of the person using it. */
+function drawScreen(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, activity: Activity | null, now: number, seed: number) {
+  if (!activity || activity === "IDLE" || activity === "DONE") {
+    ctx.fillStyle = "#30343f";
+    ctx.fillRect(x, y, w, h);
+    return;
+  }
+  const scroll = Math.floor(now / 350 + seed);
+  switch (activity) {
+    case "CODING":
+    case "THINKING": {
+      ctx.fillStyle = "#1b2130";
+      ctx.fillRect(x, y, w, h);
+      const colors = ["#3bd1c6", "#b58cff", "#f2c94c", "#6aa8ff"];
+      for (let row = 0; row < h - 1; row += 2) {
+        const n = hashString(`${seed}:${scroll + row}`);
+        if (activity === "THINKING" && row > 1) break;
+        ctx.fillStyle = colors[n % colors.length];
+        ctx.fillRect(x + 1 + (n % 2), y + 1 + row, 1 + ((n >>> 4) % (w - 2)), 1);
+      }
+      if (activity === "THINKING" && Math.floor(now / 400) % 2) {
+        ctx.fillStyle = "#e7e9ef";
+        ctx.fillRect(x + 1, y + 3, 1, 2);
+      }
+      return;
+    }
+    case "READING": {
+      ctx.fillStyle = "#eef1f6";
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "#9aa3b5";
+      for (let row = 1; row < h - 1; row += 2) {
+        const n = hashString(`${seed}:${scroll + row}`);
+        ctx.fillRect(x + 1, y + row, 2 + (n % (w - 3)), 1);
+      }
+      return;
+    }
+    case "RUNNING_COMMAND":
+    case "TESTING": {
+      ctx.fillStyle = "#0c1410";
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = activity === "TESTING" ? "#7bdc6b" : "#3fdc7a";
+      for (let row = 0; row < h - 1; row += 2) {
+        const n = hashString(`${seed}:${scroll + row}`);
+        ctx.fillRect(x + 1, y + 1 + row, 1 + (n % (w - 2)), 1);
+      }
+      return;
+    }
+    case "WAITING_PERMISSION":
+    case "WAITING_INPUT": {
+      ctx.fillStyle = "#1b2130";
+      ctx.fillRect(x, y, w, h);
+      const blink = Math.floor(now / 350) % 2 === 0;
+      ctx.fillStyle = activity === "WAITING_PERMISSION" ? (blink ? "#ff5c5c" : "#a83a3a") : blink ? "#f2994a" : "#9c5d2a";
+      ctx.fillRect(x + 1, y + 2, w - 2, h - 4);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(x + Math.floor(w / 2), y + 3, 1, Math.max(1, h - 7));
+      ctx.fillRect(x + Math.floor(w / 2), y + h - 3, 1, 1);
+      return;
+    }
+    case "ERROR": {
+      ctx.fillStyle = Math.floor(now / 200) % 2 ? "#7a1f1f" : "#3a1414";
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "#ff8a8a";
+      ctx.fillRect(x + 1, y + 1, w - 2, 1);
+      return;
+    }
+  }
+}
+
+function drawFurniture(ctx: CanvasRenderingContext2D, f: Furniture, now: number, activity: Activity | null) {
   const x = f.x * TILE;
   const y = f.y * TILE;
   const w = f.w * TILE;
+  const seed = f.x * 31 + f.y * 7;
   switch (f.kind) {
     case "desk":
     case "console":
@@ -160,29 +244,29 @@ function drawFurniture(ctx: CanvasRenderingContext2D, f: Furniture, now: number,
       ctx.fillStyle = edge;
       ctx.fillRect(x, y + 9, w, 3);
       if (f.kind === "testBench") {
+        // Test rig: a small screen with a progress bar and a status light.
         ctx.fillStyle = "#2b2f3a";
-        ctx.fillRect(x + 3, y - 3, 8, 6);
-        ctx.fillStyle = Math.floor(now / 500) % 2 && lit ? "#3fbf5f" : "#2f8f4a";
-        ctx.fillRect(x + 5, y - 1, 2, 2);
+        ctx.fillRect(x + 3, y - 4, 10, 7);
+        if (activity) {
+          const failing = activity === "ERROR";
+          const progress = failing ? 6 : 1 + (Math.floor(now / 250 + seed) % 7);
+          ctx.fillStyle = failing ? "#ff5c5c" : "#7bdc6b";
+          ctx.fillRect(x + 4, y - 1, progress, 2);
+          ctx.fillStyle = Math.floor(now / 500) % 2 ? (failing ? "#ff5c5c" : "#3fbf5f") : "#2f5f3a";
+        } else {
+          ctx.fillStyle = "#2f5f3a";
+        }
+        ctx.fillRect(x + 4, y - 3, 2, 1);
         ctx.fillStyle = "#9aa3b5";
         ctx.fillRect(x + 22, y + 2, 6, 3);
         break;
       }
-      // Monitor (seen from the side/back) and keyboard.
+      // Monitor (to the side of the person) and keyboard.
       ctx.fillStyle = "#23262f";
       ctx.fillRect(x + 1, y - 7, 9, 9);
       ctx.fillStyle = "#3a3f4d";
       ctx.fillRect(x + 4, y + 2, 3, 2);
-      if (lit) {
-        const color = f.kind === "console" ? "#3fdc7a" : lit === "CODING" ? "#3bd1c6" : "#6aa8ff";
-        ctx.fillStyle = color;
-        ctx.globalAlpha = 0.55 + 0.25 * Math.sin(now / 240);
-        ctx.fillRect(x + 2, y - 6, 7, 7);
-        ctx.globalAlpha = 1;
-      } else {
-        ctx.fillStyle = "#30343f";
-        ctx.fillRect(x + 2, y - 6, 7, 7);
-      }
+      drawScreen(ctx, x + 2, y - 6, 7, 7, f.kind === "console" && activity ? "RUNNING_COMMAND" : activity, now, seed);
       ctx.fillStyle = "#c9ced8";
       ctx.fillRect(x + 12, y + 3, 10, 3);
       ctx.fillStyle = "#9aa1ae";
@@ -288,9 +372,33 @@ function drawFurniture(ctx: CanvasRenderingContext2D, f: Furniture, now: number,
   }
 }
 
-function frameFor(entity: Entity): CharacterFrame {
+/** The pose for what the character is doing (sprites.ts has the frames). */
+export function frameFor(entity: Entity, now: number): CharacterFrame {
   if (entity.path.length) return Math.floor(entity.walkPhase / 140) % 2 ? "walkA" : "walkB";
-  return entity.sitting ? "sit" : "stand";
+  if (entity.celebrating) return "celebrate";
+  const sit = entity.sitting;
+  const offset = hashString(entity.key) % 7;
+  switch (entity.activity) {
+    case "CODING":
+      return sit ? (Math.floor(now / 170 + offset) % 2 ? "typeA" : "typeB") : "stand";
+    case "RUNNING_COMMAND":
+    case "TESTING":
+      return sit ? (Math.floor(now / 420 + offset) % 3 === 0 ? "typeA" : "sit") : "stand";
+    case "READING":
+      return sit ? "read" : "readStand";
+    case "THINKING":
+      return sit ? "think" : "thinkStand";
+    case "WAITING_PERMISSION":
+    case "WAITING_INPUT":
+      // Waves now and then to be noticed.
+      return Math.floor(now / 600 + offset) % 4 === 3 ? (sit ? "sit" : "stand") : sit ? "raise" : "raiseStand";
+    case "ERROR":
+      return sit ? "worried" : "worriedStand";
+    case "IDLE":
+      return sit ? "coffee" : "coffeeStand";
+    case "DONE":
+      return "celebrate";
+  }
 }
 
 function drawIcon(ctx: CanvasRenderingContext2D, name: string, x: number, y: number) {
@@ -298,23 +406,53 @@ function drawIcon(ctx: CanvasRenderingContext2D, name: string, x: number, y: num
   if (sprite) ctx.drawImage(sprite, x, y);
 }
 
-function drawBubble(ctx: CanvasRenderingContext2D, entity: Entity, now: number) {
-  const icon: Partial<Record<Activity, string>> = {
-    READING: "doc",
-    CODING: "code",
-    RUNNING_COMMAND: "terminal",
-    TESTING: "flask",
-    WAITING_PERMISSION: "alert",
-    WAITING_INPUT: "question",
-    ERROR: "error",
-    DONE: "check",
-  };
-  const activity = entity.activity;
-  if (activity === "IDLE" && entity.zone !== "lounge") return;
+const BUBBLE_ICON: Partial<Record<Activity, string>> = {
+  READING: "doc",
+  CODING: "code",
+  RUNNING_COMMAND: "terminal",
+  TESTING: "flask",
+  WAITING_PERMISSION: "alert",
+  WAITING_INPUT: "question",
+  ERROR: "error",
+  DONE: "check",
+  IDLE: "coffee",
+};
+
+function drawThoughtCloud(ctx: CanvasRenderingContext2D, x: number, y: number, now: number) {
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#2b2f3a";
+  ctx.lineWidth = 1;
+  // Trail of small puffs from the head to the cloud.
+  ctx.fillRect(x - 2, y + 13, 2, 2);
+  ctx.fillRect(x, y + 10, 3, 2);
+  // Cloud: three overlapping blobs.
+  const blobs: [number, number, number, number][] = [
+    [x + 1, y + 1, 13, 8],
+    [x + 3, y - 1, 9, 3],
+    [x, y + 3, 15, 4],
+  ];
+  ctx.fillStyle = "#2b2f3a";
+  for (const [bx, by, bw, bh] of blobs) ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+  ctx.fillStyle = "#ffffff";
+  for (const [bx, by, bw, bh] of blobs) ctx.fillRect(bx, by, bw, bh);
+  const phase = Math.floor(now / 300) % 4;
+  ctx.fillStyle = "#6b5bd6";
+  for (let i = 0; i < 3; i++) if (i < phase) ctx.fillRect(x + 3 + i * 3, y + 4, 2, 2);
+}
+
+/** Draws the activity bubble; returns false when the activity has none. */
+function drawBubble(ctx: CanvasRenderingContext2D, entity: Entity, lift: number, now: number): boolean {
+  const activity = entity.celebrating ? "DONE" : entity.activity;
+  const bx = Math.round(entity.x + 3);
+  if (activity === "THINKING") {
+    drawThoughtCloud(ctx, bx, Math.round(entity.y - 32 - lift), now);
+    return true;
+  }
+  const name = BUBBLE_ICON[activity];
+  if (!name || (activity === "IDLE" && entity.zone !== "lounge")) return false;
   const waiting = activity === "WAITING_PERMISSION" || activity === "WAITING_INPUT";
   const bob = waiting ? Math.round(Math.abs(Math.sin(now / 160)) * -3) : 0;
-  const bx = Math.round(entity.x + 3);
-  const by = Math.round(entity.y - 30 + bob);
+  const by = Math.round(entity.y - 30 + bob - lift);
   ctx.fillStyle = activity === "WAITING_PERMISSION" || activity === "ERROR" ? "#fff1f1" : "#ffffff";
   ctx.fillRect(bx, by, 11, 10);
   ctx.fillStyle = "#2b2f3a";
@@ -324,18 +462,45 @@ function drawBubble(ctx: CanvasRenderingContext2D, entity: Entity, now: number) 
   ctx.fillRect(bx + 11, by, 1, 10);
   ctx.fillRect(bx + 1, by + 11, 2, 1);
   ctx.fillRect(bx, by + 12, 1, 1);
-  if (activity === "THINKING") {
-    const phase = Math.floor(now / 300) % 4;
-    ctx.fillStyle = "#6b5bd6";
-    for (let i = 0; i < 3; i++) if (i < phase) ctx.fillRect(bx + 2 + i * 3, by + 5, 2, 2);
-    return;
-  }
-  const name = activity === "IDLE" ? "coffee" : icon[activity];
-  if (name) drawIcon(ctx, name, bx + 2, by + 2);
+  drawIcon(ctx, name, bx + 2, by + 2);
+  return true;
 }
+
+const CONFETTI = ["#f2c94c", "#ff5c5c", "#3bd1c6", "#b58cff", "#7bdc6b", "#6aa8ff"];
+
+/** Confetti falling around a character that just finished (t in ms since the end). */
+function drawConfetti(ctx: CanvasRenderingContext2D, x: number, y: number, t: number, seed: number) {
+  for (let i = 0; i < 14; i++) {
+    const n = hashString(`${seed}:${i}`);
+    const life = ((t + (n % 600)) % 1200) / 1200;
+    const px = x + ((n % 29) - 14) + Math.sin(life * 6 + i) * 2;
+    const py = y - 34 + life * 30;
+    ctx.globalAlpha = 1 - life * 0.6;
+    ctx.fillStyle = CONFETTI[i % CONFETTI.length];
+    ctx.fillRect(Math.round(px), Math.round(py), i % 3 === 0 ? 2 : 1, 1);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** A puff of dust where a character leaves the office. */
+function drawPoof(ctx: CanvasRenderingContext2D, x: number, y: number, progress: number) {
+  const r = 3 + progress * 6;
+  ctx.globalAlpha = 0.5 * (1 - progress);
+  ctx.fillStyle = "#e7e3da";
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    ctx.fillRect(Math.round(x + Math.cos(a) * r) - 1, Math.round(y - 6 + Math.sin(a) * r * 0.6) - 1, 3, 3);
+  }
+  ctx.globalAlpha = 1;
+}
+
+type Drawable = { y: number; furniture?: Furniture; entity?: Entity };
 
 export class OfficeRenderer {
   private staticLayer: HTMLCanvasElement | null = null;
+  private readonly looks = new Map<string, CharacterLook>();
+  private readonly textWidths = new Map<string, number>();
+  private readonly drawables: Drawable[] = [];
   scale = 2;
   offsetX = 0;
   offsetY = 0;
@@ -356,6 +521,34 @@ export class OfficeRenderer {
     return { x: (px - this.offsetX) / this.scale, y: (py - this.offsetY) / this.scale };
   }
 
+  /** Screen position (device pixels) of a layout point. */
+  toScreen(x: number, y: number) {
+    return { x: this.offsetX + x * this.scale, y: this.offsetY + y * this.scale };
+  }
+
+  private look(entity: Entity, agent: AgentState | undefined, providers: Record<string, ProviderInfo>): CharacterLook {
+    const accent = (agent && providers[agent.provider]?.descriptor.accentColor) || "#9aa3b5";
+    const cacheKey = `${entity.key}|${accent}|${entity.isMain}`;
+    let look = this.looks.get(cacheKey);
+    if (!look) {
+      look = characterLook(entity.key, accent, !entity.isMain);
+      if (this.looks.size > 2_000) this.looks.clear();
+      this.looks.set(cacheKey, look);
+    }
+    return look;
+  }
+
+  private measure(ctx: CanvasRenderingContext2D, text: string): number {
+    const key = `${ctx.font}|${text}`;
+    let w = this.textWidths.get(key);
+    if (w === undefined) {
+      w = ctx.measureText(text).width;
+      if (this.textWidths.size > 4_000) this.textWidths.clear();
+      this.textWidths.set(key, w);
+    }
+    return w;
+  }
+
   draw(ctx: CanvasRenderingContext2D, width: number, height: number, input: RenderInput): Hitbox[] {
     const { scene, agents, providers, now } = input;
     this.fit(width, height);
@@ -370,16 +563,22 @@ export class OfficeRenderer {
 
     const entities = [...scene.entities.values()];
     const hitboxes: Hitbox[] = [];
+    const focusKey = input.hoverKey ?? input.selectedKey;
+    const focusAgent = focusKey ? agents[focusKey] : undefined;
+    // The focused agent's team: its lead and every subagent of that lead.
+    const familyRoot = focusAgent ? (focusAgent.parentKey ?? focusAgent.key) : null;
 
-    // Parent → subagent links.
+    // Lead → subagent links: always in a small office; in a busy one only
+    // for the focused team (subagents already sit next to their lead).
+    const allLinks = entities.length <= 16;
     ctx.lineWidth = 1;
     ctx.setLineDash([2, 2]);
     for (const e of entities) {
+      const parent = e.parentKey ? scene.entities.get(e.parentKey) : undefined;
+      if (!parent || (!allLinks && e.parentKey !== familyRoot)) continue;
       const agent = agents[e.key];
-      const parent = agent?.parentKey ? scene.entities.get(agent.parentKey) : undefined;
-      if (!agent || !parent) continue;
-      ctx.strokeStyle = providers[agent.provider]?.descriptor.accentColor ?? "#ffffff";
-      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = (agent && providers[agent.provider]?.descriptor.accentColor) || "#ffffff";
+      ctx.globalAlpha = e.parentKey === familyRoot ? 0.9 : 0.45;
       ctx.beginPath();
       ctx.moveTo(parent.x, parent.y - 8);
       ctx.lineTo(e.x, e.y - 8);
@@ -388,10 +587,10 @@ export class OfficeRenderer {
     ctx.globalAlpha = 1;
     ctx.setLineDash([]);
 
-    // Selection / alert rings under characters.
+    // Selection / attention rings under characters.
     for (const e of entities) {
       const selected = e.key === input.selectedKey;
-      const alert = e.activity === "WAITING_PERMISSION" || e.activity === "WAITING_INPUT" || e.activity === "ERROR";
+      const alert = ATTENTION.has(e.activity);
       if (!selected && !alert && e.key !== input.hoverKey) continue;
       ctx.fillStyle = alert ? "#ff4d4d" : selected ? "#f2c94c" : "#ffffff";
       ctx.globalAlpha = alert ? 0.35 + 0.2 * Math.sin(now / 150) : selected ? 0.6 : 0.3;
@@ -402,39 +601,53 @@ export class OfficeRenderer {
     }
 
     // Y-sorted furniture and characters.
-    type Drawable = { y: number; draw: () => void };
-    const drawables: Drawable[] = [];
-    for (const f of this.layout.furniture) {
-      const occupant = f.seatId ? scene.occupant(f.seatId) : undefined;
-      const lit = occupant && occupant.activity !== "IDLE" && occupant.activity !== "DONE" ? occupant.activity : null;
-      drawables.push({ y: (f.y + f.h) * TILE, draw: () => drawFurniture(ctx, f, now, lit) });
-    }
-    for (const e of entities) {
-      const agent = agents[e.key];
-      const accent = (agent && providers[agent.provider]?.descriptor.accentColor) || "#9aa3b5";
-      drawables.push({
-        y: e.y,
-        draw: () => {
-          const frame = frameFor(e);
-          const sprite = spriteCanvas(CHARACTER_FRAMES[frame], characterPalette(e.key, accent), `${e.key}:${accent}:${frame}`);
-          const typing = !e.path.length && (e.activity === "CODING" || e.activity === "RUNNING_COMMAND");
-          const bob = typing ? Math.floor(now / 180) % 2 : 0;
-          if (sprite) ctx.drawImage(sprite, Math.round(e.x - 6), Math.round(e.y - 15 - bob));
-        },
-      });
-      hitboxes.push({
-        key: e.key,
-        kind: "agent",
-        x: this.offsetX + (e.x - 8) * this.scale,
-        y: this.offsetY + (e.y - 18) * this.scale,
-        w: 16 * this.scale,
-        h: 20 * this.scale,
-      });
-    }
+    const drawables = this.drawables;
+    drawables.length = 0;
+    for (const f of this.layout.furniture) drawables.push({ y: (f.y + f.h) * TILE, furniture: f });
+    for (const e of entities) drawables.push({ y: e.y, entity: e });
     drawables.sort((a, b) => a.y - b.y);
-    for (const d of drawables) d.draw();
+    for (const d of drawables) {
+      if (d.furniture) {
+        const f = d.furniture;
+        const occupant = f.seatId ? scene.occupant(f.seatId) : undefined;
+        const activity = occupant && !occupant.celebrating ? occupant.activity : null;
+        drawFurniture(ctx, f, now, activity);
+        continue;
+      }
+      const e = d.entity!;
+      const agent = agents[e.key];
+      const sprite = characterCanvas(this.look(e, agent, providers), frameFor(e, now));
+      const typing = !e.path.length && e.sitting && e.activity === "CODING";
+      const jump = e.celebrating ? Math.round(Math.abs(Math.sin(now / 130)) * 4) : 0;
+      const bob = typing ? Math.floor(now / 180) % 2 : 0;
+      const fading = e.fadeMs > 0;
+      if (fading) ctx.globalAlpha = Math.max(0, 1 - e.fadeMs / EXIT_FADE_MS);
+      if (sprite) ctx.drawImage(sprite, Math.round(e.x - SPRITE_W / 2), Math.round(e.y - (SPRITE_H - 1) - bob - jump));
+      ctx.globalAlpha = 1;
+      if (fading) drawPoof(ctx, e.x, e.y, Math.min(1, e.fadeMs / EXIT_FADE_MS));
+      if (e.celebrating && agent?.endedAt !== undefined) drawConfetti(ctx, e.x, e.y, now - agent.endedAt, hashString(e.key));
+      if (!fading) {
+        hitboxes.push({
+          key: e.key,
+          kind: "agent",
+          x: this.offsetX + (e.x - 8) * this.scale,
+          y: this.offsetY + (e.y - 18) * this.scale,
+          w: 16 * this.scale,
+          h: 20 * this.scale,
+        });
+      }
+    }
 
-    for (const e of entities) drawBubble(ctx, e, now);
+    // Bubbles: always for leads and for anyone who needs attention; for
+    // other subagents only when their team is focused (keeps 70 agents calm).
+    const withBubble = new Set<string>();
+    for (const e of entities) {
+      if (e.fadeMs > 0) continue;
+      const important = e.isMain || e.celebrating || ATTENTION.has(e.activity);
+      const focused = e.key === focusKey || (familyRoot !== null && (e.key === familyRoot || e.parentKey === familyRoot));
+      if (!important && !focused) continue;
+      if (drawBubble(ctx, e, e.celebrating ? Math.round(Math.abs(Math.sin(now / 130)) * 4) : 0, now)) withBubble.add(e.key);
+    }
 
     // CEO inbox: pending approvals waiting for the user.
     const ceoDesk = this.layout.furniture.find((f) => f.kind === "ceoDesk");
@@ -451,7 +664,7 @@ export class OfficeRenderer {
       hitboxes.push({
         key: "ceo-inbox",
         kind: "inbox",
-        x: this.offsetX + (ceoDesk.x * TILE) * this.scale,
+        x: this.offsetX + ceoDesk.x * TILE * this.scale,
         y: this.offsetY + (ceoDesk.y * TILE - 10) * this.scale,
         w: ceoDesk.w * TILE * this.scale,
         h: 26 * this.scale,
@@ -467,9 +680,31 @@ export class OfficeRenderer {
       const y = this.offsetY + (room.rect.y + 1) * TILE * this.scale + 8;
       const text = room.name.toUpperCase();
       ctx.fillStyle = "rgba(15,17,23,0.55)";
-      ctx.fillRect(x - 3, y - 7, ctx.measureText(text).width + 6, 14);
+      ctx.fillRect(x - 3, y - 7, this.measure(ctx, text) + 6, 14);
       ctx.fillStyle = "#e7e9ef";
       ctx.fillText(text, x, y);
+    }
+
+    // Team name plates on the desk rows.
+    ctx.font = `700 ${Math.max(10, Math.round(5.5 * this.scale))}px "Segoe UI", system-ui, sans-serif`;
+    const room = (id: string) => this.layout.rooms.find((r) => r.id === id)?.rect;
+    for (const { pod, names } of scene.podLabels()) {
+      const rect = room(pod.roomId);
+      // The plate may use the floor up to the room's wall.
+      const maxW = ((rect ? rect.x + rect.w - 1 : pod.label.x + 4) - pod.label.x) * TILE * this.scale - 4;
+      let text = names.join(" · ");
+      while (text.length > 1 && this.measure(ctx, text) + 12 > maxW) text = `${text.slice(0, -2)}…`;
+      const x = this.offsetX + pod.label.x * TILE * this.scale;
+      const y = this.offsetY + (pod.label.y * TILE + TILE / 2) * this.scale;
+      const w = this.measure(ctx, text) + 12;
+      ctx.fillStyle = "#3d2a1c";
+      ctx.fillRect(x - 1, y - 10, w + 2, 20);
+      ctx.fillStyle = "#8a5a33";
+      ctx.fillRect(x, y - 9, w, 18);
+      ctx.fillStyle = "#f2c94c";
+      ctx.fillRect(x, y - 9, 3, 18);
+      ctx.fillStyle = "#fff6e6";
+      ctx.fillText(text, x + 7, y + 0.5);
     }
 
     if (ceoDesk && input.pendingApprovals > 0) {
@@ -485,6 +720,7 @@ export class OfficeRenderer {
       ctx.textAlign = "left";
     }
 
+    // Name tags: leads always, subagents when few or focused.
     const labelAll = entities.length <= 16;
     ctx.font = `600 ${Math.max(10, Math.round(5.5 * this.scale))}px "Segoe UI", system-ui, sans-serif`;
     const placed: { l: number; t: number; r: number; b: number }[] = [];
@@ -492,7 +728,7 @@ export class OfficeRenderer {
       .filter((e) => {
         const agent = agents[e.key];
         const focused = e.key === input.selectedKey || e.key === input.hoverKey;
-        return agent && (agent.isMain || labelAll || focused);
+        return agent && e.fadeMs === 0 && (agent.isMain || labelAll || focused);
       })
       .sort((a, b) => b.y - a.y);
     for (const e of labelled) {
@@ -502,11 +738,14 @@ export class OfficeRenderer {
       const badge = provider?.badge ?? "?";
       const name = agent.name.length > 18 ? `${agent.name.slice(0, 17)}…` : agent.name;
       const cx = this.offsetX + e.x * this.scale;
-      let cy = this.offsetY + (e.y - 36) * this.scale;
-      const badgeW = ctx.measureText(badge).width + 8;
-      const nameW = ctx.measureText(name).width + 8;
+      // Above the bubble when there is one, else just above the head.
+      let cy = this.offsetY + (e.y - (withBubble.has(e.key) ? 36 : 23)) * this.scale;
+      const badgeW = this.measure(ctx, badge) + 8;
+      const nameW = this.measure(ctx, name) + 8;
       const total = badgeW + nameW;
-      const left = Math.round(cx - total / 2);
+      // Keep the tag on screen.
+      const left = Math.round(Math.min(Math.max(cx - total / 2, 2), width - total - 2));
+      cy = Math.max(cy, 10);
       // Nudge labels upwards until they no longer overlap one already drawn.
       for (let tries = 0; tries < 4; tries++) {
         const hit = placed.some((p) => left < p.r && left + total > p.l && cy - 8 < p.b && cy + 8 > p.t);
