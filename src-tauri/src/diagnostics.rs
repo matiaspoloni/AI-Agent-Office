@@ -1,5 +1,6 @@
 //! Diagnostics report: providers, integrations, backend, database, Git, paths.
 
+use crate::hooks::HookBridgeStatus;
 use crate::host::Host;
 use crate::paths::{known_paths, PathEntry};
 use ao_core::provider::{InstallationInfo, IntegrationStatus};
@@ -78,6 +79,7 @@ pub struct DiagnosticsReport {
     pub providers: Vec<ProviderDiagnostics>,
     pub paths: Vec<PathEntry>,
     pub provider_errors: Vec<ProviderErrorRecord>,
+    pub hooks: HookBridgeStatus,
 }
 
 const GIT_DIRS: &[&str] = if cfg!(windows) {
@@ -93,9 +95,10 @@ pub async fn run(host: Arc<Host>) -> DiagnosticsReport {
     // Probe every provider concurrently; one slow or failing CLI cannot block the others.
     let mut probes = tokio::task::JoinSet::new();
     for (index, adapter) in host.registry.adapters().into_iter().enumerate() {
+        let ctx = host.adapter_context();
         probes.spawn(async move {
             let installation = adapter.detect_installation().await;
-            let integration = adapter.integration_status().await;
+            let integration = adapter.integration_status(&ctx).await;
             (
                 index,
                 ProviderDiagnostics {
@@ -155,5 +158,6 @@ pub async fn run(host: Arc<Host>) -> DiagnosticsReport {
         providers: providers.into_iter().map(|(_, p)| p).collect(),
         paths: known_paths(&host.paths),
         provider_errors: host.provider_errors(),
+        hooks: host.hook_status(),
     }
 }

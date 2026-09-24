@@ -12,4 +12,17 @@ maxOutputChars: number,
 /**
  * Store prompt text. When off, only the fact that a prompt was sent is kept.
  */
-storePrompts: boolean, };
+storePrompts: boolean, 
+/**
+ * External sessions: permission requests wait for an answer in Agent
+ * Office before Claude shows its own prompt. Off = observe only.
+ */
+answerPermissionsFromApp: boolean, 
+/**
+ * Seconds Agent Office waits for Approve/Reject.
+ */
+permissionTimeoutSecs: number, 
+/**
+ * Poll official listing commands (`claude agents --json`) for sessions.
+ */
+discoverExternalSessions: boolean, };

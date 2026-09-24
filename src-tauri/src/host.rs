@@ -2,6 +2,7 @@
 //! Independent of Tauri so it can run headless (smoke test) and in tests.
 
 use crate::diagnostics::{self, DiagnosticsReport, ProviderErrorRecord};
+use crate::hooks::{HookBridge, HookBridgeStatus};
 use crate::paths::AppPaths;
 use crate::prefs::Preferences;
 use ao_core::batch::{Batcher, UiBatch};
@@ -9,19 +10,24 @@ use ao_core::event::{AgentEvent, EventKind, EventSource, SessionEnded, SessionMo
 use ao_core::ids::{PermissionRequestId, ProjectId, ProviderId, SessionId};
 use ao_core::pipeline::{Ingest, Pipeline, ProjectRoot};
 use ao_core::provider::{
-    AdapterContext, EventSink, LaunchRequest, PermissionDecision, SessionHandle, StopMode,
+    AdapterContext, EventSink, ExternalSessionInfo, HookCall, IntegrationState, IntegrationStatus,
+    LaunchRequest, PermissionDecision, RelayCommand, SessionHandle, StopMode,
 };
 use ao_core::registry::{ProviderInfo, ProviderRegistry};
 use ao_core::sanitize::SanitizeLimits;
 use ao_core::time::now_ms;
 use ao_core::world::{SessionStatus, WorldSnapshot, WorldState};
+use ao_ipc::{HookOrigin, HookRequest, HookResponse};
+use ao_provider_claude::ClaudeOptions;
 use ao_provider_demo::DemoAdapter;
 use ao_store::writer::{StoreWriter, WriteOp};
 use ao_store::{NewProject, Project, Store};
+use serde::Deserialize;
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use ts_rs::TS;
 
 const UI_FLUSH_INTERVAL: Duration = Duration::from_millis(100);
 const PRUNE_INTERVAL: Duration = Duration::from_secs(60);
@@ -30,6 +36,50 @@ const RESTORE_WINDOW_MS: i64 = 24 * 60 * 60 * 1000;
 const MAX_PROVIDER_ERRORS: usize = 100;
 
 pub type UiSink = Box<dyn Fn(UiBatch) + Send + Sync>;
+
+/// How the host is wired to the outside world.
+#[derive(Debug, Clone, Default)]
+pub struct HostOptions {
+    /// Command agent CLIs run to reach Agent Office (`None`: hooks disabled).
+    pub relay: Option<RelayCommand>,
+    pub claude: ClaudeOptions,
+}
+
+impl HostOptions {
+    /// The shipped configuration: this executable is also the hook relay
+    /// (`agent-office.exe hook <provider> …`).
+    pub fn for_app(paths: &AppPaths) -> Self {
+        let relay = match std::env::current_exe() {
+            Ok(program) => Some(RelayCommand {
+                program,
+                prefix_args: vec!["hook".into()],
+                // Hooks run outside our environment, so a non-default data
+                // folder has to be spelled out for the relay to find the token.
+                data_dir: (paths.data_dir != ao_ipc::paths::default_data_dir())
+                    .then(|| paths.data_dir.clone()),
+            }),
+            Err(err) => {
+                tracing::error!(%err, "cannot locate the Agent Office executable; hooks disabled");
+                None
+            }
+        };
+        Self {
+            relay,
+            claude: ClaudeOptions::default(),
+        }
+    }
+}
+
+/// Integration buttons in Diagnostics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum IntegrationAction {
+    Status,
+    Install,
+    Repair,
+    Uninstall,
+}
 
 struct Inner {
     pipeline: Pipeline,
@@ -43,6 +93,8 @@ pub struct Host {
     pub registry: ProviderRegistry,
     pub demo: Arc<DemoAdapter>,
     sink: EventSink,
+    relay: Option<RelayCommand>,
+    hooks: HookBridge,
     inner: Mutex<Inner>,
     store: Mutex<Store>,
     store_error: Option<String>,
@@ -73,10 +125,11 @@ fn open_store(paths: &AppPaths) -> (Store, Store, Option<String>) {
 impl Host {
     /// Builds the host and starts its background tasks. Must be called from
     /// inside a Tokio runtime.
-    pub fn start(paths: AppPaths) -> Arc<Host> {
+    pub fn start(paths: AppPaths, options: HostOptions) -> Arc<Host> {
         let (sink, mut rx) = EventSink::new(65_536);
         let demo = Arc::new(DemoAdapter::new());
-        let registry = crate::providers::build_registry(demo.clone());
+        let registry = crate::providers::build_registry(demo.clone(), options.claude);
+        let endpoint = ao_ipc::Endpoint::for_data_dir(&paths.data_dir);
         let (reader, writer_store, store_error) = open_store(&paths);
         let prefs = Preferences::load(&reader);
 
@@ -93,6 +146,8 @@ impl Host {
             registry,
             demo,
             sink,
+            relay: options.relay,
+            hooks: HookBridge::new(endpoint),
             inner: Mutex::new(Inner {
                 pipeline,
                 world,
@@ -111,6 +166,17 @@ impl Host {
 
         host.close_orphaned_managed_sessions();
         host.purge_old_events();
+
+        let settings = host.preferences().provider_settings();
+        for adapter in host.registry.adapters() {
+            adapter.configure(&settings);
+            let ctx = host.adapter_context();
+            tokio::spawn(async move { adapter.start(ctx).await });
+        }
+        if host.relay.is_some() {
+            let bridge_host = host.clone();
+            tokio::spawn(async move { bridge_host.start_hook_bridge().await });
+        }
 
         let ingest_host = host.clone();
         tokio::spawn(async move {
@@ -156,7 +222,111 @@ impl Host {
     pub fn adapter_context(&self) -> AdapterContext {
         AdapterContext {
             sink: self.sink.clone(),
+            relay: self.relay.clone(),
+            data_dir: self.paths.data_dir.clone(),
         }
+    }
+
+    /// Starts the local IPC server the hook relay talks to. Holds only a weak
+    /// reference so the host can shut down while the listener is running.
+    async fn start_hook_bridge(self: Arc<Self>) {
+        let token = match ao_ipc::token::ensure_token(&self.paths.data_dir) {
+            Ok(token) => token,
+            Err(err) => {
+                let message = format!("cannot create the IPC token: {err}");
+                self.record_provider_error("agent-office", "hooks", &message);
+                *self.hooks.error.lock().expect("error lock") = Some(message);
+                return;
+            }
+        };
+        let weak = Arc::downgrade(&self);
+        let handler = ao_ipc::server::handler(move |request: HookRequest| {
+            let weak = weak.clone();
+            async move {
+                match weak.upgrade() {
+                    Some(host) => host.handle_hook(request).await,
+                    None => HookResponse::default(),
+                }
+            }
+        });
+        match ao_ipc::server::start(self.hooks.endpoint.clone(), token, handler).await {
+            Ok(server) => {
+                tracing::info!(endpoint = %self.hooks.endpoint.display(), "hook bridge listening");
+                *self.hooks.server.lock().expect("server lock") = Some(server);
+            }
+            Err(err) => {
+                let message = format!("hook bridge unavailable: {err}");
+                self.record_provider_error("agent-office", "hooks", &message);
+                *self.hooks.error.lock().expect("error lock") = Some(message);
+            }
+        }
+    }
+
+    /// One hook invocation from an agent CLI. Unknown providers and failures
+    /// answer with an empty response, which lets the agent continue normally.
+    pub async fn handle_hook(&self, request: HookRequest) -> HookResponse {
+        let event = request
+            .payload
+            .get("hook_event_name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        self.hooks
+            .record(&request.provider, event, request.received_at_ms);
+        let Some(adapter) = self.registry.get(&ProviderId::new(&request.provider)) else {
+            return HookResponse::default();
+        };
+        let reply = adapter
+            .handle_hook(
+                HookCall {
+                    managed_origin: request.origin == HookOrigin::Managed,
+                    payload: request.payload,
+                    received_at_ms: request.received_at_ms,
+                    payload_truncated: request.payload_truncated,
+                },
+                self.adapter_context(),
+            )
+            .await;
+        HookResponse {
+            stdout: reply.stdout,
+            exit_code: reply.exit_code,
+        }
+    }
+
+    pub fn hook_status(&self) -> HookBridgeStatus {
+        self.hooks.status(self.relay.as_ref())
+    }
+
+    pub async fn integration_action(
+        &self,
+        provider: ProviderId,
+        action: IntegrationAction,
+    ) -> Result<IntegrationStatus, String> {
+        let adapter = self.adapter(&provider)?;
+        let ctx = self.adapter_context();
+        let result = match action {
+            IntegrationAction::Status => Ok(adapter.integration_status(&ctx).await),
+            IntegrationAction::Install => adapter.install_integration(&ctx).await,
+            IntegrationAction::Repair => adapter.repair_integration(&ctx).await,
+            IntegrationAction::Uninstall => adapter.uninstall_integration(&ctx).await,
+        };
+        match &result {
+            Ok(status) if action != IntegrationAction::Status => {
+                tracing::info!(%provider, ?action, state = ?status.state, "integration updated");
+            }
+            Err(err) => self.record_provider_error(&provider.0, "integration", &err.to_string()),
+            _ => {}
+        }
+        result.map_err(|e| e.to_string())
+    }
+
+    pub async fn list_external_sessions(
+        &self,
+        provider: ProviderId,
+    ) -> Result<Vec<ExternalSessionInfo>, String> {
+        self.adapter(&provider)?
+            .list_sessions()
+            .await
+            .map_err(|e| e.to_string())
     }
 
     /// Managed sessions cannot survive an app restart (their process belonged to
@@ -380,7 +550,7 @@ impl Host {
         self.prefs.lock().expect("prefs lock").clone()
     }
 
-    pub fn set_preferences(&self, prefs: Preferences) -> Result<Preferences, String> {
+    pub async fn set_preferences(&self, prefs: Preferences) -> Result<Preferences, String> {
         let prefs = prefs.normalized();
         self.with_store(|s| prefs.save(s))
             .map_err(|e| e.to_string())?;
@@ -391,6 +561,19 @@ impl Host {
             .set_limits(prefs.sanitize_limits());
         *self.prefs.lock().expect("prefs lock") = prefs.clone();
         self.purge_old_events();
+
+        // Hook settings depend on preferences (e.g. whether permission
+        // requests wait for Agent Office), so installed hooks are refreshed.
+        let settings = prefs.provider_settings();
+        let ctx = self.adapter_context();
+        for adapter in self.registry.adapters() {
+            adapter.configure(&settings);
+            if adapter.integration_status(&ctx).await.state == IntegrationState::NeedsRepair {
+                if let Err(err) = adapter.repair_integration(&ctx).await {
+                    self.record_provider_error(&adapter.id().0, "integration", &err.to_string());
+                }
+            }
+        }
         Ok(prefs)
     }
 
@@ -562,10 +745,23 @@ mod tests {
         format!("{}-{}", std::process::id(), now_ms())
     }
 
+    /// No relay, and a Claude executable that does not exist, so tests never
+    /// see real sessions from the machine they run on.
+    fn test_options() -> HostOptions {
+        HostOptions {
+            relay: None,
+            claude: ClaudeOptions {
+                executable: Some("/nonexistent/claude".into()),
+                config_dir: Some(std::env::temp_dir().join("ao-host-test-no-claude-config")),
+                ..Default::default()
+            },
+        }
+    }
+
     #[tokio::test(flavor = "multi_thread")]
     async fn events_flow_to_state_ui_and_disk() {
         let paths = temp_paths();
-        let host = Host::start(paths.clone());
+        let host = Host::start(paths.clone(), test_options());
         let batches = Arc::new(Mutex::new(Vec::<UiBatch>::new()));
         let sink = batches.clone();
         host.set_ui_sink(Some(Box::new(move |b| sink.lock().unwrap().push(b))));
@@ -628,7 +824,7 @@ mod tests {
     async fn restart_closes_orphaned_managed_sessions() {
         let paths = temp_paths();
         {
-            let host = Host::start(paths.clone());
+            let host = Host::start(paths.clone(), test_options());
             host.adapter_context().sink.emit(AgentEvent::for_session(
                 "demo",
                 "d1",
@@ -641,7 +837,7 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(300)).await;
             host.flush_to_disk();
         }
-        let host = Host::start(paths.clone());
+        let host = Host::start(paths.clone(), test_options());
         tokio::time::sleep(Duration::from_millis(300)).await;
         let snapshot = host.snapshot();
         let session = snapshot

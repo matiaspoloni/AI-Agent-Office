@@ -36,3 +36,6 @@ ts-rs.workspace = true
 
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+
+[dev-dependencies]
+ao-testkit.workspace = true

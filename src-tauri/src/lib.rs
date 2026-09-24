@@ -2,13 +2,14 @@
 
 pub mod commands;
 pub mod diagnostics;
+pub mod hooks;
 pub mod host;
 pub mod logging;
 pub mod paths;
 pub mod prefs;
 pub mod providers;
 
-use host::Host;
+use host::{Host, HostOptions};
 use paths::AppPaths;
 use std::sync::Arc;
 use tauri::Manager;
@@ -22,7 +23,8 @@ pub fn smoke_test() -> i32 {
         .build()
         .expect("tokio runtime");
     runtime.block_on(async {
-        let host = Host::start(paths);
+        let options = HostOptions::for_app(&paths);
+        let host = Host::start(paths, options);
         let handles = host.start_demo_office();
         tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
         host.flush_to_disk();
@@ -58,8 +60,9 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .setup(move |app| {
             // Start the runtime inside Tauri's Tokio runtime so background tasks keep running.
+            let options = HostOptions::for_app(&paths);
             let host: Arc<Host> =
-                tauri::async_runtime::block_on(async { Host::start(paths.clone()) });
+                tauri::async_runtime::block_on(async { Host::start(paths.clone(), options) });
             app.manage(host);
             Ok(())
         })
@@ -80,6 +83,8 @@ pub fn run() {
             commands::recent_events,
             commands::get_preferences,
             commands::set_preferences,
+            commands::integration_action,
+            commands::list_external_sessions,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Agent Office")

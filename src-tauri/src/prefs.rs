@@ -1,5 +1,6 @@
 //! User preferences persisted in the `preferences` table.
 
+use ao_core::provider::ProviderSettings;
 use ao_core::sanitize::SanitizeLimits;
 use ao_store::Store;
 use serde::{Deserialize, Serialize};
@@ -17,6 +18,13 @@ pub struct Preferences {
     pub max_output_chars: u32,
     /// Store prompt text. When off, only the fact that a prompt was sent is kept.
     pub store_prompts: bool,
+    /// External sessions: permission requests wait for an answer in Agent
+    /// Office before Claude shows its own prompt. Off = observe only.
+    pub answer_permissions_from_app: bool,
+    /// Seconds Agent Office waits for Approve/Reject.
+    pub permission_timeout_secs: u32,
+    /// Poll official listing commands (`claude agents --json`) for sessions.
+    pub discover_external_sessions: bool,
 }
 
 impl Default for Preferences {
@@ -25,6 +33,9 @@ impl Default for Preferences {
             retention_days: 14,
             max_output_chars: 8 * 1024,
             store_prompts: true,
+            answer_permissions_from_app: false,
+            permission_timeout_secs: 120,
+            discover_external_sessions: true,
         }
     }
 }
@@ -46,7 +57,16 @@ impl Preferences {
     pub fn normalized(mut self) -> Self {
         self.retention_days = self.retention_days.clamp(1, 365);
         self.max_output_chars = self.max_output_chars.clamp(256, 256 * 1024);
+        self.permission_timeout_secs = self.permission_timeout_secs.clamp(10, 3600);
         self
+    }
+
+    pub fn provider_settings(&self) -> ProviderSettings {
+        ProviderSettings {
+            answer_permissions_from_app: self.answer_permissions_from_app,
+            permission_timeout_secs: self.permission_timeout_secs,
+            discover_external_sessions: self.discover_external_sessions,
+        }
     }
 
     pub fn sanitize_limits(&self) -> SanitizeLimits {

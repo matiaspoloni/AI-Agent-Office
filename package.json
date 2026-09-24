@@ -14,7 +14,7 @@
     "build": "tauri build && node scripts/collect-installer.mjs",
     "build:ui": "tsc --noEmit && vite build",
     "preview:record": "cargo run -q -p ao-provider-demo --example record_preview -- src/ipc/preview-recording.json 90",
-    "bindings": "cargo test -q -p ao-core -p ao-store --lib export_bindings",
+    "bindings": "cargo test -q -p ao-core -p ao-store -p agent-office --lib export_bindings",
     "test": "npm run test:rust && npm run test:ui",
     "test:rust": "cargo test --workspace",
     "test:ui": "vitest run",

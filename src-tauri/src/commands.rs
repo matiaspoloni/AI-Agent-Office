@@ -1,12 +1,15 @@
 //! Tauri commands: the only surface the UI can call.
 
 use crate::diagnostics::DiagnosticsReport;
-use crate::host::Host;
+use crate::host::{Host, IntegrationAction};
 use crate::prefs::Preferences;
 use ao_core::batch::UiBatch;
 use ao_core::event::AgentEvent;
 use ao_core::ids::{PermissionRequestId, ProviderId, SessionId};
-use ao_core::provider::{LaunchRequest, PermissionDecision, SessionHandle, StopMode};
+use ao_core::provider::{
+    ExternalSessionInfo, IntegrationStatus, LaunchRequest, PermissionDecision, SessionHandle,
+    StopMode,
+};
 use ao_core::registry::ProviderInfo;
 use ao_core::world::WorldSnapshot;
 use ao_store::{NewProject, Project};
@@ -169,9 +172,29 @@ pub fn get_preferences(host: HostState<'_>) -> Preferences {
 }
 
 #[tauri::command]
-pub fn set_preferences(
+pub async fn set_preferences(
     host: HostState<'_>,
     preferences: Preferences,
 ) -> Result<Preferences, String> {
-    host.set_preferences(preferences)
+    host.set_preferences(preferences).await
+}
+
+/// Install / repair / uninstall / check a provider's hook integration.
+#[tauri::command]
+pub async fn integration_action(
+    host: HostState<'_>,
+    provider: String,
+    action: IntegrationAction,
+) -> Result<IntegrationStatus, String> {
+    host.integration_action(ProviderId::new(provider), action)
+        .await
+}
+
+/// Sessions reported by the provider's official listing command.
+#[tauri::command]
+pub async fn list_external_sessions(
+    host: HostState<'_>,
+    provider: String,
+) -> Result<Vec<ExternalSessionInfo>, String> {
+    host.list_external_sessions(ProviderId::new(provider)).await
 }
