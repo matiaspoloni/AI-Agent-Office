@@ -219,6 +219,10 @@ pub fn map_hook(payload: &Value, ctx: &HookContext) -> Vec<AgentEvent> {
             }
             _ => Vec::new(),
         },
+        // Managed sessions: stream-json already reports the final message
+        // and the turn result (observed with 2.1.281: both paths fire), so
+        // the hook copy would only duplicate them.
+        "Stop" | "StopFailure" if ctx.managed => Vec::new(),
         "Stop" => {
             let mut out = Vec::new();
             if let Some(message) = s(payload, "last_assistant_message") {
