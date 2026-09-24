@@ -1,0 +1,24 @@
+# Node
+node_modules/
+dist/
+*.log
+npm-debug.log*
+
+# Rust / Tauri
+target/
+src-tauri/gen/schemas/
+src-tauri/binaries/*
+!src-tauri/binaries/.gitkeep
+
+# Local data / editors
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.db
+*.db-wal
+*.db-shm
+coverage/
+test-results/
+playwright-report/
