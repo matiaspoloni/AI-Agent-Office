@@ -209,7 +209,10 @@ impl AgentState {
     /// only cleared by their explicit resolution: hooks run concurrently, so
     /// activity can arrive out of order and prove nothing about them.
     fn clear_answered_permission(&mut self, at: i64) {
-        let observe_only = self.pending_permission.as_ref().is_some_and(|p| !p.can_resolve);
+        let observe_only = self
+            .pending_permission
+            .as_ref()
+            .is_some_and(|p| !p.can_resolve);
         if observe_only && self.pending_permission_at.is_some_and(|t| at > t) {
             self.pending_permission = None;
             self.pending_permission_at = None;
@@ -1061,7 +1064,10 @@ mod tests {
             EventKind::ToolCompleted(done("t0", "Read", ToolCategory::Read)),
             3,
         ));
-        w.apply(&ev(EventKind::PromptSubmitted(PromptSubmitted { text: None }), 4));
+        w.apply(&ev(
+            EventKind::PromptSubmitted(PromptSubmitted { text: None }),
+            4,
+        ));
         assert!(main_agent(&w).pending_permission.is_some());
         w.apply(&ev(
             EventKind::PermissionApproved(PermissionResolved {
