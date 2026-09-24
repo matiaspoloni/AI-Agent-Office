@@ -64,7 +64,7 @@ impl Pipeline {
             .map(|p| (p.id, normalize_path(&p.path)))
             .collect();
         // Longest path first so nested projects win.
-        normalized.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+        normalized.sort_by_key(|p| std::cmp::Reverse(p.1.len()));
         self.projects = normalized;
         self.session_projects.clear();
     }
