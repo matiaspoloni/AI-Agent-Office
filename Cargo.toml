@@ -8,6 +8,7 @@ members = [
   "crates/providers/ao-provider-codex",
   "crates/providers/ao-provider-cursor",
   "crates/providers/ao-provider-demo",
+  "src-tauri",
 ]
 
 [workspace.package]

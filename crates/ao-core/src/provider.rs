@@ -106,6 +106,7 @@ pub enum PermissionDecision {
         /// Approve only this call (`false`) or for the rest of the session (`true`)
         /// when the provider supports it.
         #[serde(default, rename = "forSession")]
+        #[ts(rename = "forSession")]
         for_session: bool,
     },
     Reject {

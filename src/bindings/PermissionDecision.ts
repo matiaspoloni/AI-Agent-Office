@@ -5,4 +5,4 @@ export type PermissionDecision = { "decision": "approve",
  * Approve only this call (`false`) or for the rest of the session (`true`)
  * when the provider supports it.
  */
-for_session: boolean, } | { "decision": "reject", message?: string, };
+forSession: boolean, } | { "decision": "reject", message?: string, };
