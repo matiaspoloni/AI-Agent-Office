@@ -1,0 +1,31 @@
+{
+  "description": "Edit reports a modified file; the unknown tool falls back to category other",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "/tmp/proj/src/a.rs",
+      "old_string": "a",
+      "new_string": "b"
+    },
+    "tool_response": {},
+    "tool_use_id": "toolu_e"
+  },
+  "expected": [
+    {
+      "type": "file.modified",
+      "payload": {
+        "path": "/tmp/proj/src/a.rs"
+      }
+    },
+    {
+      "type": "tool.completed",
+      "payload": {
+        "category": "edit"
+      }
+    }
+  ]
+}

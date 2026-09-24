@@ -1,0 +1,45 @@
+{
+  "description": "PermissionRequest (documented example, no tool_use_id) uses the id assigned by Agent Office",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "permission_mode": "default",
+    "hook_event_name": "PermissionRequest",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "rm -rf node_modules",
+      "description": "Remove node_modules directory"
+    },
+    "permission_suggestions": [
+      {
+        "type": "addRules",
+        "rules": [
+          {
+            "toolName": "Bash",
+            "ruleContent": "rm -rf node_modules"
+          }
+        ],
+        "behavior": "allow",
+        "destination": "localSettings"
+      }
+    ]
+  },
+  "expected": [
+    {
+      "type": "permission.requested",
+      "payload": {
+        "requestId": "perm-1",
+        "toolName": "Bash",
+        "description": "Run: rm -rf node_modules",
+        "canResolve": true
+      }
+    }
+  ],
+  "context": {
+    "permission": [
+      "perm-1",
+      true
+    ]
+  }
+}

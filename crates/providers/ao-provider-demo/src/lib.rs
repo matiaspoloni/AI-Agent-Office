@@ -256,7 +256,7 @@ mod tests {
     async fn permission_can_be_approved_and_session_stopped() {
         let adapter = DemoAdapter::new();
         let (sink, mut rx) = EventSink::new(10_000);
-        let ctx = AdapterContext { sink };
+        let ctx = AdapterContext::new(sink, std::env::temp_dir());
         // Preset index 1 ("munder") runs the tests scenario that asks for permission.
         adapter.next_preset.store(1, Ordering::Relaxed);
         let handle = adapter

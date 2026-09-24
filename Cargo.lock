@@ -22,6 +22,7 @@ dependencies = [
  "ao-provider-cursor",
  "ao-provider-demo",
  "ao-store",
+ "ao-testkit",
  "serde",
  "serde_json",
  "tauri",
@@ -139,8 +140,14 @@ version = "0.1.0"
 dependencies = [
  "ao-core",
  "ao-detect",
+ "ao-process",
+ "ao-testkit",
  "async-trait",
+ "serde",
+ "serde_json",
  "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

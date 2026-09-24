@@ -1,0 +1,19 @@
+{
+  "description": "PostCompact reports the compaction",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "hook_event_name": "PostCompact",
+    "trigger": "auto",
+    "compact_summary": "..."
+  },
+  "expected": [
+    {
+      "type": "context.compacted",
+      "payload": {
+        "text": "auto"
+      }
+    }
+  ]
+}

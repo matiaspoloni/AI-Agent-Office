@@ -26,9 +26,9 @@ pub use event::{AgentEvent, EventKind, EventSource, SessionMode, ToolCategory};
 pub use ids::*;
 pub use pipeline::{Ingest, Pipeline, ProjectRoot};
 pub use provider::{
-    AdapterContext, EventSink, ExternalSessionInfo, InstallationInfo, IntegrationState,
-    IntegrationStatus, LaunchRequest, PermissionDecision, ProviderAdapter, ProviderDescriptor,
-    ProviderError, SessionHandle, StopMode,
+    AdapterContext, EventSink, ExternalSessionInfo, HookCall, HookReply, InstallationInfo,
+    IntegrationState, IntegrationStatus, LaunchRequest, PermissionDecision, ProviderAdapter,
+    ProviderDescriptor, ProviderError, ProviderSettings, RelayCommand, SessionHandle, StopMode,
 };
 pub use registry::{ProviderInfo, ProviderRegistry};
 pub use sanitize::SanitizeLimits;

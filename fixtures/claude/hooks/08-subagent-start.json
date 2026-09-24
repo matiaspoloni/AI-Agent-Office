@@ -1,0 +1,21 @@
+{
+  "description": "SubagentStart (documented example) creates a subagent",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "agent-abc123",
+    "agent_type": "Explore"
+  },
+  "expected": [
+    {
+      "type": "subagent.started",
+      "agentId": "agent-abc123",
+      "sessionId": "11111111-2222-4333-8444-555555555555",
+      "payload": {
+        "agentType": "Explore"
+      }
+    }
+  ]
+}

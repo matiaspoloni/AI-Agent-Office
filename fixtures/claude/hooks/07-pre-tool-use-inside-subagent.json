@@ -1,0 +1,27 @@
+{
+  "description": "Tool call made by a subagent is attributed to that subagent",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "hook_event_name": "PreToolUse",
+    "agent_id": "agent-abc123",
+    "agent_type": "Explore",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/tmp/proj/src/router.ts"
+    },
+    "tool_use_id": "toolu_02"
+  },
+  "expected": [
+    {
+      "type": "tool.started",
+      "agentId": "agent-abc123",
+      "payload": {
+        "toolName": "Read",
+        "category": "read",
+        "title": "Read src/router.ts"
+      }
+    }
+  ]
+}

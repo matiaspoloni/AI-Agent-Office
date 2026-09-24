@@ -7,6 +7,7 @@ use crate::event::{AgentEvent, SessionMode};
 use crate::ids::{PermissionRequestId, ProjectId, ProviderId, SessionId};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -228,10 +229,97 @@ impl EventSink {
     }
 }
 
+/// How agent CLIs must invoke the hook relay (written into hook configs).
+/// In the shipped app this is `<install dir>\agent-office.exe hook …`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RelayCommand {
+    /// Absolute path of the executable.
+    pub program: PathBuf,
+    /// Arguments placed before the provider id (e.g. `["hook"]`).
+    pub prefix_args: Vec<String>,
+    /// Passed as `--data-dir` when Agent Office runs with a non-default data folder.
+    pub data_dir: Option<PathBuf>,
+}
+
+impl RelayCommand {
+    /// Full argument vector for one hook entry.
+    pub fn args(&self, provider: &str, origin: &str, wait_secs: Option<u64>) -> Vec<String> {
+        let mut args = self.prefix_args.clone();
+        args.push(provider.to_owned());
+        args.push("--origin".into());
+        args.push(origin.to_owned());
+        if let Some(wait) = wait_secs {
+            args.push("--wait".into());
+            args.push(wait.to_string());
+        }
+        if let Some(dir) = &self.data_dir {
+            args.push("--data-dir".into());
+            args.push(dir.display().to_string());
+        }
+        args
+    }
+}
+
+/// User preferences that apply to every provider (set in Agent Office).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+#[ts(export)]
+pub struct ProviderSettings {
+    /// External sessions: let Agent Office answer permission prompts (the
+    /// agent's own prompt appears only after the timeout). Off = observe only.
+    pub answer_permissions_from_app: bool,
+    /// Seconds Agent Office waits for Approve/Reject before handing the
+    /// decision back (external) or denying it (managed).
+    pub permission_timeout_secs: u32,
+    /// Discover external sessions through official listing commands.
+    pub discover_external_sessions: bool,
+}
+
+impl Default for ProviderSettings {
+    fn default() -> Self {
+        Self {
+            answer_permissions_from_app: false,
+            permission_timeout_secs: 120,
+            discover_external_sessions: true,
+        }
+    }
+}
+
+/// One hook invocation forwarded by the relay.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HookCall {
+    /// `true` for hooks injected into a session Agent Office launched.
+    pub managed_origin: bool,
+    pub payload: serde_json::Value,
+    pub received_at_ms: i64,
+    pub payload_truncated: bool,
+}
+
+/// What the relay prints to the agent CLI (and its exit code).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct HookReply {
+    pub stdout: Option<String>,
+    pub exit_code: i32,
+}
+
 /// Everything an adapter receives from the host.
 #[derive(Clone)]
 pub struct AdapterContext {
     pub sink: EventSink,
+    /// How to invoke the hook relay; `None` when it is unavailable.
+    pub relay: Option<RelayCommand>,
+    /// Agent Office data folder (per-session scratch files live here).
+    pub data_dir: PathBuf,
+}
+
+impl AdapterContext {
+    pub fn new(sink: EventSink, data_dir: PathBuf) -> Self {
+        Self {
+            sink,
+            relay: None,
+            data_dir,
+        }
+    }
 }
 
 #[async_trait]
@@ -311,25 +399,46 @@ pub trait ProviderAdapter: Send + Sync + 'static {
         })
     }
 
-    async fn integration_status(&self) -> IntegrationStatus {
+    async fn integration_status(&self, _ctx: &AdapterContext) -> IntegrationStatus {
         IntegrationStatus::unsupported("No integration available for this provider in this build.")
     }
 
-    async fn install_integration(&self) -> Result<IntegrationStatus, ProviderError> {
+    async fn install_integration(
+        &self,
+        _ctx: &AdapterContext,
+    ) -> Result<IntegrationStatus, ProviderError> {
         Err(ProviderError::Unsupported {
             capability: "integration",
         })
     }
 
-    async fn uninstall_integration(&self) -> Result<IntegrationStatus, ProviderError> {
+    async fn uninstall_integration(
+        &self,
+        _ctx: &AdapterContext,
+    ) -> Result<IntegrationStatus, ProviderError> {
         Err(ProviderError::Unsupported {
             capability: "integration",
         })
     }
 
-    async fn repair_integration(&self) -> Result<IntegrationStatus, ProviderError> {
+    async fn repair_integration(
+        &self,
+        _ctx: &AdapterContext,
+    ) -> Result<IntegrationStatus, ProviderError> {
         Err(ProviderError::Unsupported {
             capability: "integration",
         })
+    }
+
+    /// Applies user preferences. Called at startup and whenever they change.
+    fn configure(&self, _settings: &ProviderSettings) {}
+
+    /// Starts background work (e.g. discovering external sessions).
+    async fn start(&self, _ctx: AdapterContext) {}
+
+    /// Handles one hook invocation forwarded by the relay. The default
+    /// ignores it (empty reply = the agent proceeds normally).
+    async fn handle_hook(&self, _call: HookCall, _ctx: AdapterContext) -> HookReply {
+        HookReply::default()
     }
 }

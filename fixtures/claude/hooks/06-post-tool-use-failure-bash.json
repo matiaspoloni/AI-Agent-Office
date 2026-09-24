@@ -1,0 +1,37 @@
+{
+  "description": "PostToolUseFailure for a failing npm test (documented example)",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "permission_mode": "default",
+    "hook_event_name": "PostToolUseFailure",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "npm test",
+      "description": "Run test suite"
+    },
+    "tool_use_id": "toolu_01ABC123",
+    "error": "Exit code 1\nError: Cannot find module 'express'",
+    "is_interrupt": false,
+    "duration_ms": 4187
+  },
+  "expected": [
+    {
+      "type": "command.failed",
+      "payload": {
+        "commandId": "toolu_01ABC123",
+        "exitCode": 1,
+        "durationMs": 4187,
+        "error": "Exit code 1"
+      }
+    },
+    {
+      "type": "tool.failed",
+      "payload": {
+        "toolName": "Bash",
+        "detail": "Exit code 1\nError: Cannot find module 'express'"
+      }
+    }
+  ]
+}

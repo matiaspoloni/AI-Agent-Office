@@ -1,0 +1,20 @@
+{
+  "description": "UserPromptSubmit recorded from Claude Code 2.1.281",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "prompt_id": "3efee03b-daf0-4bb6-81e1-939a6f4ebef8",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "hello"
+  },
+  "expected": [
+    {
+      "type": "prompt.submitted",
+      "payload": {
+        "text": "hello"
+      }
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "description": "SessionStart recorded from Claude Code 2.1.281 in -p mode (no model field)",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "hook_event_name": "SessionStart",
+    "source": "startup"
+  },
+  "expected": [
+    {
+      "type": "session.started",
+      "source": "hook",
+      "sessionId": "11111111-2222-4333-8444-555555555555",
+      "agentId": "11111111-2222-4333-8444-555555555555",
+      "payload": {
+        "mode": "external",
+        "cwd": "/tmp/proj",
+        "reason": "startup",
+        "model": null
+      }
+    }
+  ]
+}

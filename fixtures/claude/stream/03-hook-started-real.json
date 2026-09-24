@@ -1,0 +1,13 @@
+{
+  "description": "hook lifecycle messages are ignored (hooks report through the relay)",
+  "input": {
+    "type": "system",
+    "subtype": "hook_started",
+    "hook_id": "88a94dc1-56d5-4979-9b35-661f48f304f2",
+    "hook_name": "SessionStart:startup",
+    "hook_event": "SessionStart",
+    "uuid": "b248f78d-29f0-430b-b4ec-962f19b6a302",
+    "session_id": "11111111-2222-4333-8444-555555555555"
+  },
+  "expected": []
+}

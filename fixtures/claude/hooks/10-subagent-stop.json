@@ -1,0 +1,23 @@
+{
+  "description": "SubagentStop of a real subagent ends it",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "agent-abc123",
+    "agent_type": "Explore",
+    "last_assistant_message": "Found it"
+  },
+  "expected": [
+    {
+      "type": "subagent.ended",
+      "agentId": "agent-abc123",
+      "payload": {
+        "agentType": "Explore",
+        "reason": "completed"
+      }
+    }
+  ]
+}

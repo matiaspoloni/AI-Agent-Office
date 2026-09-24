@@ -1,0 +1,22 @@
+{
+  "description": "StopFailure (documented example) is a recoverable error for rate limits",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "hook_event_name": "StopFailure",
+    "error": "rate_limit",
+    "error_details": "429 Too Many Requests",
+    "last_assistant_message": "API Error: Rate limit reached"
+  },
+  "expected": [
+    {
+      "type": "agent.error",
+      "payload": {
+        "message": "API Error: Rate limit reached",
+        "errorType": "rate_limit",
+        "recoverable": true
+      }
+    }
+  ]
+}

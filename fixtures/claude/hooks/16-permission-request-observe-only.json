@@ -1,0 +1,29 @@
+{
+  "description": "PermissionRequest in observe mode cannot be answered from the app",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "hook_event_name": "PermissionRequest",
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "/tmp/proj/src/a.rs"
+    }
+  },
+  "expected": [
+    {
+      "type": "permission.requested",
+      "payload": {
+        "requestId": "perm-2",
+        "description": "Edit src/a.rs",
+        "canResolve": false
+      }
+    }
+  ],
+  "context": {
+    "permission": [
+      "perm-2",
+      false
+    ]
+  }
+}

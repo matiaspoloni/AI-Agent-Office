@@ -1,0 +1,12 @@
+{
+  "description": "Notification types without office meaning produce nothing",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "hook_event_name": "Notification",
+    "message": "Logged in",
+    "notification_type": "auth_success"
+  },
+  "expected": []
+}

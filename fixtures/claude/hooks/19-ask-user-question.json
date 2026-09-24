@@ -1,0 +1,29 @@
+{
+  "description": "AskUserQuestion means the agent waits for the user's answer",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "AskUserQuestion",
+    "tool_input": {
+      "questions": []
+    },
+    "tool_use_id": "toolu_q"
+  },
+  "expected": [
+    {
+      "type": "tool.started",
+      "payload": {
+        "toolName": "AskUserQuestion",
+        "title": "Ask you a question"
+      }
+    },
+    {
+      "type": "agent.waiting",
+      "payload": {
+        "reason": "input"
+      }
+    }
+  ]
+}

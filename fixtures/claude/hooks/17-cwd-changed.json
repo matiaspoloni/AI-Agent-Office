@@ -1,0 +1,19 @@
+{
+  "description": "CwdChanged updates the session folder (documented fields old_cwd/new_cwd)",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "hook_event_name": "CwdChanged",
+    "old_cwd": "/tmp/proj",
+    "new_cwd": "/tmp/proj/src"
+  },
+  "expected": [
+    {
+      "type": "session.updated",
+      "payload": {
+        "cwd": "/tmp/proj/src"
+      }
+    }
+  ]
+}

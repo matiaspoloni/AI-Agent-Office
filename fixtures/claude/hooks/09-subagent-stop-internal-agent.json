@@ -1,0 +1,16 @@
+{
+  "description": "SubagentStop of an internal helper agent (empty agent_type) is ignored",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "prompt-suggestion-1",
+    "agent_type": "",
+    "agent_transcript_path": "/x",
+    "last_assistant_message": "..."
+  },
+  "expected": []
+}

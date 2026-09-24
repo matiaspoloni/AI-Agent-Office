@@ -1,0 +1,23 @@
+{
+  "description": "SessionStart from a session launched by Agent Office is managed",
+  "input": {
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
+    "cwd": "/tmp/proj",
+    "hook_event_name": "SessionStart",
+    "source": "startup",
+    "model": "claude-opus-5-5"
+  },
+  "expected": [
+    {
+      "type": "session.started",
+      "payload": {
+        "mode": "managed",
+        "model": "claude-opus-5-5"
+      }
+    }
+  ],
+  "context": {
+    "managed": true
+  }
+}

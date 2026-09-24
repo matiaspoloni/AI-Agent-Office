@@ -1,0 +1,25 @@
+{
+  "description": "system/init recorded from Claude Code 2.1.281 (fields trimmed)",
+  "input": {
+    "type": "system",
+    "subtype": "init",
+    "cwd": "/tmp/proj",
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "model": "claude-opus-5-5[1m]",
+    "permissionMode": "default",
+    "apiKeySource": "ANTHROPIC_API_KEY",
+    "claude_code_version": "2.1.281",
+    "uuid": "8e172ecc-6288-42ff-9736-2fb8beb7ded6"
+  },
+  "expected": [
+    {
+      "type": "session.updated",
+      "source": "protocol",
+      "payload": {
+        "model": "claude-opus-5-5[1m]",
+        "cwd": "/tmp/proj",
+        "permissionMode": "default"
+      }
+    }
+  ]
+}
