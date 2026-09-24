@@ -8,6 +8,7 @@ rust-version.workspace = true
 
 [dependencies]
 ao-core.workspace = true
+ao-config.workspace = true
 ao-detect.workspace = true
 ao-process.workspace = true
 async-trait.workspace = true

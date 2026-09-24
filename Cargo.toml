@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "crates/ao-config",
   "crates/ao-core",
   "crates/ao-store",
   "crates/ao-detect",
@@ -22,6 +23,7 @@ license = "MIT"
 rust-version = "1.80"
 
 [workspace.dependencies]
+ao-config = { path = "crates/ao-config" }
 ao-core = { path = "crates/ao-core" }
 ao-store = { path = "crates/ao-store" }
 ao-detect = { path = "crates/ao-detect" }

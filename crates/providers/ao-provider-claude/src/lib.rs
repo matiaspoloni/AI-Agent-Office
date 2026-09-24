@@ -146,10 +146,8 @@ impl ClaudeAdapter {
 
     fn settings_file(&self) -> Option<SettingsFile> {
         match &self.inner.options.config_dir {
-            Some(dir) => Some(SettingsFile {
-                path: dir.join("settings.json"),
-            }),
-            None => SettingsFile::default_location(),
+            Some(dir) => Some(SettingsFile::new(dir.join("settings.json"))),
+            None => settings::default_location(),
         }
     }
 

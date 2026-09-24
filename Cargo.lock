@@ -75,6 +75,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
+name = "ao-config"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "ao-core"
 version = "0.1.0"
 dependencies = [
@@ -138,6 +145,7 @@ dependencies = [
 name = "ao-provider-claude"
 version = "0.1.0"
 dependencies = [
+ "ao-config",
  "ao-core",
  "ao-detect",
  "ao-process",
@@ -154,10 +162,16 @@ dependencies = [
 name = "ao-provider-codex"
 version = "0.1.0"
 dependencies = [
+ "ao-config",
  "ao-core",
  "ao-detect",
+ "ao-process",
+ "ao-testkit",
  "async-trait",
+ "serde_json",
  "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

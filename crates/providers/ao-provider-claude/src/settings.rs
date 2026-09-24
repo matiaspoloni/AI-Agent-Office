@@ -14,8 +14,6 @@ use serde_json::{json, Map, Value};
 use std::path::PathBuf;
 
 pub const PROVIDER_ARG: &str = "claude";
-pub const BACKUP_PREFIX: &str = "settings.json.agent-office-backup-";
-pub const KEEP_BACKUPS: usize = 5;
 
 /// Events Agent Office observes. `PermissionRequest` is added separately
 /// because it can be answered. `WorktreeCreate` is deliberately absent: a
@@ -267,97 +265,16 @@ pub fn evaluate(settings: &Value, plan: &HookPlan) -> (IntegrationState, Vec<Str
     (state, details)
 }
 
-/// The Claude Code user settings file on disk.
-#[derive(Debug, Clone)]
-pub struct SettingsFile {
-    pub path: PathBuf,
-}
+/// The Claude Code user settings file on disk (safe edits via `ao-config`).
+pub type SettingsFile = ao_config::JsonConfigFile;
 
-impl SettingsFile {
-    /// `$CLAUDE_CONFIG_DIR/settings.json`, else `~/.claude/settings.json`.
-    pub fn default_location() -> Option<Self> {
-        let dir = std::env::var_os("CLAUDE_CONFIG_DIR")
-            .map(PathBuf::from)
-            .filter(|p| !p.as_os_str().is_empty())
-            .or_else(|| ao_detect::home_dir().map(|h| h.join(".claude")))?;
-        Some(Self {
-            path: dir.join("settings.json"),
-        })
-    }
-
-    /// `Ok(None)` when the file does not exist; `Err` when it is unreadable or not JSON.
-    pub fn read(&self) -> Result<Option<Value>, String> {
-        match std::fs::read_to_string(&self.path) {
-            Ok(text) if text.trim().is_empty() => Ok(Some(json!({}))),
-            Ok(text) => serde_json::from_str(&text).map(Some).map_err(|e| {
-                format!(
-                    "{} is not valid JSON ({e}); Agent Office will not modify it",
-                    self.path.display()
-                )
-            }),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(e) => Err(format!("cannot read {}: {e}", self.path.display())),
-        }
-    }
-
-    fn backups(&self) -> Vec<PathBuf> {
-        let Some(dir) = self.path.parent() else {
-            return Vec::new();
-        };
-        let mut found: Vec<PathBuf> = std::fs::read_dir(dir)
-            .map(|entries| {
-                entries
-                    .filter_map(|e| e.ok().map(|e| e.path()))
-                    .filter(|p| {
-                        p.file_name()
-                            .is_some_and(|n| n.to_string_lossy().starts_with(BACKUP_PREFIX))
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
-        found.sort();
-        found
-    }
-
-    pub fn backup_count(&self) -> usize {
-        self.backups().len()
-    }
-
-    /// Backs up the current file (if any), then writes `value` atomically.
-    pub fn write(&self, value: &Value) -> Result<Option<PathBuf>, String> {
-        let dir = self
-            .path
-            .parent()
-            .ok_or("settings path has no parent folder")?;
-        std::fs::create_dir_all(dir)
-            .map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
-        let mut backup = None;
-        if self.path.exists() {
-            let stamp = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_millis())
-                .unwrap_or_default();
-            let target = dir.join(format!("{BACKUP_PREFIX}{stamp}"));
-            std::fs::copy(&self.path, &target)
-                .map_err(|e| format!("backup failed, nothing changed: {e}"))?;
-            backup = Some(target);
-            let backups = self.backups();
-            if backups.len() > KEEP_BACKUPS {
-                for old in &backups[..backups.len() - KEEP_BACKUPS] {
-                    let _ = std::fs::remove_file(old);
-                }
-            }
-        }
-        let mut text = serde_json::to_string_pretty(value).map_err(|e| e.to_string())?;
-        text.push('\n');
-        let tmp = dir.join("settings.json.agent-office-tmp");
-        std::fs::write(&tmp, text).map_err(|e| format!("cannot write {}: {e}", tmp.display()))?;
-        std::fs::rename(&tmp, &self.path).map_err(|e| {
-            let _ = std::fs::remove_file(&tmp);
-            format!("cannot replace {}: {e}", self.path.display())
-        })?;
-        Ok(backup)
-    }
+/// `$CLAUDE_CONFIG_DIR/settings.json`, else `~/.claude/settings.json`.
+pub fn default_location() -> Option<SettingsFile> {
+    let dir = std::env::var_os("CLAUDE_CONFIG_DIR")
+        .map(PathBuf::from)
+        .filter(|p| !p.as_os_str().is_empty())
+        .or_else(|| ao_detect::home_dir().map(|h| h.join(".claude")))?;
+    Some(SettingsFile::new(dir.join("settings.json")))
 }
 
 /// Reads, evaluates and reports the integration state of a settings file.
@@ -556,9 +473,7 @@ mod tests {
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
-        let file = SettingsFile {
-            path: dir.join("settings.json"),
-        };
+        let file = SettingsFile::new(dir.join("settings.json"));
 
         // Missing file: install creates it, no backup needed.
         let status = apply(&file, &plan(false), true).unwrap();
@@ -579,7 +494,7 @@ mod tests {
             apply(&file, &plan(i % 2 == 0), true).unwrap();
             std::thread::sleep(std::time::Duration::from_millis(2));
         }
-        assert!(file.backup_count() <= KEEP_BACKUPS);
+        assert!(file.backup_count() <= ao_config::KEEP_BACKUPS);
 
         // Invalid JSON is never modified.
         std::fs::write(&file.path, "{ \"model\": \"opus\", // comment\n}").unwrap();
