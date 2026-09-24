@@ -7,6 +7,7 @@ members = [
   "crates/ao-detect",
   "crates/ao-hook-relay",
   "crates/ao-ipc",
+  "crates/ao-jsonrpc",
   "crates/ao-process",
   "crates/ao-testkit",
   "crates/providers/ao-provider-claude",
@@ -30,6 +31,7 @@ ao-detect = { path = "crates/ao-detect" }
 ao-testkit = { path = "crates/ao-testkit" }
 ao-process = { path = "crates/ao-process" }
 ao-ipc = { path = "crates/ao-ipc" }
+ao-jsonrpc = { path = "crates/ao-jsonrpc" }
 ao-hook-relay = { path = "crates/ao-hook-relay" }
 ao-provider-claude = { path = "crates/providers/ao-provider-claude" }
 ao-provider-codex = { path = "crates/providers/ao-provider-codex" }

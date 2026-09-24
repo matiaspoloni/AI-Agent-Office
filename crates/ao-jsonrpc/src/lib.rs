@@ -1,7 +1,8 @@
-//! Minimal JSON-RPC 2.0 client for `codex app-server` over stdio (one JSON
-//! message per line). Observed with codex-cli 0.156.1: the server omits the
-//! `"jsonrpc"` member in its messages and adds `emittedAtMs` to
-//! notifications, so neither is required here.
+//! Minimal JSON-RPC 2.0 client over the stdio of a managed process, one JSON
+//! message per line (`codex app-server`, ACP agents such as `agent acp`).
+//!
+//! Tolerant by design: servers that omit the `"jsonrpc"` member (codex-cli
+//! 0.156.1 does) or add extra members (`emittedAtMs`) are accepted.
 
 use ao_process::ManagedProcess;
 use serde_json::{json, Value};
@@ -29,7 +30,7 @@ impl std::fmt::Display for RpcError {
         match self {
             RpcError::Server { code, message } => write!(f, "{message} (code {code})"),
             RpcError::Timeout(method) => write!(f, "no answer to `{method}` in time"),
-            RpcError::Closed => write!(f, "codex app-server is not running"),
+            RpcError::Closed => write!(f, "the agent process is not running"),
             RpcError::Io(e) => write!(f, "{e}"),
         }
     }
@@ -98,6 +99,17 @@ impl RpcClient {
         params: Value,
         timeout: Duration,
     ) -> Result<Value, RpcError> {
+        self.request_until(method, params, Some(timeout)).await
+    }
+
+    /// Like [`request`](Self::request); `None` waits until the answer arrives
+    /// or the process exits (long-running calls such as an ACP prompt turn).
+    pub async fn request_until(
+        &self,
+        method: &str,
+        params: Value,
+        timeout: Option<Duration>,
+    ) -> Result<Value, RpcError> {
         let id = json!(self.next_id.fetch_add(1, Ordering::Relaxed));
         let (tx, rx) = oneshot::channel();
         self.pending.lock().expect("rpc lock").insert(key(&id), tx);
@@ -108,6 +120,9 @@ impl RpcClient {
             self.pending.lock().expect("rpc lock").remove(&key(&id));
             return Err(e);
         }
+        let Some(timeout) = timeout else {
+            return rx.await.unwrap_or(Err(RpcError::Closed));
+        };
         match tokio::time::timeout(timeout, rx).await {
             Ok(Ok(result)) => result,
             Ok(Err(_)) => Err(RpcError::Closed),

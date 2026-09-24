@@ -3,8 +3,8 @@
 //! codex-cli 0.156.1). Agent Office never writes trust state: the user
 //! approves hooks in Codex with `/hooks`.
 
-use crate::rpc::{Incoming, RpcClient};
 use crate::settings;
+use ao_jsonrpc::{Incoming, RpcClient};
 use ao_process::{ManagedProcess, ProcessEvent, SpawnSpec, Stream};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};

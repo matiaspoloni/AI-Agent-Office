@@ -10,6 +10,7 @@ rust-version.workspace = true
 ao-config.workspace = true
 ao-core.workspace = true
 ao-detect.workspace = true
+ao-jsonrpc.workspace = true
 ao-process.workspace = true
 async-trait.workspace = true
 serde_json.workspace = true

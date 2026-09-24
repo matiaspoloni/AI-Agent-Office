@@ -10,7 +10,6 @@
 
 pub mod appserver;
 pub mod hooks;
-pub mod rpc;
 pub mod settings;
 pub mod tools;
 pub mod trust;
@@ -25,10 +24,10 @@ use ao_core::provider::{
     ProviderError, ProviderSettings, RelayCommand, SessionHandle, StopMode,
 };
 use ao_core::time::now_ms;
+use ao_jsonrpc::{Incoming, RpcClient};
 use ao_process::{ManagedProcess, ProcessEvent, SpawnSpec, Stream};
 use appserver::{ApprovalKind, Mapper};
 use async_trait::async_trait;
-use rpc::{Incoming, RpcClient};
 use serde_json::{json, Value};
 use settings::{HookPlan, ShellKind};
 use std::collections::{HashMap, VecDeque};
