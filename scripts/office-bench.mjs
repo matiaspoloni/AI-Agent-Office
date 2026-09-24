@@ -41,9 +41,10 @@ if (!existsSync("dist/index.html")) {
 }
 
 const { chromium } = await loadPlaywright();
-const server = spawn("npx", ["vite", "preview", "--port", String(port), "--strictPort"], {
+// Start Vite's own entry with this Node (no npx/shell wrapper), so killing
+// the child really stops the server.
+const server = spawn(process.execPath, ["node_modules/vite/bin/vite.js", "preview", "--port", String(port), "--strictPort"], {
   stdio: "ignore",
-  shell: process.platform === "win32",
 });
 const stop = () => server.kill();
 process.on("exit", stop);
