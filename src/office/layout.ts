@@ -73,6 +73,18 @@ export interface Seat {
   sitting: boolean;
 }
 
+/**
+ * A group of desks that one project team shares (a row in the open space).
+ * The scene assigns pods to teams at runtime; `label` is where the team's
+ * name plate is drawn (tile coordinates).
+ */
+export interface DeskPod {
+  id: string;
+  roomId: string;
+  seatIds: string[];
+  label: { x: number; y: number };
+}
+
 // Reserved for later phases (office customization / progression).
 export interface Perk {
   id: string;
@@ -98,6 +110,7 @@ export interface OfficeLayout {
   furniture: Furniture[];
   decorations: Decoration[];
   seats: Seat[];
+  pods: DeskPod[];
 }
 
 function build(): OfficeLayout {
@@ -125,17 +138,23 @@ function build(): OfficeLayout {
 
   const furniture: Furniture[] = [];
   const seats: Seat[] = [];
+  const pods: DeskPod[] = [];
 
-  // Open space: 4 rows x 6 desks. The chair is above the desk; characters face the viewer.
+  // Open space: 4 rows x 6 desks, one row per project team. The chair is
+  // above the desk; characters face the viewer.
   const deskColumns = [3, 7, 11, 15, 19, 23];
   const deskRows = [13, 17, 21, 25];
-  deskRows.forEach((row, r) =>
+  deskRows.forEach((row, r) => {
+    const seatIds: string[] = [];
     deskColumns.forEach((col, c) => {
       const seatId = `desk-${r}-${c}`;
+      seatIds.push(seatId);
       furniture.push({ id: `desk-f-${r}-${c}`, kind: "desk", x: col, y: row, w: 2, h: 1, seatId });
       seats.push({ id: seatId, zone: "desk", roomId: "desks", x: col, y: row - 1, dx: 8, dy: 5, sitting: true });
-    }),
-  );
+    });
+    // Name plate at the end of the row, beside the last chair.
+    pods.push({ id: `pod-${r}`, roomId: "desks", seatIds, label: { x: deskColumns[deskColumns.length - 1] + 2, y: row - 1 } });
+  });
   furniture.push({ id: "plant-os-1", kind: "plant", x: 27, y: 11, w: 1, h: 1 });
   furniture.push({ id: "plant-os-2", kind: "plant", x: 2, y: 11, w: 1, h: 1 });
   furniture.push({ id: "cooler", kind: "waterCooler", x: 27, y: 23, w: 1, h: 1 });
@@ -220,6 +239,7 @@ function build(): OfficeLayout {
       { id: "poster", kind: "poster", x: 8, y: 10 },
     ],
     seats,
+    pods,
   };
 }
 
@@ -303,4 +323,69 @@ export function findPath(
   const path: { x: number; y: number }[] = [];
   for (let cur = goal; cur !== start; cur = prev[cur]) path.push({ x: cur % width, y: Math.floor(cur / width) });
   return path.reverse();
+}
+
+/**
+ * Checks a layout before it is used (the default one in tests; saved or
+ * edited layouts later). Returns human-readable problems; empty = valid.
+ */
+export function validateLayout(layout: OfficeLayout): string[] {
+  const problems: string[] = [];
+  const { width, height } = layout;
+  const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < width && y < height;
+  const unique = (kind: string, ids: string[]) => {
+    const seen = new Set<string>();
+    for (const id of ids) {
+      if (seen.has(id)) problems.push(`duplicate ${kind} id ${id}`);
+      seen.add(id);
+    }
+  };
+  unique("room", layout.rooms.map((r) => r.id));
+  unique("furniture", layout.furniture.map((f) => f.id));
+  unique("seat", layout.seats.map((s) => s.id));
+  unique("pod", layout.pods.map((p) => p.id));
+
+  for (const room of layout.rooms) {
+    const { x, y, w, h } = room.rect;
+    if (!inside(x, y) || !inside(x + w - 1, y + h - 1)) problems.push(`room ${room.id} is outside the office`);
+    for (const d of room.doors) {
+      const onBorder = (d.x === x || d.x === x + w - 1 || d.y === y || d.y === y + h - 1) && d.x >= x && d.x < x + w && d.y >= y && d.y < y + h;
+      if (!onBorder) problems.push(`door ${d.x},${d.y} of ${room.id} is not on its wall`);
+    }
+  }
+
+  const grid = buildGrid(layout);
+  const occupied = new Map<number, string>();
+  for (const f of layout.furniture) {
+    for (let y = f.y; y < f.y + f.h; y++)
+      for (let x = f.x; x < f.x + f.w; x++) {
+        if (!inside(x, y)) {
+          problems.push(`furniture ${f.id} is outside the office`);
+          continue;
+        }
+        const cell = grid.cells[y * width + x];
+        if (cell !== "floor") problems.push(`furniture ${f.id} stands on ${cell} at ${x},${y}`);
+        if (f.solid === false) continue;
+        const other = occupied.get(y * width + x);
+        if (other) problems.push(`furniture ${f.id} overlaps ${other}`);
+        occupied.set(y * width + x, f.id);
+      }
+  }
+
+  const seatIds = new Set(layout.seats.map((s) => s.id));
+  for (const seat of layout.seats) {
+    if (!inside(seat.x, seat.y)) {
+      problems.push(`seat ${seat.id} is outside the office`);
+      continue;
+    }
+    if (occupied.has(seat.y * width + seat.x)) problems.push(`seat ${seat.id} is inside furniture ${occupied.get(seat.y * width + seat.x)}`);
+    if (findPath(grid, layout.entrance, seat).length === 0) problems.push(`seat ${seat.id} cannot be reached from the entrance`);
+  }
+  for (const pod of layout.pods) {
+    for (const id of pod.seatIds) {
+      if (!seatIds.has(id)) problems.push(`pod ${pod.id} lists unknown seat ${id}`);
+      else if (layout.seats.find((s) => s.id === id)?.zone !== "desk") problems.push(`pod ${pod.id} seat ${id} is not a desk`);
+    }
+  }
+  return problems;
 }
