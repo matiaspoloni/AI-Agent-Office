@@ -50,11 +50,20 @@ export function formatTokens(n: number | undefined): string {
 
 /** Usage text that never invents numbers: "Unavailable" when nothing was reported. */
 export function formatUsage(usage: UsageSnapshot | undefined, supported: boolean): string {
-  if (!usage || (usage.inputTokens === undefined && usage.outputTokens === undefined && usage.totalTokens === undefined)) {
+  const tokens =
+    usage && (usage.inputTokens !== undefined || usage.outputTokens !== undefined || usage.totalTokens !== undefined);
+  if (!usage || (!tokens && usage.contextTokens === undefined)) {
     return supported ? "Not reported yet" : "Unavailable";
   }
-  const parts = [`in ${formatTokens(usage.inputTokens)}`, `out ${formatTokens(usage.outputTokens)}`];
-  if (usage.cachedInputTokens !== undefined) parts.push(`cached ${formatTokens(usage.cachedInputTokens)}`);
+  const parts: string[] = [];
+  if (tokens) {
+    parts.push(`in ${formatTokens(usage.inputTokens)}`, `out ${formatTokens(usage.outputTokens)}`);
+    if (usage.cachedInputTokens !== undefined) parts.push(`cached ${formatTokens(usage.cachedInputTokens)}`);
+  }
+  if (usage.contextTokens !== undefined) {
+    const window = usage.contextWindow !== undefined ? ` / ${formatTokens(usage.contextWindow)}` : "";
+    parts.push(`context ${formatTokens(usage.contextTokens)}${window}`);
+  }
   return parts.join(" · ");
 }
 

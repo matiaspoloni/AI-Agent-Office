@@ -816,6 +816,7 @@ fn merge_usage(target: &mut UsageSnapshot, update: &UsageSnapshot) {
     take!(reasoning_tokens);
     take!(total_tokens);
     take!(context_window);
+    take!(context_tokens);
     if update.cost_usd.is_some() {
         target.cost_usd = update.cost_usd;
         target.cost_is_estimate = update.cost_is_estimate;

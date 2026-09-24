@@ -71,3 +71,16 @@ describe("capability gating", () => {
     expect(actionAvailability(byId.demo, "managed", "permissions").enabled).toBe(true);
   });
 });
+
+describe("formatUsage", () => {
+  it("never invents numbers and shows the context fill when reported", async () => {
+    const { formatUsage } = await import("./format");
+    expect(formatUsage(undefined, false)).toBe("Unavailable");
+    expect(formatUsage(undefined, true)).toBe("Not reported yet");
+    expect(formatUsage({ costIsEstimate: false }, true)).toBe("Not reported yet");
+    expect(formatUsage({ contextTokens: 53000, contextWindow: 200000, costIsEstimate: false }, true)).toMatch(/^context 53/);
+    const both = formatUsage({ inputTokens: 1000, outputTokens: 20, contextTokens: 5000, costIsEstimate: false }, true);
+    expect(both).toContain("in ");
+    expect(both).toContain("context ");
+  });
+});

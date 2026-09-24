@@ -264,6 +264,10 @@ pub struct UsageSnapshot {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional, type = "number")]
     pub context_window: Option<u64>,
+    /// Tokens currently in the context window (ACP `usage_update.used`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional, type = "number")]
+    pub context_tokens: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub cost_usd: Option<f64>,
@@ -279,6 +283,7 @@ impl UsageSnapshot {
             && self.cached_input_tokens.is_none()
             && self.reasoning_tokens.is_none()
             && self.total_tokens.is_none()
+            && self.context_tokens.is_none()
             && self.cost_usd.is_none()
     }
 }

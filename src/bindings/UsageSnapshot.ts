@@ -4,7 +4,11 @@
  * Token usage and cost. Every field is optional: only values the provider
  * actually reported are filled in.
  */
-export type UsageSnapshot = { inputTokens?: number, outputTokens?: number, cachedInputTokens?: number, reasoningTokens?: number, totalTokens?: number, contextWindow?: number, costUsd?: number, 
+export type UsageSnapshot = { inputTokens?: number, outputTokens?: number, cachedInputTokens?: number, reasoningTokens?: number, totalTokens?: number, contextWindow?: number, 
+/**
+ * Tokens currently in the context window (ACP `usage_update.used`).
+ */
+contextTokens?: number, costUsd?: number, 
 /**
  * True when the cost is an estimate (e.g. Claude Code's client-side `total_cost_usd`).
  */

@@ -336,7 +336,7 @@ impl Mapper {
                         total_tokens: Some(sum.total),
                         context_window: self.context_window,
                         cost_usd: None,
-                        cost_is_estimate: false,
+                        ..Default::default()
                     }),
                 ));
             }
