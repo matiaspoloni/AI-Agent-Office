@@ -145,3 +145,20 @@ async fn dropping_the_handle_does_not_leave_orphans() {
     drop(process);
     assert!(wait_until(|| !is_process_alive(pid), Duration::from_secs(10)).await);
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_killed_process_is_always_reported_as_killed() {
+    // The exit can be noticed before the kill request is: the report must
+    // still say that Agent Office ended it.
+    for _ in 0..25 {
+        let (process, rx) =
+            ManagedProcess::spawn(SpawnSpec::new(fake_child()).arg("sleep")).unwrap();
+        process.kill_tree();
+        let events = collect_until_exit(rx).await;
+        let Some(ProcessEvent::Exited(info)) = events.last() else {
+            panic!("no exit")
+        };
+        assert!(info.killed, "{info:?}");
+        assert!(!info.success);
+    }
+}

@@ -15,6 +15,7 @@ use std::ffi::OsString;
 use std::io;
 use std::path::PathBuf;
 use std::process::Stdio;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -96,6 +97,9 @@ pub struct ManagedProcess {
     tree: tree::ProcessTree,
     exit: watch::Receiver<Option<ExitInfo>>,
     kill_tx: mpsc::UnboundedSender<()>,
+    /// Set before the tree is signalled, so an exit caused by our kill is
+    /// reported as killed even when it is noticed before the kill request.
+    kill_requested: Arc<AtomicBool>,
 }
 
 async fn pump_lines<R>(reader: R, stream: Stream, tx: mpsc::Sender<ProcessEvent>)
@@ -159,6 +163,8 @@ impl ManagedProcess {
         let (events_tx, events_rx) = mpsc::channel(4096);
         let (exit_tx, exit_rx) = watch::channel(None);
         let (kill_tx, mut kill_rx) = mpsc::unbounded_channel::<()>();
+        let kill_requested = Arc::new(AtomicBool::new(false));
+        let kill_flag = kill_requested.clone();
 
         let readers: Vec<_> = [
             stdout.map(|s| tokio::spawn(pump_lines(s, Stream::Stdout, events_tx.clone()))),
@@ -181,6 +187,7 @@ impl ManagedProcess {
                     }
                 }
             };
+            let killed = killed || kill_flag.load(Ordering::SeqCst);
             // Let the readers drain what is left; grandchildren may keep the
             // pipes open, so don't wait forever.
             for reader in readers {
@@ -215,6 +222,7 @@ impl ManagedProcess {
                 tree,
                 exit: exit_rx,
                 kill_tx,
+                kill_requested,
             }),
             events_rx,
         ))
@@ -280,6 +288,9 @@ impl ManagedProcess {
     /// Kills the process and every descendant in its tree. Safe to call twice.
     pub fn kill_tree(&self) {
         let running = self.is_running();
+        if running {
+            self.kill_requested.store(true, Ordering::SeqCst);
+        }
         self.tree.terminate(running);
         let _ = self.kill_tx.send(());
     }
