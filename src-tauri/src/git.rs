@@ -632,6 +632,17 @@ impl GitService {
         }
     }
 
+    /// Working trees the service follows.
+    pub fn known_roots(&self) -> Vec<String> {
+        self.state
+            .lock()
+            .expect("git state")
+            .trees
+            .keys()
+            .cloned()
+            .collect()
+    }
+
     /// Repositories and project folders, for the UI. File evidence is added
     /// by the host (it needs the sessions' changed files).
     pub fn report(&self) -> (RepositoriesReport, HashMap<String, Vec<LinkedSession>>) {

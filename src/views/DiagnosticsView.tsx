@@ -8,6 +8,7 @@ import { ProcessesCard } from "../components/ProcessesCard";
 import { errorMessage } from "../ipc/backend";
 import { useBackend } from "../ipc/BackendContext";
 import { formatDuration, formatTime, SUPPORT_LABEL } from "../state/format";
+import { gitVersionSupported, MIN_GIT_VERSION } from "../state/git";
 import { useOfficeStore } from "../state/store";
 
 function Status({ ok, children }: { ok: boolean | null; children: React.ReactNode }) {
@@ -286,6 +287,14 @@ export function DiagnosticsView() {
                 <Status ok={report.git.installed}>{report.git.installed ? "Detected" : "Not found"}</Status>{" "}
                 {report.git.version && `v${report.git.version}`}
               </p>
+              {report.git.installed && report.git.version && !gitVersionSupported(report.git.version) && (
+                <p className="bad-text small">
+                  Too old: Agent Office needs Git {MIN_GIT_VERSION.join(".")} or newer to read repositories.
+                </p>
+              )}
+              {!report.git.installed && (
+                <p className="small muted">Without Git, branches and changed files are not shown.</p>
+              )}
               <p className="mono small">{report.git.executablePath ?? report.git.error}</p>
             </section>
             <section className="card">

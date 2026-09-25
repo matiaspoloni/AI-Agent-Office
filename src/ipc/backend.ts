@@ -15,6 +15,7 @@ import type { NewProject } from "../bindings/NewProject";
 import type { PermissionDecision } from "../bindings/PermissionDecision";
 import type { Preferences } from "../bindings/Preferences";
 import type { Project } from "../bindings/Project";
+import type { RepositoriesReport } from "../bindings/RepositoriesReport";
 import type { SessionHandle } from "../bindings/SessionHandle";
 import type { UiBatch } from "../bindings/UiBatch";
 
@@ -39,6 +40,12 @@ export interface Backend {
   openTerminal(provider: string, sessionId: string): Promise<void>;
   /** Agent processes Agent Office started and still tracks. */
   listProcesses(): Promise<ManagedProcessInfo[]>;
+  /** Repositories agents work in and project folders (`refresh`: re-read stale ones first). */
+  listRepositories(refresh: boolean): Promise<RepositoriesReport>;
+  /** Open a session's or project's folder in the file manager. */
+  openFolder(folder: string): Promise<void>;
+  /** Select a file (relative to `folder`) in the file manager. Never runs it. */
+  revealFile(folder: string, path: string): Promise<void>;
   sendPrompt(provider: string, sessionId: string, prompt: string): Promise<void>;
   resolvePermission(
     provider: string,

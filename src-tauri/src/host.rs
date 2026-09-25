@@ -840,6 +840,43 @@ impl Host {
         report
     }
 
+    /// Folders the UI may open: sessions' folders and worktrees, project
+    /// folders and the working trees the Git service follows.
+    fn allowed_folder(&self, folder: &str) -> Result<std::path::PathBuf, String> {
+        let wanted = normalize_folder(folder);
+        let mut known: Vec<String> = self.git.known_roots();
+        {
+            let inner = self.inner.lock().expect("host lock");
+            for s in inner.world.sessions() {
+                known.extend(s.cwd.clone());
+                known.extend(s.worktree.clone());
+            }
+        }
+        known.extend(self.with_store(project_folders).into_iter().map(|(_, p)| p));
+        if !known.iter().any(|k| normalize_folder(k) == wanted) {
+            return Err("Agent Office only opens folders of its sessions and projects.".into());
+        }
+        let path = std::path::PathBuf::from(folder.trim());
+        if !path.is_dir() {
+            return Err(format!(
+                "The folder {folder} does not exist on this computer."
+            ));
+        }
+        Ok(path)
+    }
+
+    /// "Open project": the folder in the file manager.
+    pub fn open_folder(&self, folder: &str) -> Result<(), String> {
+        let dir = self.allowed_folder(folder)?;
+        crate::reveal::open_folder(&dir)
+    }
+
+    /// "Show changed file": the file selected in the file manager (never run).
+    pub fn reveal_file(&self, folder: &str, path: &str) -> Result<(), String> {
+        let dir = self.allowed_folder(folder)?;
+        crate::reveal::reveal(&dir, path)
+    }
+
     /// Opens the user's terminal in a session's folder (see `terminal.rs`).
     /// Works for any session whose folder exists on this computer.
     pub fn open_terminal(&self, provider: &ProviderId, session: &SessionId) -> Result<(), String> {
@@ -910,6 +947,18 @@ impl Host {
     /// Current sanitize limits (exposed for diagnostics).
     pub fn sanitize_limits(&self) -> SanitizeLimits {
         self.prefs.lock().expect("prefs lock").sanitize_limits()
+    }
+}
+
+/// A folder for comparison: `/` separators, no trailing `/`, and
+/// case-insensitive on Windows.
+fn normalize_folder(folder: &str) -> String {
+    let text = folder.trim().replace('\\', "/");
+    let text = text.trim_end_matches('/').to_owned();
+    if cfg!(windows) {
+        text.to_lowercase()
+    } else {
+        text
     }
 }
 
@@ -1093,6 +1142,39 @@ mod tests {
             .open_terminal(&demo, &SessionId::new("t1"))
             .unwrap_err();
         assert!(err.contains("does not exist"), "{err}");
+        let _ = std::fs::remove_dir_all(paths.data_dir);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn only_known_folders_are_opened_and_paths_cannot_escape() {
+        let paths = temp_paths();
+        let host = Host::start(paths.clone(), test_options());
+        let work = paths.data_dir.join("work");
+        std::fs::create_dir_all(&work).unwrap();
+        let work_text = work.display().to_string();
+        let err = host.open_folder(&work_text).unwrap_err();
+        assert!(err.contains("only opens folders"), "{err}");
+        host.adapter_context().sink.emit(AgentEvent::for_session(
+            "demo",
+            "f1",
+            EventSource::Simulation,
+            EventKind::SessionStarted(SessionInfo {
+                cwd: Some(work_text.clone()),
+                ..Default::default()
+            }),
+        ));
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while host.snapshot().sessions.is_empty() {
+            assert!(std::time::Instant::now() < deadline);
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        // Known now, but nothing outside it can be shown.
+        let err = host.reveal_file(&work_text, "../secret.txt").unwrap_err();
+        assert!(err.contains("not inside"), "{err}");
+        let err = host
+            .reveal_file(&work_text, "gone/deleted.txt")
+            .unwrap_err();
+        assert!(err.contains("no longer exists"), "{err}");
         let _ = std::fs::remove_dir_all(paths.data_dir);
     }
 

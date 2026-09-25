@@ -829,3 +829,51 @@ label.check input {
   white-space: nowrap;
   border: 0;
 }
+
+/* Git */
+.chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-2);
+  font-size: 12px;
+}
+
+.table.compact td {
+  padding: 3px 6px;
+}
+
+.git-code {
+  white-space: pre;
+  color: var(--warn);
+  width: 2.5em;
+}
+
+.plain-list {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0;
+}
+
+.repo-card h4 {
+  margin: 12px 0 4px;
+}
+
+.file-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.file-link:hover {
+  text-decoration: underline;
+}
+
+.repo-card h4 .muted {
+  font-weight: normal;
+}

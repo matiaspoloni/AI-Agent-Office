@@ -14,6 +14,7 @@ import {
   isAvailable,
   shortPath,
 } from "../state/format";
+import { folderName, formatGitStatus } from "../state/git";
 import { silentSince } from "../state/silence";
 import { useOfficeStore } from "../state/store";
 import { VirtualList } from "./VirtualList";
@@ -121,6 +122,20 @@ export function AgentPanel() {
     : session.cwd
       ? { enabled: true, reason: `Open your terminal in ${session.cwd}` }
       : { enabled: false, reason: "This session did not report its folder" };
+  // Git folder of the session: its linked worktree, else its repository.
+  const gitRoot = session.worktree ?? session.repositoryId;
+  const projectFolder = project?.path ?? gitRoot ?? session.cwd;
+  const openProject = preview
+    ? previewOnly
+    : projectFolder
+      ? { enabled: true, reason: `Open ${projectFolder} in the file manager` }
+      : { enabled: false, reason: "This session did not report its folder" };
+  const showFile = (file: string) => {
+    const absolute = /^([a-zA-Z]:[\\/]|[\\/])/.test(file);
+    const folder = absolute ? (gitRoot ?? session.cwd) : session.cwd;
+    if (!folder) return;
+    void run("Show file", () => backend.revealFile(folder, file));
+  };
   const quietSince = silentSince(agent, session);
   const pending = agent.pendingPermission;
   const canResolve = !!pending?.canResolve && perms.enabled;
@@ -240,7 +255,25 @@ export function AgentPanel() {
           </Row>
         )}
         {session.restarts > 0 && <Row label="Restarts">{session.restarts}</Row>}
-        <Row label="Branch">{session.branch ?? "—"}</Row>
+        <Row label="Repository">
+          {session.repositoryId ? (
+            <span title={gitRoot}>
+              {folderName(session.repositoryId)}
+              {session.worktree && <span className="muted"> · worktree {folderName(session.worktree)}</span>}
+            </span>
+          ) : (
+            "—"
+          )}
+        </Row>
+        <Row label="Branch">{session.branch ?? (session.repositoryId ? "detached" : "—")}</Row>
+        {session.gitStatus && <Row label="Git changes">{formatGitStatus(session.gitStatus)}</Row>}
+        {session.repositoryId && (
+          <Row label="Commits">
+            <span title="Only commits this agent is known to have made (it ran the git commit)">
+              {session.stats.commits}
+            </span>
+          </Row>
+        )}
         <Row label="Files changed">{session.stats.filesChanged.length}</Row>
         <Row label="Tool calls">
           {agent.toolCalls} {agent.isMain ? `(session ${session.stats.toolCalls})` : ""}
@@ -268,8 +301,14 @@ export function AgentPanel() {
           <h4>Changed files (tool evidence)</h4>
           <ul className="file-list">
             {session.stats.filesChanged.slice(0, 12).map((f) => (
-              <li key={f} title={f}>
-                {f}
+              <li key={f}>
+                {preview || !session.cwd ? (
+                  <span title={f}>{f}</span>
+                ) : (
+                  <button className="file-link" title={`Show ${f} in its folder (not opened or run)`} onClick={() => showFile(f)}>
+                    {f}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -310,7 +349,12 @@ export function AgentPanel() {
           >
             Open terminal
           </button>
-          <button className="btn" disabled title="Opening folders/files arrives with the Git integration (Phase 8)">
+          <button
+            className="btn"
+            disabled={!openProject.enabled || busy}
+            title={openProject.reason}
+            onClick={() => projectFolder && run("Open project", () => backend.openFolder(projectFolder))}
+          >
             Open project
           </button>
         </div>

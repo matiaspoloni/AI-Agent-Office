@@ -1,4 +1,5 @@
 import type { AgentEvent } from "../bindings/AgentEvent";
+import { formatGitStatus } from "./git";
 
 /** One-line, human readable summary of a normalized event (for logs). */
 export function describeEvent(e: AgentEvent): string {
@@ -62,7 +63,7 @@ export function describeEvent(e: AgentEvent): string {
     case "git.commit_created":
       return `Commit ${e.payload.sha.slice(0, 7)}: ${e.payload.summary}`;
     case "git.status_changed":
-      return `Git: ${e.payload.dirty} dirty, ${e.payload.staged} staged`;
+      return `Git: ${formatGitStatus(e.payload)}`;
     case "context.compacted":
       return "Context compacted";
     case "usage.updated":

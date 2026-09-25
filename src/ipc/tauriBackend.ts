@@ -9,6 +9,7 @@ import type { IntegrationStatus } from "../bindings/IntegrationStatus";
 import type { ManagedProcessInfo } from "../bindings/ManagedProcessInfo";
 import type { Preferences } from "../bindings/Preferences";
 import type { Project } from "../bindings/Project";
+import type { RepositoriesReport } from "../bindings/RepositoriesReport";
 import type { SessionHandle } from "../bindings/SessionHandle";
 import type { UiBatch } from "../bindings/UiBatch";
 import type { Backend } from "./backend";
@@ -37,6 +38,9 @@ export function createTauriBackend(): Backend {
     restartSession: (provider, sessionId) => invoke<SessionHandle>("restart_session", { provider, sessionId }),
     openTerminal: (provider, sessionId) => invoke<void>("open_terminal", { provider, sessionId }),
     listProcesses: () => invoke<ManagedProcessInfo[]>("list_processes"),
+    listRepositories: (refresh) => invoke<RepositoriesReport>("list_repositories", { refresh }),
+    openFolder: (folder) => invoke<void>("open_folder", { folder }),
+    revealFile: (folder, path) => invoke<void>("reveal_file", { folder, path }),
     sendPrompt: (provider, sessionId, prompt) => invoke<void>("send_prompt", { provider, sessionId, prompt }),
     resolvePermission: (provider, sessionId, requestId, decision) =>
       invoke<void>("resolve_permission", { provider, sessionId, requestId, decision }),

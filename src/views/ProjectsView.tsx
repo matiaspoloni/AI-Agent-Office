@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { RepositoriesReport } from "../bindings/RepositoriesReport";
+import { RepositoryCard } from "../components/RepositoryCard";
 import { errorMessage } from "../ipc/backend";
 import { useBackend } from "../ipc/BackendContext";
 import { useOfficeStore } from "../state/store";
@@ -12,6 +14,27 @@ export function ProjectsView() {
   const [name, setName] = useState("");
   const [path, setPath] = useState("");
   const [model, setModel] = useState("");
+  const [repos, setRepos] = useState<RepositoriesReport | null>(null);
+  const [reading, setReading] = useState(false);
+
+  // Git state of the project folders (and of other repositories agents
+  // work in), re-read while this view is open.
+  const readRepos = useCallback(async () => {
+    setReading(true);
+    try {
+      setRepos(await backend.listRepositories(true));
+    } catch (error) {
+      pushToast("error", `Git: ${errorMessage(error)}`);
+    } finally {
+      setReading(false);
+    }
+  }, [backend, pushToast]);
+
+  useEffect(() => {
+    void readRepos();
+    const id = window.setInterval(() => void readRepos(), 15_000);
+    return () => window.clearInterval(id);
+  }, [readRepos, projects]);
 
   const refresh = async () => setProjects(await backend.listProjects());
 
@@ -111,10 +134,42 @@ export function ProjectsView() {
             })}
           </tbody>
         </table>
-        <p className="muted small">
-          Repository, branch, worktree and dirty-file details arrive with the Git integration (Phase 8).
-        </p>
       </section>
+
+      <section className="card">
+        <div className="card-title-row">
+          <h3>Repositories</h3>
+          <button className="btn small" disabled={reading} onClick={() => void readRepos()}>
+            {reading ? "Reading…" : "Refresh"}
+          </button>
+        </div>
+        <p className="muted small">
+          Read with your own Git, without changing anything. A file or commit is linked to an agent only with
+          evidence: its tool wrote the file, or it ran the <code>git commit</code>.
+        </p>
+        {repos && !repos.available && <p className="muted">{repos.unavailableReason ?? "Git is not available."}</p>}
+        {repos?.available &&
+          projects.map((p) => {
+            const info = repos.projects.find((r) => r.projectId === p.id);
+            if (info?.worktreeRoot) return null;
+            return (
+              <p key={p.id} className="small">
+                <strong>{p.name}</strong>: <span className="muted">{info?.note ?? "not read yet"}</span>
+              </p>
+            );
+          })}
+      </section>
+
+      {repos?.repositories.map((repo) => {
+        const project = projects.find((p) => repo.projects.includes(p.id));
+        return (
+          <RepositoryCard
+            key={repo.location.worktreeRoot}
+            repo={repo}
+            title={project?.name}
+          />
+        );
+      })}
     </div>
   );
 }

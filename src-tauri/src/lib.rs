@@ -9,6 +9,7 @@ pub mod logging;
 pub mod paths;
 pub mod prefs;
 pub mod providers;
+pub mod reveal;
 pub mod terminal;
 
 use host::{Host, HostOptions};
@@ -88,6 +89,8 @@ pub fn run() {
             commands::open_terminal,
             commands::list_processes,
             commands::list_repositories,
+            commands::open_folder,
+            commands::reveal_file,
             commands::send_prompt,
             commands::resolve_permission,
             commands::recent_events,

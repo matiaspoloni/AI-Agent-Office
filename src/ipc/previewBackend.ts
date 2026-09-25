@@ -124,6 +124,19 @@ export async function createPreviewBackend(): Promise<Backend> {
     },
     // The preview starts no processes.
     listProcesses: async () => [],
+    // The recorded demo has no real folders.
+    listRepositories: async () => ({
+      available: false,
+      unavailableReason: "Git information needs the desktop app (the browser preview is a recording).",
+      repositories: [],
+      projects: [],
+    }),
+    openFolder: async () => {
+      throw new Error(PREVIEW_ONLY);
+    },
+    revealFile: async () => {
+      throw new Error(PREVIEW_ONLY);
+    },
     sendPrompt: async () => {
       throw new Error(PREVIEW_ONLY);
     },

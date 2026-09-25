@@ -4,6 +4,7 @@ import { useBackend } from "../ipc/BackendContext";
 import { actionAvailability } from "../state/capabilities";
 import { ACTIVITY_COLOR, ACTIVITY_LABEL, formatTokens, shortPath } from "../state/format";
 import { useOfficeStore } from "../state/store";
+import { formatGitStatus } from "../state/git";
 
 function Kpi({ label, value, tone }: { label: string; value: string | number; tone?: "warn" | "bad" | "good" }) {
   return (
@@ -135,6 +136,7 @@ export function CommandCenter() {
               <th>Status</th>
               <th>Current action</th>
               <th>Branch</th>
+              <th>Git changes</th>
               <th>Tools</th>
             </tr>
           </thead>
@@ -155,6 +157,7 @@ export function CommandCenter() {
                   </td>
                   <td className="ellipsis">{a.currentAction ?? "—"}</td>
                   <td>{s?.branch ?? "—"}</td>
+                  <td className="small">{a.isMain && s?.gitStatus ? formatGitStatus(s.gitStatus) : "—"}</td>
                   <td>{a.toolCalls}</td>
                 </tr>
               );

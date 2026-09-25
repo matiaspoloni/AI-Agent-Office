@@ -155,6 +155,18 @@ pub async fn list_repositories(
     Ok(host.repositories(refresh).await)
 }
 
+/// "Open project": a session's or project's folder in the file manager.
+#[tauri::command]
+pub fn open_folder(host: HostState<'_>, folder: String) -> Result<(), String> {
+    host.open_folder(&folder)
+}
+
+/// "Show changed file": selects the file in the file manager (never runs it).
+#[tauri::command]
+pub fn reveal_file(host: HostState<'_>, folder: String, path: String) -> Result<(), String> {
+    host.reveal_file(&folder, &path)
+}
+
 /// Agent processes Agent Office started and still tracks.
 #[tauri::command]
 pub fn list_processes() -> Vec<ManagedProcessInfo> {
