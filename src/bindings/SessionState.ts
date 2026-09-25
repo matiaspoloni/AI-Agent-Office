@@ -2,13 +2,22 @@
 import type { GitStatusChanged } from "./GitStatusChanged";
 import type { ProjectId } from "./ProjectId";
 import type { ProviderId } from "./ProviderId";
+import type { RepositoryId } from "./RepositoryId";
 import type { SessionId } from "./SessionId";
 import type { SessionMode } from "./SessionMode";
 import type { SessionStats } from "./SessionStats";
 import type { SessionStatus } from "./SessionStatus";
 import type { UsageSnapshot } from "./UsageSnapshot";
 
-export type SessionState = { key: string, provider: ProviderId, sessionId: SessionId, mode: SessionMode, status: SessionStatus, mainAgentKey: string, agentKeys: Array<string>, projectId?: ProjectId, cwd?: string, model?: string, title?: string, permissionMode?: string, branch?: string, worktree?: string, gitStatus?: GitStatusChanged, pid?: number, startedAt: number, endedAt?: number, lastEventAt: number, endReason?: string, stats: SessionStats, usage?: UsageSnapshot, 
+export type SessionState = { key: string, provider: ProviderId, sessionId: SessionId, mode: SessionMode, status: SessionStatus, mainAgentKey: string, agentKeys: Array<string>, projectId?: ProjectId, cwd?: string, model?: string, title?: string, permissionMode?: string, branch?: string, 
+/**
+ * The linked worktree the session works in (not set for a main one).
+ */
+worktree?: string, 
+/**
+ * The repository (main working tree folder) the session works in.
+ */
+repositoryId?: RepositoryId, gitStatus?: GitStatusChanged, pid?: number, startedAt: number, endedAt?: number, lastEventAt: number, endReason?: string, stats: SessionStats, usage?: UsageSnapshot, 
 /**
  * How many times the session started again after it had ended
  * (Restart in Agent Office, `--resume` in a terminal, …).

@@ -47,6 +47,7 @@ fn options(data_dir: &Path, config_dir: &Path) -> HostOptions {
         cursor: CursorOptions {
             executable: Some(config_dir.join("no-cursor")),
         },
+        git_executable: None,
     }
 }
 

@@ -1,6 +1,7 @@
 //! Tauri commands: the only surface the UI can call.
 
 use crate::diagnostics::{DiagnosticsReport, ManagedProcessInfo};
+use crate::git::RepositoriesReport;
 use crate::host::{Host, IntegrationAction};
 use crate::prefs::Preferences;
 use ao_core::batch::UiBatch;
@@ -142,6 +143,16 @@ pub fn open_terminal(
     session_id: String,
 ) -> Result<(), String> {
     host.open_terminal(&ProviderId::new(provider), &SessionId::new(session_id))
+}
+
+/// Repositories agents work in and project folders (`refresh`: re-read
+/// trees older than a few seconds first).
+#[tauri::command]
+pub async fn list_repositories(
+    host: HostState<'_>,
+    refresh: bool,
+) -> Result<RepositoriesReport, String> {
+    Ok(host.repositories(refresh).await)
 }
 
 /// Agent processes Agent Office started and still tracks.

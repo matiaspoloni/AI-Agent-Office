@@ -2,6 +2,7 @@
 
 pub mod commands;
 pub mod diagnostics;
+pub mod git;
 pub mod hooks;
 pub mod host;
 pub mod logging;
@@ -86,6 +87,7 @@ pub fn run() {
             commands::restart_session,
             commands::open_terminal,
             commands::list_processes,
+            commands::list_repositories,
             commands::send_prompt,
             commands::resolve_permission,
             commands::recent_events,

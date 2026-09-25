@@ -141,7 +141,8 @@ pub fn managed_processes() -> Vec<ManagedProcessInfo> {
     list
 }
 
-const GIT_DIRS: &[&str] = if cfg!(windows) {
+/// Where Git for Windows installs besides PATH.
+pub const GIT_DIRS: &[&str] = if cfg!(windows) {
     &[
         "%ProgramFiles%\\Git\\cmd",
         "%LOCALAPPDATA%\\Programs\\Git\\cmd",

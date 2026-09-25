@@ -49,6 +49,7 @@ fn options(data_dir: &Path, codex_home: &Path) -> HostOptions {
         cursor: CursorOptions {
             executable: Some(codex_home.join("no-cursor")),
         },
+        git_executable: None,
     }
 }
 

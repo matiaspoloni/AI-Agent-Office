@@ -2,6 +2,7 @@
 //! Independent of Tauri so it can run headless (smoke test) and in tests.
 
 use crate::diagnostics::{self, DiagnosticsReport, ProviderErrorRecord};
+use crate::git::{relative_to_tree, GitService, RepositoriesReport};
 use crate::hooks::{HookBridge, HookBridgeStatus};
 use crate::paths::AppPaths;
 use crate::prefs::Preferences;
@@ -50,6 +51,8 @@ pub struct HostOptions {
     pub claude: ClaudeOptions,
     pub codex: CodexOptions,
     pub cursor: CursorOptions,
+    /// The `git` to use (`None`: found on PATH or in Git's usual folders).
+    pub git_executable: Option<std::path::PathBuf>,
 }
 
 impl HostOptions {
@@ -75,6 +78,7 @@ impl HostOptions {
             claude: ClaudeOptions::default(),
             codex: CodexOptions::default(),
             cursor: CursorOptions::default(),
+            git_executable: None,
         }
     }
 }
@@ -101,6 +105,7 @@ pub struct Host {
     pub paths: AppPaths,
     pub registry: ProviderRegistry,
     pub demo: Arc<DemoAdapter>,
+    pub git: Arc<GitService>,
     sink: EventSink,
     relay: Option<RelayCommand>,
     hooks: HookBridge,
@@ -154,11 +159,14 @@ impl Host {
         if let Ok(snapshot) = reader.load_world_since(now_ms() - RESTORE_WINDOW_MS) {
             world.restore(snapshot);
         }
+        let git = GitService::start(sink.clone(), options.git_executable.clone());
+        git.set_projects(project_folders(&reader));
 
         let host = Arc::new(Host {
             paths,
             registry,
             demo,
+            git,
             sink,
             relay: options.relay,
             hooks: HookBridge::new(endpoint),
@@ -420,6 +428,9 @@ impl Host {
             }
         };
         let touched = inner.world.apply(&event);
+        let key = ao_core::ids::session_key(&event.provider, &event.session_id);
+        let folder = inner.world.session(&key).and_then(|s| s.cwd.clone());
+        self.git.observe(&event, folder.as_deref());
         inner.batcher.note(&event, touched);
         inner.persist.push(event);
     }
@@ -551,6 +562,7 @@ impl Host {
     // ------------------------------------------------------------------
 
     fn refresh_projects(&self) {
+        self.git.set_projects(self.with_store(project_folders));
         let roots = self.with_store(project_roots);
         self.inner
             .lock()
@@ -772,6 +784,62 @@ impl Host {
             .map_err(|e| e.to_string())
     }
 
+    /// Repositories agents work in and project folders, with the changed
+    /// files each session's tools are known to have written. `refresh`
+    /// re-reads trees older than a few seconds first.
+    pub async fn repositories(&self, refresh: bool) -> RepositoriesReport {
+        if refresh {
+            self.git.refresh_now(Duration::from_secs(5)).await;
+        }
+        let (mut report, links) = self.git.report();
+        let inner = self.inner.lock().expect("host lock");
+        for repo in &mut report.repositories {
+            let (Some(snapshot), Some(linked)) =
+                (&repo.snapshot, links.get(&repo.location.worktree_root))
+            else {
+                continue;
+            };
+            let root = &repo.location.worktree_root;
+            // Each linked session's written files, relative to the tree.
+            let touched: Vec<(&str, Vec<String>)> = linked
+                .iter()
+                .filter_map(|link| {
+                    let session = inner.world.session(&link.key)?;
+                    let cwd = session.cwd.as_deref().unwrap_or(&link.folder);
+                    let files = session
+                        .stats
+                        .files_changed
+                        .iter()
+                        .filter_map(|f| relative_to_tree(root, cwd, f))
+                        .collect::<Vec<_>>();
+                    (!files.is_empty()).then_some((link.key.as_str(), files))
+                })
+                .collect();
+            for file in &snapshot.status.files {
+                let sessions: Vec<String> = touched
+                    .iter()
+                    .filter(|(_, files)| {
+                        files.iter().any(|t| {
+                            crate::git::covers(&file.path, t)
+                                || file
+                                    .orig_path
+                                    .as_deref()
+                                    .is_some_and(|o| crate::git::covers(o, t))
+                        })
+                    })
+                    .map(|(key, _)| (*key).to_owned())
+                    .collect();
+                if !sessions.is_empty() {
+                    repo.file_sessions.push(crate::git::FileSessions {
+                        path: file.path.clone(),
+                        sessions,
+                    });
+                }
+            }
+        }
+        report
+    }
+
     /// Opens the user's terminal in a session's folder (see `terminal.rs`).
     /// Works for any session whose folder exists on this computer.
     pub fn open_terminal(&self, provider: &ProviderId, session: &SessionId) -> Result<(), String> {
@@ -845,6 +913,15 @@ impl Host {
     }
 }
 
+fn project_folders(store: &Store) -> Vec<(String, String)> {
+    store
+        .list_projects()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|p| (p.id, p.path))
+        .collect()
+}
+
 fn project_roots(store: &Store) -> Vec<ProjectRoot> {
     store
         .list_projects()
@@ -891,6 +968,7 @@ mod tests {
             cursor: CursorOptions {
                 executable: Some("/nonexistent/cursor-agent".into()),
             },
+            git_executable: None,
         }
     }
 

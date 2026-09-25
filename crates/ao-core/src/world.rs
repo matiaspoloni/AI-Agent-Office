@@ -4,10 +4,10 @@
 
 use crate::activity::{activity_for_tool, looks_like_test_command, Activity};
 use crate::event::{
-    AgentEvent, EventKind, GitStatusChanged, PermissionRequested, SessionMode, ToolCategory,
-    UsageSnapshot, WaitingReason,
+    AgentEvent, EventKind, EventSource, GitStatusChanged, PermissionRequested, SessionMode,
+    ToolCategory, UsageSnapshot, WaitingReason,
 };
-use crate::ids::{agent_key, session_key, AgentId, ProjectId, ProviderId, SessionId};
+use crate::ids::{agent_key, session_key, AgentId, ProjectId, ProviderId, RepositoryId, SessionId};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use ts_rs::TS;
@@ -69,9 +69,14 @@ pub struct SessionState {
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
+    /// The linked worktree the session works in (not set for a main one).
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub worktree: Option<String>,
+    /// The repository (main working tree folder) the session works in.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repository_id: Option<RepositoryId>,
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub git_status: Option<GitStatusChanged>,
@@ -438,6 +443,7 @@ impl WorldState {
                     permission_mode: None,
                     branch: None,
                     worktree: None,
+                    repository_id: e.repository_id.clone(),
                     git_status: None,
                     pid: None,
                     started_at: e.timestamp,
@@ -510,8 +516,11 @@ impl WorldState {
         let mut touched = Touched::default();
         let skey = session_key(&e.provider, &e.session_id);
 
-        // Provider-level errors without a known session only go to diagnostics.
-        if matches!(e.kind, EventKind::ProviderError(_)) && !self.sessions.contains_key(&skey) {
+        // Provider-level errors without a known session only go to diagnostics,
+        // and Git findings never create a session (it may have been pruned).
+        if (matches!(e.kind, EventKind::ProviderError(_)) || e.source == EventSource::Git)
+            && !self.sessions.contains_key(&skey)
+        {
             return touched;
         }
 
@@ -540,13 +549,19 @@ impl WorldState {
 
         {
             let session = self.sessions.get_mut(&skey).expect("session exists");
-            // Any sign of life ends a silence.
-            session.silent_since = None;
-            if at > session.last_event_at {
-                session.last_event_at = at;
+            // Any sign of life ends a silence. A Git finding is about the
+            // repository, not a sign that the agent is doing something.
+            if e.source != EventSource::Git {
+                session.silent_since = None;
+                if at > session.last_event_at {
+                    session.last_event_at = at;
+                }
             }
             if session.project_id.is_none() {
                 session.project_id = e.project_id.clone();
+            }
+            if e.repository_id.is_some() {
+                session.repository_id = e.repository_id.clone();
             }
         }
 
@@ -1279,5 +1294,55 @@ mod tests {
             10_000_001,
         ));
         assert!(w.mark_silent(99_000_000, 0).is_empty());
+    }
+
+    #[test]
+    fn git_findings_update_the_repository_but_are_not_agent_activity() {
+        let mut w = WorldState::new();
+        let git = |kind: EventKind, at: i64| {
+            let mut e = AgentEvent::for_session("claude", "s1", EventSource::Git, kind).at(at);
+            e.repository_id = Some(RepositoryId("/work/app".into()));
+            e
+        };
+        // Never creates a session (it may have been pruned meanwhile).
+        let touched = w.apply(&git(
+            EventKind::GitBranchChanged(GitBranchChanged {
+                branch: Some("main".into()),
+                previous: None,
+            }),
+            500,
+        ));
+        assert!(touched.is_empty());
+        assert!(w.session("claude:s1").is_none());
+
+        w.apply(&ev(
+            EventKind::SessionStarted(SessionInfo::default()),
+            1_000,
+        ));
+        w.apply(&ev(
+            EventKind::ToolStarted(tool("t1", "Bash", ToolCategory::Execute, "npm test")),
+            2_000,
+        ));
+        w.mark_silent(70_000, 60_000);
+        let before = main_agent(&w).activity;
+        w.apply(&git(
+            EventKind::GitStatusChanged(GitStatusChanged {
+                dirty: 2,
+                staged: 1,
+                untracked: Some(1),
+                ..Default::default()
+            }),
+            80_000,
+        ));
+        let session = w.session("claude:s1").unwrap();
+        assert_eq!(
+            session.repository_id,
+            Some(RepositoryId("/work/app".into()))
+        );
+        assert_eq!(session.git_status.as_ref().unwrap().dirty, 2);
+        // Still silent: the repository changed, the agent said nothing.
+        assert_eq!(session.silent_since, Some(2_000));
+        assert_eq!(session.last_event_at, 2_000);
+        assert_eq!(main_agent(&w).activity, before);
     }
 }

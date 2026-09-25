@@ -42,6 +42,7 @@ fn options(dir: &Path) -> HostOptions {
         cursor: CursorOptions {
             executable: Some(cargo_bin("ao-testkit", "fake-cursor")),
         },
+        git_executable: None,
     }
 }
 

@@ -530,8 +530,18 @@ pub struct GitCommitCreated {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct GitStatusChanged {
+    /// Files with changes that are not staged: edits, new files, conflicts.
     pub dirty: u32,
+    /// Files with staged changes.
     pub staged: u32,
+    /// Of `dirty`: new files Git does not track yet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub untracked: Option<u32>,
+    /// Of `dirty`: files with merge conflicts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub conflicted: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub ahead: Option<u32>,

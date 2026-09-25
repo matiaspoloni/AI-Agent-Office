@@ -14,6 +14,7 @@ version = "0.1.0"
 dependencies = [
  "ao-core",
  "ao-detect",
+ "ao-git",
  "ao-hook-relay",
  "ao-ipc",
  "ao-process",
@@ -23,6 +24,7 @@ dependencies = [
  "ao-provider-demo",
  "ao-store",
  "ao-testkit",
+ "regex",
  "serde",
  "serde_json",
  "tauri",
