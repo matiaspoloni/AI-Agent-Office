@@ -18,8 +18,15 @@ impl TempDir {
         ));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        // Git reports canonical paths (e.g. /private/tmp on macOS).
-        Self(dir.canonicalize().unwrap())
+        // Git reports real paths (long Windows names, /private/tmp on
+        // macOS). Windows' real path starts with `\\?\`, which Git cannot
+        // use for every command: drop it.
+        let real = dir.canonicalize().unwrap();
+        let text = real.to_string_lossy().into_owned();
+        Self(match text.strip_prefix(r"\\?\") {
+            Some(rest) => PathBuf::from(rest),
+            None => real,
+        })
     }
     fn path(&self) -> &Path {
         &self.0
