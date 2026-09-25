@@ -72,6 +72,16 @@ export function PreferencesCard({ onSaved }: { onSaved?: () => void }) {
               onChange={(e) => set("permissionTimeoutSecs", Number(e.target.value))}
             />
           </label>
+          <label>
+            Warn when a busy agent is silent for (minutes, 0 = never)
+            <input
+              type="number"
+              min={0}
+              max={1440}
+              value={draft.silenceWarningMinutes}
+              onChange={(e) => set("silenceWarningMinutes", Number(e.target.value))}
+            />
+          </label>
           <label className="check">
             <input
               type="checkbox"

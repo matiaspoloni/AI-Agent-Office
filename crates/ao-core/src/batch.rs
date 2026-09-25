@@ -60,6 +60,11 @@ impl Batcher {
         }
     }
 
+    /// Changes that did not come from an event (e.g. a session going silent).
+    pub fn note_touched(&mut self, touched: Touched) {
+        self.dirty.merge(touched);
+    }
+
     pub fn note_removed(&mut self, sessions: Vec<String>, agents: Vec<String>) {
         for s in sessions {
             self.dirty.sessions.remove(&s);

@@ -25,4 +25,9 @@ permissionTimeoutSecs: number,
 /**
  * Poll official listing commands (`claude agents --json`) for sessions.
  */
-discoverExternalSessions: boolean, };
+discoverExternalSessions: boolean, 
+/**
+ * Warn when a busy agent has been silent this many minutes (0 = never).
+ * Only a warning: quiet sessions are never stopped automatically.
+ */
+silenceWarningMinutes: number, };

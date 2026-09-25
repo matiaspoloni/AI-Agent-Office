@@ -25,6 +25,9 @@ pub struct Preferences {
     pub permission_timeout_secs: u32,
     /// Poll official listing commands (`claude agents --json`) for sessions.
     pub discover_external_sessions: bool,
+    /// Warn when a busy agent has been silent this many minutes (0 = never).
+    /// Only a warning: quiet sessions are never stopped automatically.
+    pub silence_warning_minutes: u32,
 }
 
 impl Default for Preferences {
@@ -36,6 +39,7 @@ impl Default for Preferences {
             answer_permissions_from_app: false,
             permission_timeout_secs: 120,
             discover_external_sessions: true,
+            silence_warning_minutes: 5,
         }
     }
 }
@@ -58,6 +62,7 @@ impl Preferences {
         self.retention_days = self.retention_days.clamp(1, 365);
         self.max_output_chars = self.max_output_chars.clamp(256, 256 * 1024);
         self.permission_timeout_secs = self.permission_timeout_secs.clamp(10, 3600);
+        self.silence_warning_minutes = self.silence_warning_minutes.min(24 * 60);
         self
     }
 

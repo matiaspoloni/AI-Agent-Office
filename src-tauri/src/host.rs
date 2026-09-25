@@ -33,6 +33,7 @@ use ts_rs::TS;
 
 const UI_FLUSH_INTERVAL: Duration = Duration::from_millis(100);
 const PRUNE_INTERVAL: Duration = Duration::from_secs(60);
+const SILENCE_CHECK_INTERVAL: Duration = Duration::from_secs(15);
 const KEEP_ENDED_IN_MEMORY_MS: i64 = 15 * 60 * 1000;
 const RESTORE_WINDOW_MS: i64 = 24 * 60 * 60 * 1000;
 const MAX_PROVIDER_ERRORS: usize = 100;
@@ -206,6 +207,19 @@ impl Host {
                     break;
                 };
                 host.flush();
+            }
+        });
+
+        let silence_host = Arc::downgrade(&host);
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(SILENCE_CHECK_INTERVAL);
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                interval.tick().await;
+                let Some(host) = silence_host.upgrade() else {
+                    break;
+                };
+                host.mark_silent_sessions(now_ms());
             }
         });
 
@@ -433,6 +447,20 @@ impl Host {
             if let Some(ui) = self.ui.lock().expect("ui lock").as_ref() {
                 ui(batch);
             }
+        }
+    }
+
+    /// Flags busy sessions that went quiet (see `WorldState::mark_silent`).
+    pub fn mark_silent_sessions(&self, now: i64) {
+        let minutes = self
+            .prefs
+            .lock()
+            .expect("prefs lock")
+            .silence_warning_minutes;
+        let mut inner = self.inner.lock().expect("host lock");
+        let touched = inner.world.mark_silent(now, minutes as i64 * 60_000);
+        if !touched.is_empty() {
+            inner.batcher.note_touched(touched);
         }
     }
 
@@ -839,6 +867,36 @@ mod tests {
             "{err}"
         );
 
+        let _ = std::fs::remove_dir_all(paths.data_dir);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn busy_sessions_that_go_quiet_are_flagged_not_stopped() {
+        let paths = temp_paths();
+        let host = Host::start(paths.clone(), test_options());
+        let sink = host.adapter_context().sink;
+        let t0 = now_ms();
+        let event = |kind: EventKind| {
+            AgentEvent::for_session("demo", "quiet", EventSource::Simulation, kind).at(t0)
+        };
+        sink.emit(event(EventKind::SessionStarted(SessionInfo::default())));
+        sink.emit(event(EventKind::AgentThinking(TextNote::default())));
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while host.snapshot().sessions.is_empty() {
+            assert!(std::time::Instant::now() < deadline);
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        let silence = Preferences::default().silence_warning_minutes as i64 * 60_000;
+        host.mark_silent_sessions(t0 + silence - 1);
+        assert_eq!(host.snapshot().sessions[0].silent_since, None);
+        host.mark_silent_sessions(t0 + silence);
+        let session = host.snapshot().sessions[0].clone();
+        assert_eq!(session.silent_since, Some(t0));
+        assert_eq!(
+            session.status,
+            SessionStatus::Active,
+            "a quiet session is never ended"
+        );
         let _ = std::fs::remove_dir_all(paths.data_dir);
     }
 

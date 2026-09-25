@@ -76,6 +76,7 @@ export class StressOffice {
       startedAt: now,
       lastEventAt: now,
       stats: { prompts: 1, toolCalls: 0, failedTools: 0, commands: 0, errors: 0, subagents: 0, commits: 0, filesChanged: [] },
+      restarts: 0,
     };
   }
 

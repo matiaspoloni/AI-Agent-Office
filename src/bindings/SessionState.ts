@@ -8,4 +8,15 @@ import type { SessionStats } from "./SessionStats";
 import type { SessionStatus } from "./SessionStatus";
 import type { UsageSnapshot } from "./UsageSnapshot";
 
-export type SessionState = { key: string, provider: ProviderId, sessionId: SessionId, mode: SessionMode, status: SessionStatus, mainAgentKey: string, agentKeys: Array<string>, projectId?: ProjectId, cwd?: string, model?: string, title?: string, permissionMode?: string, branch?: string, worktree?: string, gitStatus?: GitStatusChanged, pid?: number, startedAt: number, endedAt?: number, lastEventAt: number, endReason?: string, stats: SessionStats, usage?: UsageSnapshot, };
+export type SessionState = { key: string, provider: ProviderId, sessionId: SessionId, mode: SessionMode, status: SessionStatus, mainAgentKey: string, agentKeys: Array<string>, projectId?: ProjectId, cwd?: string, model?: string, title?: string, permissionMode?: string, branch?: string, worktree?: string, gitStatus?: GitStatusChanged, pid?: number, startedAt: number, endedAt?: number, lastEventAt: number, endReason?: string, stats: SessionStats, usage?: UsageSnapshot, 
+/**
+ * How many times the session started again after it had ended
+ * (Restart in Agent Office, `--resume` in a terminal, …).
+ */
+restarts: number, 
+/**
+ * Set while an agent of the session is busy but nothing has been heard
+ * from it for a while: the time of the last event. Only a warning —
+ * Agent Office never stops a session because it is quiet.
+ */
+silentSince?: number, };

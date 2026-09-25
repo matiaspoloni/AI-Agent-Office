@@ -92,6 +92,16 @@ pub struct SessionState {
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub usage: Option<UsageSnapshot>,
+    /// How many times the session started again after it had ended
+    /// (Restart in Agent Office, `--resume` in a terminal, …).
+    #[serde(default)]
+    pub restarts: u32,
+    /// Set while an agent of the session is busy but nothing has been heard
+    /// from it for a while: the time of the last event. Only a warning —
+    /// Agent Office never stops a session because it is quiet.
+    #[ts(optional, type = "number")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub silent_since: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -344,6 +354,38 @@ impl WorldState {
         }
     }
 
+    /// Flags active sessions whose agents are busy (thinking, reading,
+    /// coding, running a command or tests) but that have not produced an
+    /// event for `after_ms`, and unflags the rest. Returns what changed.
+    pub fn mark_silent(&mut self, now: i64, after_ms: i64) -> Touched {
+        let mut touched = Touched::default();
+        for session in self.sessions.values_mut() {
+            let busy = session.agent_keys.iter().any(|k| {
+                self.agents.get(k).is_some_and(|a| {
+                    !a.ended
+                        && matches!(
+                            a.activity,
+                            Activity::Thinking
+                                | Activity::Reading
+                                | Activity::Coding
+                                | Activity::RunningCommand
+                                | Activity::Testing
+                        )
+                })
+            });
+            let silent = after_ms > 0
+                && session.status == SessionStatus::Active
+                && busy
+                && now - session.last_event_at >= after_ms;
+            let wanted = silent.then_some(session.last_event_at);
+            if session.silent_since != wanted {
+                session.silent_since = wanted;
+                touched.sessions.insert(session.key.clone());
+            }
+        }
+        touched
+    }
+
     /// Removes ended sessions (and their agents) that ended before `before_ms`.
     /// Returns the removed (session keys, agent keys).
     pub fn prune_ended(&mut self, before_ms: i64) -> (Vec<String>, Vec<String>) {
@@ -404,6 +446,8 @@ impl WorldState {
                     end_reason: None,
                     stats: SessionStats::default(),
                     usage: None,
+                    restarts: 0,
+                    silent_since: None,
                 },
             );
             let name = default_name(title.as_deref(), cwd.as_deref(), &e.session_id);
@@ -496,6 +540,8 @@ impl WorldState {
 
         {
             let session = self.sessions.get_mut(&skey).expect("session exists");
+            // Any sign of life ends a silence.
+            session.silent_since = None;
             if at > session.last_event_at {
                 session.last_event_at = at;
             }
@@ -531,6 +577,7 @@ impl WorldState {
                 }
                 let reopen = resumed && session.status == SessionStatus::Ended;
                 if reopen {
+                    session.restarts += 1;
                     session.status = SessionStatus::Active;
                     session.ended_at = None;
                     session.end_reason = None;
@@ -1180,17 +1227,57 @@ mod tests {
         let mut w = WorldState::new();
         w.apply(&ev(EventKind::SessionStarted(SessionInfo::default()), 1));
         w.apply(&ev(EventKind::SessionEnded(SessionEnded::default()), 2));
+        assert_eq!(w.session("claude:s1").unwrap().restarts, 0);
         w.apply(&ev(EventKind::SessionStarted(SessionInfo::default()), 3));
         assert_eq!(
             w.session("claude:s1").unwrap().status,
             SessionStatus::Active
         );
+        assert_eq!(w.session("claude:s1").unwrap().restarts, 1);
         assert!(!main_agent(&w).ended);
+        // A start while already running (e.g. a duplicate hook) is not a restart.
+        w.apply(&ev(EventKind::SessionStarted(SessionInfo::default()), 3));
+        assert_eq!(w.session("claude:s1").unwrap().restarts, 1);
 
         w.apply(&ev(EventKind::SessionEnded(SessionEnded::default()), 4));
         let (sessions, agents) = w.prune_ended(10);
         assert_eq!(sessions, vec!["claude:s1".to_string()]);
         assert_eq!(agents, vec!["claude:s1:s1".to_string()]);
         assert_eq!(w.agents().count(), 0);
+    }
+
+    #[test]
+    fn busy_but_silent_sessions_are_flagged_until_they_speak_again() {
+        let mut w = WorldState::new();
+        w.apply(&ev(
+            EventKind::SessionStarted(SessionInfo::default()),
+            1_000,
+        ));
+        w.apply(&ev(
+            EventKind::ToolStarted(tool("t1", "Bash", ToolCategory::Execute, "npm install")),
+            2_000,
+        ));
+        // Not silent long enough yet.
+        assert!(w.mark_silent(2_000 + 59_999, 60_000).is_empty());
+        let touched = w.mark_silent(2_000 + 60_000, 60_000);
+        assert!(touched.sessions.contains("claude:s1"));
+        assert_eq!(w.session("claude:s1").unwrap().silent_since, Some(2_000));
+        // Nothing new to report on the next check.
+        assert!(w.mark_silent(200_000, 60_000).is_empty());
+        // Any event ends the silence.
+        w.apply(&ev(
+            EventKind::ToolCompleted(done("t1", "Bash", ToolCategory::Execute)),
+            300_000,
+        ));
+        assert_eq!(w.session("claude:s1").unwrap().silent_since, None);
+        // An idle agent is never "silent": it is waiting for the user.
+        w.apply(&ev(EventKind::AgentIdle(TextNote::default()), 300_001));
+        assert!(w.mark_silent(10_000_000, 60_000).is_empty());
+        // 0 turns the check off.
+        w.apply(&ev(
+            EventKind::AgentThinking(TextNote::default()),
+            10_000_001,
+        ));
+        assert!(w.mark_silent(99_000_000, 0).is_empty());
     }
 }

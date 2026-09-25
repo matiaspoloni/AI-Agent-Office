@@ -16,6 +16,7 @@ const session = (key: string, partial: Partial<SessionState>): SessionState => (
   startedAt: 0,
   lastEventAt: 0,
   stats: { prompts: 0, toolCalls: 0, failedTools: 0, commands: 0, errors: 0, subagents: 0, commits: 0, filesChanged: [] },
+  restarts: 0,
   ...partial,
 });
 const agent = (sessionKey: string): AgentState => ({
