@@ -37,6 +37,8 @@ use std::time::Duration;
 use tokio::sync::oneshot;
 
 pub const PROVIDER_ID: &str = "claude";
+/// How long a Restart waits for the previous run of the session to finish.
+const RESUME_RELEASE_WAIT: Duration = Duration::from_secs(5);
 
 /// Install locations checked after `PATH`.
 const EXTRA_DIRS: &[&str] = if cfg!(windows) {
@@ -541,7 +543,10 @@ impl ProviderAdapter for ClaudeAdapter {
                         ProviderError::Other(format!("`{id}` is not a Claude Code session id."))
                     })?
                     .to_string();
-                if self
+                // A run that was just stopped may still be finishing: its end
+                // must reach the office before the new run starts.
+                let deadline = std::time::Instant::now() + RESUME_RELEASE_WAIT;
+                while self
                     .inner
                     .state
                     .lock()
@@ -549,10 +554,13 @@ impl ProviderAdapter for ClaudeAdapter {
                     .managed
                     .contains_key(&id)
                 {
-                    return Err(ProviderError::Other(
-                        "This Claude Code session is still running; stop it before restarting it."
-                            .into(),
-                    ));
+                    if std::time::Instant::now() > deadline {
+                        return Err(ProviderError::Other(
+                            "This Claude Code session is still running; stop it before restarting it."
+                                .into(),
+                        ));
+                    }
+                    tokio::time::sleep(Duration::from_millis(50)).await;
                 }
                 Some(id)
             }
@@ -697,7 +705,9 @@ impl ProviderAdapter for ClaudeAdapter {
                         stderr_tail.push_back(line);
                     }
                     ProcessEvent::Exited(info) => {
-                        inner.state.lock().expect("state lock").managed.remove(&id);
+                        // The session id stays reserved until its end has been
+                        // sent: a Restart (same id) waits for that, so the old
+                        // end can never arrive after the new start.
                         inner.cancel_pending_for(&id);
                         let _ = std::fs::remove_file(&settings_path);
                         if !info.success && !info.killed {
@@ -725,6 +735,7 @@ impl ProviderAdapter for ClaudeAdapter {
                                 exit_code: info.code,
                             }),
                         ));
+                        inner.state.lock().expect("state lock").managed.remove(&id);
                         break;
                     }
                 }

@@ -37,6 +37,8 @@ use std::time::Duration;
 use tokio::sync::oneshot;
 
 pub const PROVIDER_ID: &str = "codex";
+/// How long a Restart waits for the previous run of the thread to finish.
+const RESUME_RELEASE_WAIT: Duration = Duration::from_secs(5);
 
 /// app-server minor version the protocol mapping was verified against.
 pub const TESTED_VERSION: &str = "0.156";
@@ -692,12 +694,9 @@ impl ProviderAdapter for CodexAdapter {
                             }
                             break;
                         };
-                        inner
-                            .state
-                            .lock()
-                            .expect("state lock")
-                            .managed
-                            .remove(&root);
+                        // The thread id stays reserved until its end has been
+                        // sent: a Restart (same id) waits for that, so the old
+                        // end can never arrive after the new start.
                         pump_session.approvals.lock().expect("approvals").clear();
                         if !info.success && !info.killed {
                             sink.emit(process_event(
@@ -718,6 +717,12 @@ impl ProviderAdapter for CodexAdapter {
                                 exit_code: info.code,
                             }),
                         ));
+                        inner
+                            .state
+                            .lock()
+                            .expect("state lock")
+                            .managed
+                            .remove(&root);
                         break;
                     }
                 }
@@ -786,10 +791,16 @@ impl ProviderAdapter for CodexAdapter {
             .filter(|id| !id.is_empty())
             .map(str::to_owned);
         if let Some(id) = &resuming {
-            if self.managed(id).is_some() {
-                return Err(fail(
-                    "This Codex thread is still running; stop it before restarting it.".into(),
-                ));
+            // A run that was just stopped may still be finishing: its end must
+            // reach the office before the new run starts.
+            let deadline = std::time::Instant::now() + RESUME_RELEASE_WAIT;
+            while self.managed(id).is_some() {
+                if std::time::Instant::now() > deadline {
+                    return Err(fail(
+                        "This Codex thread is still running; stop it before restarting it.".into(),
+                    ));
+                }
+                tokio::time::sleep(Duration::from_millis(50)).await;
             }
             params["threadId"] = json!(id);
             params["excludeTurns"] = json!(true);

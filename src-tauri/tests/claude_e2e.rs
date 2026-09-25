@@ -449,3 +449,67 @@ async fn restart_continues_the_same_conversation() {
     .await;
     wait_status(&host, &sid, SessionStatus::Ended, 3).await;
 }
+
+/// Resuming right after a stop, before the old run has ended: the new run
+/// waits for the old one, and the old run's end never closes the new run.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn resuming_right_after_stop_waits_for_the_old_run() {
+    let tmp = TempDir::new("resume-race");
+    let (data, config, project) = (
+        tmp.sub("data"),
+        tmp.sub("claude-config"),
+        tmp.sub("project"),
+    );
+    let host: Arc<Host> = Host::start(AppPaths::at(data.clone()), options(&data, &config));
+    wait_listening(&host).await;
+    let handle = host
+        .launch(
+            claude(),
+            LaunchRequest {
+                cwd: project.display().to_string(),
+                prompt: Some("hello".into()),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("launch");
+    let sid = handle.session_id.0.clone();
+    wait_for("first answer", &host, |s| {
+        main_agent(s, &sid)
+            .filter(|a| a.last_message.as_deref() == Some("Read README.md"))
+            .map(|_| ())
+    })
+    .await;
+
+    host.stop(claude(), SessionId::new(&sid), StopMode::Graceful)
+        .await
+        .expect("stop");
+    host.launch(
+        claude(),
+        LaunchRequest {
+            cwd: project.display().to_string(),
+            resume_session_id: Some(sid.clone()),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("the resume waits for the old run instead of failing");
+    wait_status(&host, &sid, SessionStatus::Active, 1).await;
+    // Nothing of the old run arrives afterwards.
+    tokio::time::sleep(Duration::from_millis(1500)).await;
+    host.flush();
+    let session = host
+        .snapshot()
+        .sessions
+        .into_iter()
+        .find(|s| s.session_id.0 == sid)
+        .unwrap();
+    assert_eq!(
+        (session.status, session.restarts),
+        (SessionStatus::Active, 1)
+    );
+    host.stop(claude(), SessionId::new(&sid), StopMode::Graceful)
+        .await
+        .expect("stop");
+    wait_status(&host, &sid, SessionStatus::Ended, 1).await;
+}

@@ -440,3 +440,47 @@ async fn restart_resumes_the_thread() {
     assert!(err.contains("no rollout found"), "{err}");
     assert_eq!(session(&host).status, SessionStatus::Ended);
 }
+
+/// Resuming right after a stop, before the old run has ended: the new run
+/// waits for the old one, and the old run's end never closes the new run.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn resuming_right_after_stop_waits_for_the_old_run() {
+    let tmp = TempDir::new("codex-resume-race");
+    let (data, home, project) = (tmp.sub("data"), tmp.sub("codex-home"), tmp.sub("project"));
+    let host: Arc<Host> = Host::start(AppPaths::at(data.clone()), options(&data, &home));
+    wait_listening(&host).await;
+    let handle = host
+        .launch(codex(), launch(&project, "hello"))
+        .await
+        .expect("launch");
+    let sid = handle.session_id.0.clone();
+    wait_for("first answer", &host, |s| {
+        main_agent(s, &sid)
+            .filter(|a| a.last_message.as_deref() == Some("Hello from fake codex"))
+            .map(|_| ())
+    })
+    .await;
+
+    host.stop(codex(), SessionId::new(&sid), StopMode::Graceful)
+        .await
+        .expect("stop");
+    let mut request = launch(&project, "");
+    request.prompt = None;
+    request.resume_session_id = Some(sid.clone());
+    host.launch(codex(), request)
+        .await
+        .expect("the resume waits for the old run instead of failing");
+    let active = |s: &ao_core::world::WorldSnapshot| {
+        s.sessions
+            .iter()
+            .find(|x| x.session_id.0 == sid && x.status == SessionStatus::Active && x.restarts == 1)
+            .map(|_| ())
+    };
+    wait_for("resumed", &host, active).await;
+    tokio::time::sleep(Duration::from_millis(1500)).await;
+    host.flush();
+    assert!(
+        active(&host.snapshot()).is_some(),
+        "the old run's end closed the new run"
+    );
+}
