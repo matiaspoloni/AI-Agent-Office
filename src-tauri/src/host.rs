@@ -1094,8 +1094,15 @@ mod tests {
         };
         sink.emit(event(EventKind::SessionStarted(SessionInfo::default())));
         sink.emit(event(EventKind::AgentThinking(TextNote::default())));
+        // Wait for the agent to be busy, not just for the session: an idle
+        // agent is never flagged.
         let deadline = std::time::Instant::now() + Duration::from_secs(10);
-        while host.snapshot().sessions.is_empty() {
+        while !host
+            .snapshot()
+            .agents
+            .iter()
+            .any(|a| a.activity == ao_core::activity::Activity::Thinking)
+        {
             assert!(std::time::Instant::now() < deadline);
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
