@@ -110,6 +110,7 @@ pub async fn query(
     }
     let (process, mut lines) =
         ManagedProcess::spawn(spec).map_err(|e| format!("cannot start Codex: {e}"))?;
+    process.set_label("Codex CLI · hook trust check");
     let rpc = RpcClient::new(process.clone());
     let pump_rpc = rpc.clone();
     let pump = tokio::spawn(async move {

@@ -4,6 +4,8 @@
 //!   print <n> <exit_code>   print n stdout lines + 1 stderr line, then exit
 //!   echo                    echo stdin lines until EOF
 //!   tree <pidfile>          start a grandchild, write "<pid> <grandchild>" to pidfile, sleep
+//!   orphan <pidfile>        start a grandchild, write "<pid> <grandchild>" to pidfile, exit 0
+//!   args [..]               print each argument on its own line, then exit
 //!   sleep                   sleep for 10 minutes
 
 use std::io::{BufRead, Write};
@@ -34,7 +36,13 @@ fn main() {
                 out.flush().unwrap();
             }
         }
-        Some("tree") => {
+        Some("args") => {
+            let mut out = std::io::stdout().lock();
+            for arg in &args[1..] {
+                writeln!(out, "arg: {arg}").unwrap();
+            }
+        }
+        Some(mode @ ("tree" | "orphan")) => {
             let pidfile = args.get(1).expect("pidfile");
             let grandchild = std::process::Command::new(std::env::current_exe().unwrap())
                 .arg("sleep")
@@ -49,6 +57,10 @@ fn main() {
             )
             .unwrap();
             println!("ready");
+            if mode == "orphan" {
+                // Leave the grandchild running: the process manager must stop it.
+                std::process::exit(0);
+            }
             std::thread::sleep(Duration::from_secs(600));
         }
         _ => std::thread::sleep(Duration::from_secs(600)),

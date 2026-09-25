@@ -627,6 +627,7 @@ impl ProviderAdapter for CodexAdapter {
             spec = spec.env("CODEX_HOME", home.as_os_str());
         }
         let (process, mut lines) = ManagedProcess::spawn(spec)?;
+        process.set_label("Codex CLI · starting");
         let rpc = RpcClient::new(process.clone());
         let session = Arc::new(ManagedSession {
             rpc: rpc.clone(),
@@ -702,25 +703,18 @@ impl ProviderAdapter for CodexAdapter {
                             sink.emit(process_event(
                                 &root,
                                 EventKind::AgentError(AgentError {
-                                    message: detail.unwrap_or_else(|| {
-                                        format!("Codex exited with code {:?}", info.code)
-                                    }),
+                                    message: detail
+                                        .unwrap_or_else(|| format!("Codex {}", info.describe())),
                                     error_type: Some("process_exit".into()),
                                     recoverable: false,
                                 }),
                             ));
                         }
-                        let reason = if info.killed {
-                            "stopped by Agent Office"
-                        } else if info.success {
-                            "finished"
-                        } else {
-                            "exited with an error"
-                        };
+                        let reason = info.describe();
                         sink.emit(process_event(
                             &root,
                             EventKind::SessionEnded(SessionEnded {
-                                reason: Some(reason.into()),
+                                reason: Some(reason),
                                 exit_code: info.code,
                             }),
                         ));
@@ -792,6 +786,7 @@ impl ProviderAdapter for CodexAdapter {
             .and_then(Value::as_str)
             .ok_or_else(|| fail("`thread/start` returned no thread id".into()))?
             .to_owned();
+        process.set_label(format!("Codex CLI · thread {thread_id}"));
         let model = started
             .get("model")
             .and_then(Value::as_str)

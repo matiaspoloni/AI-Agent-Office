@@ -415,6 +415,7 @@ impl ProviderAdapter for CursorAdapter {
         let exe = self.inner.executable().await?;
         let (process, mut lines) =
             ManagedProcess::spawn(SpawnSpec::new(&exe).arg("acp").cwd(&cwd))?;
+        process.set_label("Cursor CLI · starting");
         let rpc = RpcClient::new(process.clone());
         let session = Arc::new(ManagedSession {
             rpc: rpc.clone(),
@@ -479,25 +480,22 @@ impl ProviderAdapter for CursorAdapter {
                             sink.emit(process_event(
                                 &id,
                                 EventKind::AgentError(AgentError {
-                                    message: detail.unwrap_or_else(|| {
-                                        format!("Cursor exited with code {:?}", info.code)
-                                    }),
+                                    message: detail
+                                        .unwrap_or_else(|| format!("Cursor {}", info.describe())),
                                     error_type: Some("process_exit".into()),
                                     recoverable: false,
                                 }),
                             ));
                         }
                         let reason = if stopped {
-                            "stopped by Agent Office"
-                        } else if info.success {
-                            "finished"
+                            "stopped by Agent Office".to_owned()
                         } else {
-                            "exited with an error"
+                            info.describe()
                         };
                         sink.emit(process_event(
                             &id,
                             EventKind::SessionEnded(SessionEnded {
-                                reason: Some(reason.into()),
+                                reason: Some(reason),
                                 exit_code: info.code,
                             }),
                         ));
@@ -623,6 +621,7 @@ impl ProviderAdapter for CursorAdapter {
         *session.mapper.lock().expect("mapper") =
             Mapper::new(sid.clone()).with_cwd(cwd.display().to_string());
         *session_id.lock().expect("id") = Some(sid.clone());
+        process.set_label(format!("Cursor CLI · session {sid}"));
         self.inner
             .state
             .lock()

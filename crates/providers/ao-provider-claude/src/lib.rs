@@ -616,6 +616,7 @@ impl ProviderAdapter for ClaudeAdapter {
                 return Err(err.into());
             }
         };
+        process.set_label(format!("Claude Code · session {session_id}"));
 
         ctx.sink.emit(process_event(
             &session_id,
@@ -670,24 +671,18 @@ impl ProviderAdapter for ClaudeAdapter {
                                 &id,
                                 EventKind::AgentError(AgentError {
                                     message: detail.unwrap_or_else(|| {
-                                        format!("Claude Code exited with code {:?}", info.code)
+                                        format!("Claude Code {}", info.describe())
                                     }),
                                     error_type: Some("process_exit".into()),
                                     recoverable: false,
                                 }),
                             ));
                         }
-                        let reason = if info.killed {
-                            "stopped by Agent Office"
-                        } else if info.success {
-                            "finished"
-                        } else {
-                            "exited with an error"
-                        };
+                        let reason = info.describe();
                         sink.emit(process_event(
                             &id,
                             EventKind::SessionEnded(SessionEnded {
-                                reason: Some(reason.into()),
+                                reason: Some(reason),
                                 exit_code: info.code,
                             }),
                         ));
