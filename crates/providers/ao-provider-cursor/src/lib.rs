@@ -405,6 +405,12 @@ impl ProviderAdapter for CursorAdapter {
         request: LaunchRequest,
         ctx: AdapterContext,
     ) -> Result<SessionHandle, ProviderError> {
+        if request.resume_session_id.is_some() {
+            // ACP has `session/load`; Agent Office does not use it yet.
+            return Err(ProviderError::Unsupported {
+                capability: "resume",
+            });
+        }
         let cwd = PathBuf::from(request.cwd.trim());
         if request.cwd.trim().is_empty() || !cwd.is_dir() {
             return Err(ProviderError::Other(format!(

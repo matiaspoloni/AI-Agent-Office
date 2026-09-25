@@ -267,6 +267,7 @@ mod tests {
                     model: None,
                     prompt: None,
                     name: None,
+                    resume_session_id: None,
                     permission_mode: None,
                 },
                 ctx,

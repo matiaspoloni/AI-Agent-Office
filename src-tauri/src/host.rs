@@ -34,6 +34,8 @@ use ts_rs::TS;
 const UI_FLUSH_INTERVAL: Duration = Duration::from_millis(100);
 const PRUNE_INTERVAL: Duration = Duration::from_secs(60);
 const SILENCE_CHECK_INTERVAL: Duration = Duration::from_secs(15);
+/// How long Restart waits for a running session to stop.
+const RESTART_STOP_WAIT: Duration = Duration::from_secs(20);
 const KEEP_ENDED_IN_MEMORY_MS: i64 = 15 * 60 * 1000;
 const RESTORE_WINDOW_MS: i64 = 24 * 60 * 60 * 1000;
 const MAX_PROVIDER_ERRORS: usize = 100;
@@ -702,6 +704,72 @@ impl Host {
 
     pub fn start_demo_office(&self) -> Vec<SessionHandle> {
         self.demo.launch_office(&self.adapter_context())
+    }
+
+    /// Restart: continues a managed session's conversation in a new process
+    /// (Claude `--resume`, Codex `thread/resume`) with the folder, model and
+    /// permission mode it had. A running session is stopped gracefully first.
+    pub async fn restart(
+        &self,
+        provider: ProviderId,
+        session: SessionId,
+    ) -> Result<SessionHandle, String> {
+        let adapter = self.ensure_capability(&provider, Some(&session), "resume", |c| c.resume)?;
+        let key = ao_core::ids::session_key(&provider, &session);
+        let state = self
+            .inner
+            .lock()
+            .expect("host lock")
+            .world
+            .session(&key)
+            .cloned()
+            .ok_or_else(|| format!("Session {session} is not known"))?;
+        if state.mode != SessionMode::Managed {
+            return Err("Only sessions started from Agent Office can be restarted.".into());
+        }
+        let cwd = state
+            .cwd
+            .clone()
+            .filter(|c| !c.trim().is_empty())
+            .ok_or_else(|| "This session has no project folder to restart in.".to_string())?;
+        if state.status == SessionStatus::Active {
+            if let Err(err) = adapter.stop_session(&session, StopMode::Graceful).await {
+                // The process may already be gone; its end is on the way.
+                tracing::info!(%err, %key, "stop before restart");
+            }
+            let deadline = std::time::Instant::now() + RESTART_STOP_WAIT;
+            loop {
+                let ended = self
+                    .inner
+                    .lock()
+                    .expect("host lock")
+                    .world
+                    .session(&key)
+                    .map_or(true, |s| s.status == SessionStatus::Ended);
+                if ended {
+                    break;
+                }
+                if std::time::Instant::now() > deadline {
+                    return Err(
+                        "The session did not stop in time; use Force stop, then Restart.".into(),
+                    );
+                }
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            }
+        }
+        let request = LaunchRequest {
+            project_id: state.project_id.clone(),
+            cwd,
+            model: state.model.clone(),
+            prompt: None,
+            name: None,
+            permission_mode: state.permission_mode.clone(),
+            resume_session_id: Some(session.0.clone()),
+        };
+        adapter
+            .launch_session(request, self.adapter_context())
+            .await
+            .map_err(|e| e.to_string())
     }
 
     pub async fn stop(

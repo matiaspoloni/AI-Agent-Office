@@ -33,6 +33,7 @@ export function createTauriBackend(): Backend {
     launchSession: (provider, request) => invoke<SessionHandle>("launch_session", { provider, request }),
     startDemoOffice: () => invoke<SessionHandle[]>("start_demo_office"),
     stopSession: (provider, sessionId, force) => invoke<void>("stop_session", { provider, sessionId, force }),
+    restartSession: (provider, sessionId) => invoke<SessionHandle>("restart_session", { provider, sessionId }),
     sendPrompt: (provider, sessionId, prompt) => invoke<void>("send_prompt", { provider, sessionId, prompt }),
     resolvePermission: (provider, sessionId, requestId, decision) =>
       invoke<void>("resolve_permission", { provider, sessionId, requestId, decision }),

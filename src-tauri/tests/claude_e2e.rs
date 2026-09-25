@@ -70,6 +70,7 @@ async fn managed_session_runs_prompts_permissions_and_stops() {
                 model: Some("claude-fake-2".into()),
                 prompt: Some("please ask for permission".into()),
                 name: Some("e2e".into()),
+                resume_session_id: None,
                 permission_mode: None,
             },
         )
@@ -356,4 +357,94 @@ async fn global_hooks_observe_and_answer_external_sessions() {
         })
         .count();
     assert!(backups >= 1, "a backup is taken before every change");
+}
+
+async fn wait_status(host: &Host, sid: &str, status: SessionStatus, restarts: u32) {
+    wait_for("session status", host, |s| {
+        s.sessions
+            .iter()
+            .find(|x| x.session_id.0 == sid && x.status == status && x.restarts == restarts)
+            .map(|_| ())
+    })
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn restart_continues_the_same_conversation() {
+    let tmp = TempDir::new("restart");
+    let (data, config, project) = (
+        tmp.sub("data"),
+        tmp.sub("claude-config"),
+        tmp.sub("project"),
+    );
+    let host: Arc<Host> = Host::start(AppPaths::at(data.clone()), options(&data, &config));
+    wait_listening(&host).await;
+    let handle = host
+        .launch(
+            claude(),
+            LaunchRequest {
+                cwd: project.display().to_string(),
+                model: Some("claude-fake-2".into()),
+                prompt: Some("hello".into()),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("launch");
+    let sid = handle.session_id.0.clone();
+    wait_for("first answer", &host, |s| {
+        main_agent(s, &sid)
+            .filter(|a| a.last_message.as_deref() == Some("Read README.md"))
+            .map(|_| ())
+    })
+    .await;
+
+    // Stopped, then restarted: same session id, counted as a restart.
+    host.stop(claude(), SessionId::new(&sid), StopMode::Graceful)
+        .await
+        .expect("stop");
+    wait_status(&host, &sid, SessionStatus::Ended, 0).await;
+    let again = host
+        .restart(claude(), SessionId::new(&sid))
+        .await
+        .expect("restart");
+    assert_eq!(again.session_id.0, sid);
+    wait_status(&host, &sid, SessionStatus::Active, 1).await;
+    let session = host
+        .snapshot()
+        .sessions
+        .into_iter()
+        .find(|s| s.session_id.0 == sid)
+        .unwrap();
+    assert_eq!(
+        session.model.as_deref(),
+        Some("claude-fake-2"),
+        "the model is kept"
+    );
+    host.send_prompt(claude(), SessionId::new(&sid), "hello again".into())
+        .await
+        .expect("prompt after restart");
+
+    // Restart while running: stopped first, then continued.
+    host.restart(claude(), SessionId::new(&sid))
+        .await
+        .expect("restart a running session");
+    wait_status(&host, &sid, SessionStatus::Active, 2).await;
+
+    // The conversation is gone from Claude's store: Claude's own error shows.
+    host.stop(claude(), SessionId::new(&sid), StopMode::Graceful)
+        .await
+        .expect("stop");
+    wait_status(&host, &sid, SessionStatus::Ended, 2).await;
+    std::fs::remove_file(config.join("fake-sessions").join(&sid)).unwrap();
+    host.restart(claude(), SessionId::new(&sid))
+        .await
+        .expect("the process starts");
+    wait_for("resume error", &host, |s| {
+        main_agent(s, &sid)
+            .and_then(|a| a.last_error.clone())
+            .filter(|e| e.contains("No conversation found with session ID"))
+    })
+    .await;
+    wait_status(&host, &sid, SessionStatus::Ended, 3).await;
 }

@@ -32,6 +32,8 @@ export interface Backend {
   launchSession(provider: string, request: LaunchRequest): Promise<SessionHandle>;
   startDemoOffice(): Promise<SessionHandle[]>;
   stopSession(provider: string, sessionId: string, force: boolean): Promise<void>;
+  /** Continue a managed session's conversation in a new process (stops it first if running). */
+  restartSession(provider: string, sessionId: string): Promise<SessionHandle>;
   sendPrompt(provider: string, sessionId: string, prompt: string): Promise<void>;
   resolvePermission(
     provider: string,

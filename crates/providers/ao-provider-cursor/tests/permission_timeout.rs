@@ -43,6 +43,7 @@ async fn unanswered_permission_is_rejected_after_the_timeout() {
         model: None,
         prompt: Some("needs permission".into()),
         name: None,
+        resume_session_id: None,
         permission_mode: None,
     };
     let started = Instant::now();

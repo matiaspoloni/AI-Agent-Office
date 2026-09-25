@@ -3,7 +3,7 @@ import type { ProviderInfo } from "../bindings/ProviderInfo";
 import type { SessionState } from "../bindings/SessionState";
 import type { Support } from "../bindings/Support";
 
-export type Action = "stop" | "sendPrompt" | "permissions" | "launch";
+export type Action = "stop" | "sendPrompt" | "permissions" | "launch" | "resume";
 
 export interface ActionAvailability {
   enabled: boolean;

@@ -54,7 +54,7 @@ pub struct InstallationInfo {
     pub error: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS, Default)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct LaunchRequest {
@@ -75,6 +75,11 @@ pub struct LaunchRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub permission_mode: Option<String>,
+    /// Continue this earlier session instead of starting a new one (Restart).
+    /// Only for providers whose managed sessions support `resume`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub resume_session_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

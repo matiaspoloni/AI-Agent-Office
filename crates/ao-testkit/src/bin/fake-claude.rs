@@ -4,6 +4,11 @@
 //! runs configured hooks (exec form) exactly like Claude Code: JSON on stdin,
 //! async handlers not awaited, synchronous handlers' stdout read back.
 //!
+//! `--resume <id>` continues a session this fake started earlier with the
+//! same config folder (it keeps a marker per session id); an unknown id gets
+//! the reply recorded from claude 2.1.282: "No conversation found with
+//! session ID: <id>" on stderr and an `error_during_execution` result.
+//!
 //! Extra mode for tests of the global integration:
 //!   fake-claude --simulate-external <session-id>
 //! runs a scripted external session using only the user settings hooks and
@@ -20,11 +25,19 @@ fn arg_value(args: &[String], flag: &str) -> Option<String> {
         .and_then(|i| args.get(i + 1).cloned())
 }
 
-fn user_settings() -> Value {
-    let dir = std::env::var_os("CLAUDE_CONFIG_DIR")
+fn config_dir() -> Option<std::path::PathBuf> {
+    std::env::var_os("CLAUDE_CONFIG_DIR")
         .map(std::path::PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".claude")));
-    dir.and_then(|d| std::fs::read_to_string(d.join("settings.json")).ok())
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".claude")))
+}
+
+fn session_marker(id: &str) -> Option<std::path::PathBuf> {
+    config_dir().map(|d| d.join("fake-sessions").join(id))
+}
+
+fn user_settings() -> Value {
+    config_dir()
+        .and_then(|d| std::fs::read_to_string(d.join("settings.json")).ok())
         .and_then(|t| serde_json::from_str(&t).ok())
         .unwrap_or_else(|| json!({}))
 }
@@ -145,7 +158,27 @@ fn emit(line: Value) {
 }
 
 fn headless(args: &[String]) {
-    let id = arg_value(args, "--session-id").unwrap_or_else(|| "fake-session".into());
+    let resumed = arg_value(args, "--resume");
+    let id = resumed
+        .clone()
+        .or_else(|| arg_value(args, "--session-id"))
+        .unwrap_or_else(|| "fake-session".into());
+    let known = session_marker(&id).is_some_and(|m| m.exists());
+    if resumed.is_some() && !known {
+        let message = format!("No conversation found with session ID: {id}");
+        eprintln!("{message}");
+        emit(json!({
+            "type": "result", "subtype": "error_during_execution", "duration_ms": 0, "duration_api_ms": 0,
+            "is_error": true, "num_turns": 0, "stop_reason": null, "session_id": id, "total_cost_usd": 0,
+            "usage": { "input_tokens": 0, "output_tokens": 0 }, "modelUsage": {}, "permission_denials": [],
+            "errors": [message]
+        }));
+        std::process::exit(1);
+    }
+    if let Some(marker) = session_marker(&id) {
+        let _ = std::fs::create_dir_all(marker.parent().unwrap());
+        let _ = std::fs::write(marker, "");
+    }
     let flag_settings = arg_value(args, "--settings")
         .map(|s| std::fs::read_to_string(&s).unwrap_or(s))
         .and_then(|t| serde_json::from_str::<Value>(&t).ok())
@@ -158,7 +191,10 @@ fn headless(args: &[String]) {
         cwd: cwd.clone(),
     };
 
-    session.fire("SessionStart", json!({ "source": "startup" }));
+    session.fire(
+        "SessionStart",
+        json!({ "source": if resumed.is_some() { "resume" } else { "startup" } }),
+    );
     emit(
         json!({ "type": "system", "subtype": "init", "session_id": id, "cwd": cwd, "model": model, "permissionMode": "default", "claude_code_version": "2.1.281" }),
     );

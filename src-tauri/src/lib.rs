@@ -82,6 +82,7 @@ pub fn run() {
             commands::launch_session,
             commands::start_demo_office,
             commands::stop_session,
+            commands::restart_session,
             commands::send_prompt,
             commands::resolve_permission,
             commands::recent_events,

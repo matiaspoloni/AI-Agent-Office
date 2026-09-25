@@ -52,6 +52,7 @@ fn launch(project: &Path, prompt: Option<&str>) -> LaunchRequest {
         model: None,
         prompt: prompt.map(str::to_owned),
         name: Some("cursor e2e".into()),
+        resume_session_id: None,
         permission_mode: None,
     }
 }
@@ -449,4 +450,34 @@ async fn older_model_selection_and_failed_login() {
         .await
         .unwrap_err();
     assert!(err.contains("agent login"), "{err}");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn restart_is_refused_because_resume_is_not_implemented() {
+    let tmp = TempDir::new("cursor-restart");
+    let project = tmp.sub("project");
+    let host = start(&tmp);
+    let handle = host
+        .launch(cursor(), launch(&project, None))
+        .await
+        .expect("launch");
+    let sid = handle.session_id.0.clone();
+    wait_for("managed session", &host, |s| {
+        s.sessions
+            .iter()
+            .find(|x| x.session_id.0 == sid && x.mode == SessionMode::Managed)
+            .map(|_| ())
+    })
+    .await;
+    let err = host
+        .restart(cursor(), handle.session_id.clone())
+        .await
+        .unwrap_err();
+    assert!(
+        err.contains("does not support `resume` for Managed sessions"),
+        "{err}"
+    );
+    host.stop(cursor(), handle.session_id, StopMode::Force)
+        .await
+        .expect("stop");
 }

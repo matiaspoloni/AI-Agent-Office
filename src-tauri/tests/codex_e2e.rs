@@ -59,6 +59,7 @@ fn launch(project: &Path, prompt: &str) -> LaunchRequest {
         model: Some("gpt-fake-2".into()),
         prompt: Some(prompt.into()),
         name: Some("codex e2e".into()),
+        resume_session_id: None,
         permission_mode: Some("untrusted".into()),
     }
 }
@@ -355,4 +356,86 @@ async fn hooks_need_trust_then_observe_and_answer_external_sessions() {
     let restored: Value =
         serde_json::from_str(&std::fs::read_to_string(&hooks_path).unwrap()).unwrap();
     assert_eq!(restored, user_hooks);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn restart_resumes_the_thread() {
+    let tmp = TempDir::new("codex-restart");
+    let (data, home, project) = (tmp.sub("data"), tmp.sub("codex-home"), tmp.sub("project"));
+    let host: Arc<Host> = Host::start(AppPaths::at(data.clone()), options(&data, &home));
+    wait_listening(&host).await;
+    let handle = host
+        .launch(codex(), launch(&project, "hello"))
+        .await
+        .expect("launch");
+    let sid = handle.session_id.0.clone();
+    let session = |host: &Host| {
+        host.snapshot()
+            .sessions
+            .into_iter()
+            .find(|s| s.session_id.0 == sid)
+            .unwrap()
+    };
+    wait_for("first answer", &host, |s| {
+        main_agent(s, &sid)
+            .filter(|a| a.last_message.as_deref() == Some("Hello from fake codex"))
+            .map(|_| ())
+    })
+    .await;
+    host.stop(codex(), SessionId::new(&sid), StopMode::Graceful)
+        .await
+        .expect("stop");
+    wait_for("ended", &host, |s| {
+        s.sessions
+            .iter()
+            .find(|x| x.session_id.0 == sid && x.status == SessionStatus::Ended)
+            .map(|_| ())
+    })
+    .await;
+
+    let again = host
+        .restart(codex(), SessionId::new(&sid))
+        .await
+        .expect("restart");
+    assert_eq!(again.session_id.0, sid, "thread/resume keeps the thread id");
+    let restarted = wait_for("restarted", &host, |s| {
+        s.sessions
+            .iter()
+            .find(|x| x.session_id.0 == sid && x.status == SessionStatus::Active)
+            .cloned()
+    })
+    .await;
+    assert_eq!(restarted.restarts, 1);
+    assert_eq!(restarted.model.as_deref(), Some("gpt-fake-2"));
+    assert_eq!(restarted.permission_mode.as_deref(), Some("untrusted"));
+    let prompts = restarted.stats.prompts;
+    host.send_prompt(codex(), SessionId::new(&sid), "hello again".into())
+        .await
+        .expect("prompt after restart");
+    wait_for("second answer", &host, |s| {
+        s.sessions
+            .iter()
+            .find(|x| x.session_id.0 == sid && x.stats.prompts > prompts)
+            .map(|_| ())
+    })
+    .await;
+
+    // A thread Codex no longer has: its error, and the session stays ended.
+    host.stop(codex(), SessionId::new(&sid), StopMode::Graceful)
+        .await
+        .expect("stop");
+    wait_for("ended again", &host, |s| {
+        s.sessions
+            .iter()
+            .find(|x| x.session_id.0 == sid && x.status == SessionStatus::Ended)
+            .map(|_| ())
+    })
+    .await;
+    std::fs::remove_file(home.join("fake-threads").join(&sid)).unwrap();
+    let err = host
+        .restart(codex(), SessionId::new(&sid))
+        .await
+        .unwrap_err();
+    assert!(err.contains("no rollout found"), "{err}");
+    assert_eq!(session(&host).status, SessionStatus::Ended);
 }

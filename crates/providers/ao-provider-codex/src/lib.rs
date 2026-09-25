@@ -777,15 +777,48 @@ impl ProviderAdapter for CodexAdapter {
         if let Some(policy) = policy {
             params["approvalPolicy"] = json!(policy);
         }
+        // Restart: `thread/resume` continues the stored thread under its id;
+        // `excludeTurns` skips sending back the whole history.
+        let resuming = request
+            .resume_session_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|id| !id.is_empty())
+            .map(str::to_owned);
+        if let Some(id) = &resuming {
+            if self.managed(id).is_some() {
+                return Err(fail(
+                    "This Codex thread is still running; stop it before restarting it.".into(),
+                ));
+            }
+            params["threadId"] = json!(id);
+            params["excludeTurns"] = json!(true);
+        }
+        let method = if resuming.is_some() {
+            "thread/resume"
+        } else {
+            "thread/start"
+        };
         let started = rpc
-            .request("thread/start", params, RPC_TIMEOUT)
+            .request(method, params, RPC_TIMEOUT)
             .await
-            .map_err(|e| fail(format!("Codex could not start a thread: {e}")))?;
+            .map_err(|e| {
+                fail(if resuming.is_some() {
+                    format!("Codex could not resume the thread: {e}")
+                } else {
+                    format!("Codex could not start a thread: {e}")
+                })
+            })?;
         let thread_id = started
             .pointer("/thread/id")
             .and_then(Value::as_str)
-            .ok_or_else(|| fail("`thread/start` returned no thread id".into()))?
+            .ok_or_else(|| fail(format!("`{method}` returned no thread id")))?
             .to_owned();
+        if resuming.as_deref().is_some_and(|id| id != thread_id) {
+            return Err(fail(format!(
+                "Codex resumed thread {thread_id} instead of the one asked for"
+            )));
+        }
         process.set_label(format!("Codex CLI · thread {thread_id}"));
         let model = started
             .get("model")
@@ -806,7 +839,14 @@ impl ProviderAdapter for CodexAdapter {
                 cwd: Some(cwd.display().to_string()),
                 model,
                 title: request.name.clone().filter(|n| !n.trim().is_empty()),
-                reason: Some("launched by Agent Office".into()),
+                reason: Some(
+                    if resuming.is_some() {
+                        "restarted by Agent Office"
+                    } else {
+                        "launched by Agent Office"
+                    }
+                    .into(),
+                ),
                 permission_mode: policy.map(str::to_owned),
                 pid: Some(process.pid()),
                 ..Default::default()

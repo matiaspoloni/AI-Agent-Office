@@ -126,6 +126,16 @@ pub async fn stop_session(
 }
 
 #[tauri::command]
+pub async fn restart_session(
+    host: HostState<'_>,
+    provider: String,
+    session_id: String,
+) -> Result<SessionHandle, String> {
+    host.restart(ProviderId::new(provider), SessionId::new(session_id))
+        .await
+}
+
+#[tauri::command]
 pub async fn send_prompt(
     host: HostState<'_>,
     provider: String,

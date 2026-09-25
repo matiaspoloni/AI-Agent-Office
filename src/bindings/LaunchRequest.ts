@@ -5,4 +5,9 @@ export type LaunchRequest = { projectId?: ProjectId,
 /**
  * Working directory (project folder).
  */
-cwd: string, model?: string, prompt?: string, name?: string, permissionMode?: string, };
+cwd: string, model?: string, prompt?: string, name?: string, permissionMode?: string, 
+/**
+ * Continue this earlier session instead of starting a new one (Restart).
+ * Only for providers whose managed sessions support `resume`.
+ */
+resumeSessionId?: string, };

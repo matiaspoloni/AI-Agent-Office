@@ -532,7 +532,35 @@ impl ProviderAdapter for ClaudeAdapter {
             )));
         }
         let exe = self.inner.executable().await?;
-        let session_id = uuid::Uuid::new_v4().to_string();
+        // Restart: `--resume <id>` continues the conversation under the same
+        // session id (a new id would need `--fork-session`).
+        let resuming = match request.resume_session_id.as_deref().map(str::trim) {
+            Some(id) if !id.is_empty() => {
+                let id = uuid::Uuid::parse_str(id)
+                    .map_err(|_| {
+                        ProviderError::Other(format!("`{id}` is not a Claude Code session id."))
+                    })?
+                    .to_string();
+                if self
+                    .inner
+                    .state
+                    .lock()
+                    .expect("state lock")
+                    .managed
+                    .contains_key(&id)
+                {
+                    return Err(ProviderError::Other(
+                        "This Claude Code session is still running; stop it before restarting it."
+                            .into(),
+                    ));
+                }
+                Some(id)
+            }
+            _ => None,
+        };
+        let session_id = resuming
+            .clone()
+            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
         let settings = self.settings();
 
         let plan = HookPlan {
@@ -555,7 +583,11 @@ impl ProviderAdapter for ClaudeAdapter {
                 "stream-json",
                 "--verbose",
             ])
-            .arg("--session-id")
+            .arg(if resuming.is_some() {
+                "--resume"
+            } else {
+                "--session-id"
+            })
             .arg(&session_id)
             .arg("--settings")
             .arg(settings_path.as_os_str())
@@ -584,7 +616,7 @@ impl ProviderAdapter for ClaudeAdapter {
             .name
             .as_deref()
             .map(str::trim)
-            .filter(|n| !n.is_empty())
+            .filter(|n| !n.is_empty() && resuming.is_none())
         {
             spec = spec.arg("-n").arg(name);
         }
@@ -625,7 +657,14 @@ impl ProviderAdapter for ClaudeAdapter {
                 cwd: Some(cwd.display().to_string()),
                 model: request.model.clone().filter(|m| !m.trim().is_empty()),
                 title: request.name.clone().filter(|n| !n.trim().is_empty()),
-                reason: Some("launched by Agent Office".into()),
+                reason: Some(
+                    if resuming.is_some() {
+                        "restarted by Agent Office"
+                    } else {
+                        "launched by Agent Office"
+                    }
+                    .into(),
+                ),
                 permission_mode: permission_mode.map(str::to_owned),
                 pid: Some(process.pid()),
                 ..Default::default()

@@ -429,8 +429,37 @@ impl Server {
                     json!({ "data": [{ "cwd": cwd, "hooks": hooks, "warnings": [], "errors": [] }] }),
                 );
             }
+            ("thread/resume", Some(id)) => {
+                // As codex-cli 0.156.1: same thread id, no history with
+                // `excludeTurns`, no `thread/started`; unknown ids fail.
+                let thread = params["threadId"].as_str().unwrap_or_default().to_owned();
+                if thread.is_empty() || !codex_home().join("fake-threads").join(&thread).exists() {
+                    send(
+                        json!({ "id": id, "error": { "code": -32600, "message": format!("no rollout found for thread id {thread}") } }),
+                    );
+                    return Some(());
+                }
+                self.cwd = params["cwd"].as_str().unwrap_or(".").to_owned();
+                if let Some(model) = params["model"].as_str() {
+                    self.model = model.to_owned();
+                }
+                self.thread = Some(thread.clone());
+                self.session_started = true;
+                let t = json!({ "id": thread, "sessionId": thread, "parentThreadId": null, "preview": "", "ephemeral": false, "modelProvider": "openai", "model": self.model, "createdAt": 1, "updatedAt": 2, "status": { "type": "idle" }, "cwd": self.cwd, "cliVersion": VERSION, "source": "vscode", "turns": [] });
+                respond(
+                    &id,
+                    json!({ "thread": t, "model": self.model, "modelProvider": "openai", "cwd": self.cwd, "approvalPolicy": params.get("approvalPolicy").cloned().unwrap_or(json!("on-request")), "sandbox": { "type": "workspaceWrite" }, "reasoningEffort": null, "initialTurnsPage": null }),
+                );
+                notify(
+                    "thread/status/changed",
+                    json!({ "threadId": thread, "status": { "type": "idle" } }),
+                );
+            }
             ("thread/start", Some(id)) => {
                 let thread = format!("fake-thread-{}", std::process::id());
+                let threads = codex_home().join("fake-threads");
+                let _ = std::fs::create_dir_all(&threads);
+                let _ = std::fs::write(threads.join(&thread), "");
                 self.cwd = params["cwd"].as_str().unwrap_or(".").to_owned();
                 if let Some(model) = params["model"].as_str() {
                     self.model = model.to_owned();
