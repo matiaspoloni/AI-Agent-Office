@@ -5,6 +5,7 @@ members = [
   "crates/ao-core",
   "crates/ao-store",
   "crates/ao-detect",
+  "crates/ao-git",
   "crates/ao-hook-relay",
   "crates/ao-ipc",
   "crates/ao-jsonrpc",
@@ -28,6 +29,7 @@ ao-config = { path = "crates/ao-config" }
 ao-core = { path = "crates/ao-core" }
 ao-store = { path = "crates/ao-store" }
 ao-detect = { path = "crates/ao-detect" }
+ao-git = { path = "crates/ao-git" }
 ao-testkit = { path = "crates/ao-testkit" }
 ao-process = { path = "crates/ao-process" }
 ao-ipc = { path = "crates/ao-ipc" }

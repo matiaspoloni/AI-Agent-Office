@@ -110,6 +110,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ao-git"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "tokio",
+ "tracing",
+ "ts-rs",
+]
+
+[[package]]
 name = "ao-hook-relay"
 version = "0.1.0"
 dependencies = [
