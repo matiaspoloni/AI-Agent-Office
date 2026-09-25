@@ -428,14 +428,16 @@ async fn older_model_selection_and_failed_login() {
     request.model = Some("composer-2.5".into());
     let handle = host.launch(cursor(), request).await.expect("launch");
     let sid = handle.session_id.0.clone();
-    let model = wait_for("session", &host, |s| {
+    // The session is announced with Cursor's default model first; the switch
+    // is reported right after, so wait for it rather than for the session.
+    wait_for("the model switch", &host, |s| {
         s.sessions
             .iter()
             .find(|x| x.session_id.0 == sid)
-            .map(|x| x.model.clone())
+            .filter(|x| x.model.as_deref() == Some("Composer 2.5 Fast"))
+            .map(|_| ())
     })
     .await;
-    assert_eq!(model.as_deref(), Some("Composer 2.5 Fast"));
     host.stop(cursor(), SessionId::new(&sid), StopMode::Graceful)
         .await
         .expect("stop");
