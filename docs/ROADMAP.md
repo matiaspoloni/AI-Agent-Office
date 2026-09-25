@@ -60,7 +60,7 @@ then continue.
 | R9 | Windows toast click-activation is limited in the Tauri notification plugin on desktop. | Click-to-open may not work in MVS. | Use WinRT toast activation (`tauri-winrt-notification`) in Phase 9; fall back to focusing the app. |
 | R10 | Unsigned installer triggers SmartScreen. | Install friction. | Document; add signing step once a certificate exists. |
 | R11 | Provider docs change faster than code. | Silent breakage. | Capabilities documented with versions; Diagnostics shows detected versions vs tested ranges. |
-| R12 | Attributing Git changes to agents incorrectly. | Misleading UI. | Only attribute with tool-level evidence (file path in a completed edit tool call); otherwise show as "unattributed changes". |
+| R12 | Attributing Git changes to agents incorrectly. | Misleading UI. | Implemented: a file is linked to an agent only when its tool reported writing it; a commit only when the agent ran a commit-creating `git` command in that tree and the commit's time falls within that command's run (never when two agents qualify); everything else is shown without a name. |
 
 ## 4. Phase 1 checklist
 
@@ -272,3 +272,39 @@ installed and `agent login` was done once in a terminal. Note the Cursor version
   US$0.04): a temporary `CLAUDE_CONFIG_DIR` does not hide credentials passed in
   environment variables. DEVELOPMENT.md now warns about it; tests never call a
   real provider.
+
+## 11. Phase 8 checklist
+
+- [x] `ao-git`: read-only Git through the user's `git.exe` (porcelain v2), parsers tested with recorded output and real temporary repositories
+- [x] Repository, working tree and linked worktrees; branch, detached HEAD, upstream ahead/behind; staged / not staged / new / conflicted files; recent commits; worktree list
+- [x] Out of the agents' way: no optional locks (index never rewritten), repository `core.fsmonitor` program not started, no pager/prompts/console window, timeout, no inherited `GIT_*` variables
+- [x] Refresh after the agent edits files, runs commands or ends a turn (debounced), every 30 s while an agent works there, and on request
+- [x] Unified events `git.branch_changed`, `git.status_changed`, `git.commit_created` and the session's repository id / worktree
+- [x] Conservative attribution: files by tool evidence, commits by `git commit` evidence inside the command's run; otherwise nobody
+- [x] Agent panel, Projects repository cards, Command Center column; Open project; Show changed file (selected in Explorer, never run)
+- [x] Diagnostics: Git missing or older than 2.15
+- [ ] On Windows 11 by hand: a project on NTFS with Git for Windows (status, a worktree, Open project, Show a file), and a Claude or Codex session committing (credited to it)
+
+### Phase 8 findings
+
+* A plain `git status` rewrites the index to refresh file times and can start a
+  program named in the repository's `core.fsmonitor`. Both were shown with real
+  repositories in the tests; Agent Office's reads do neither.
+* Git reports the top folder with its long name while a session may report a
+  short Windows name (`RUNNER~1`) for the same folder; file matching falls back
+  to the real paths so evidence is not lost.
+* "Open changed file" became "Show": opening a file with its default program
+  runs `.js` (Windows Script Host), `.bat` or `.exe` files, and agents can
+  create any file.
+* A commit time has one-second resolution, so the evidence window allows one
+  second on each side. Commits made while two agents run `git commit` in the
+  same tree are credited to nobody.
+* Running the whole test suite repeatedly exposed a real race in Phase 7's
+  Restart: the adapter freed the session id before sending the old run's end,
+  so that end could close the restarted session and count an extra restart.
+  Claude and Codex now send the end first, and a resume waits for the old run
+  to be released. A test that resumes right after a stop fails 3/3 with the
+  old code. A Phase 7 test that checked the silence warning too early was also
+  fixed.
+* Not done: diffs of a file inside the app, submodules as separate repositories,
+  and Git state of projects no agent works in outside the Projects view.

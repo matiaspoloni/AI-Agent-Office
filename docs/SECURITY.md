@@ -36,7 +36,15 @@ to add as little attack surface as possible.
    and lets go: the folder must exist and is passed as a single argument (never
    through a shell), no command is typed into the terminal, and Agent Office never
    tracks or stops it.
-8. **Fail open for the agent.** If the app is closed or the relay fails, the hook exits
+8. **Git is only read.** Agent Office runs read-only Git commands in the folders
+   agents work in and in project folders, never commands that change a
+   repository. It turns off the repository's `core.fsmonitor` program for those
+   calls, takes no optional locks (so it never blocks the agent's own commits),
+   passes only checked commit ids as revisions, and leaves Git's
+   `safe.directory` check on. Other repository settings still apply, as they do
+   when the agent itself runs `git` in that folder. Changed files are shown
+   selected in Explorer, never opened with their default program.
+9. **Fail open for the agent.** If the app is closed or the relay fails, the hook exits
    0 with no output, so the agent behaves as if Agent Office did not exist. Agent Office
    never auto-approves anything; approvals only happen after an explicit user click.
    An unanswered request is denied (managed sessions) or handed back to the agent's

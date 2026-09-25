@@ -99,7 +99,7 @@ AI-Agent-Office/
 │  ├─ ao-config/           # safe edits of provider config files (backup, atomic write)
 │  ├─ ao-jsonrpc/          # JSON-RPC 2.0 client over a managed process's stdio (Codex app-server, ACP)
 │  ├─ ao-testkit/          # fixture harness, fake provider CLIs (fake-claude, fake-codex, fake-cursor), cargo_bin helper
-│  ├─ ao-git/              # GitService (git.exe porcelain v2)                   [Phase 8]
+│  ├─ ao-git/              # GitService: read-only git.exe (porcelain v2) + parsers
 │  └─ providers/
 │     ├─ ao-provider-claude/
 │     ├─ ao-provider-codex/
@@ -347,6 +347,48 @@ Built on top of it:
   (Windows Terminal `wt.exe -d <folder>`, else PowerShell or `cmd` in a new
   console with that working directory). It is started detached and never
   managed; no command is typed into it, and the folder is passed as one argument.
+
+## 6a. Git Service (`ao-git` + `src-tauri/src/git.rs`)
+
+* **Reads only**, through the user's own `git` (Git for Windows' `git.exe`;
+  found like Diagnostics finds it): `rev-parse` (which working tree and
+  repository a folder belongs to), `status --porcelain=v2 --branch -z`
+  (branch, upstream, ahead/behind, staged / not staged / new / conflicted
+  files), `log` (recent commits, commits between two heads) and
+  `worktree list --porcelain`. Nothing is ever written to a repository.
+* **Out of the agents' way:** `--no-optional-locks` (status never rewrites the
+  index, so it never holds `index.lock` while an agent commits), no pager,
+  colors or credential prompts, no console window, 20 s timeout, and none of
+  the caller's `GIT_*` variables.
+* **Safe with untrusted repositories as far as Git allows:** the repository's
+  `core.fsmonitor` program is not started (a real `git status` would start
+  it); only checked commit ids are passed as revisions; Git's own
+  `safe.directory` check stays on (a repository owned by another Windows user
+  is reported as refused). Like any Git tool, other repository settings (for
+  example content filters) still apply, as they do when the agent itself runs
+  `git`.
+* **When:** a session is linked to the working tree of its folder when it
+  starts. The tree is re-read 1.5 s after the agent edits files, runs a
+  command or finishes a turn (debounced), every 30 s while an agent works
+  there, and when the Projects view asks (at most every 5 s). Project folders
+  are read when the Projects view is open.
+* **Events:** changes become `git.branch_changed`, `git.status_changed` and
+  the linked worktree for every active session in the tree, with the
+  repository id (the main working tree's folder) on each event.
+* **Attribution (conservative):** a commit is credited to a session only when
+  that session ran a commit-creating `git` command in that tree and the
+  commit's time falls within that command's run; with no such session, or
+  several, the commit is credited to nobody. A changed file is linked to a
+  session only when that session's tool reported writing it
+  (`file.created` / `file.modified` / `file.deleted`). Nothing is inferred
+  from timing alone or from who is "nearby".
+* **UI:** `list_repositories` returns each tree (status, files with their
+  writers, recent commits with their credited session, worktrees, sessions,
+  projects). *Open project* opens the folder in the file manager; *Show* a
+  changed file selects it in Explorer (`explorer /select,`). Files are never
+  opened with their default program: on Windows that would run `.js`, `.bat`
+  or `.exe` files. Only folders of sessions, projects and followed
+  repositories can be opened, and paths cannot escape them.
 
 ## 7. Persistence
 

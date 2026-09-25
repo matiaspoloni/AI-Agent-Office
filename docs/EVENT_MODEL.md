@@ -16,7 +16,7 @@ state, database, UI — only understands this model. Rust definitions live in
   "agentId": "11111111-…",        // = sessionId for the main agent
   "parentAgentId": "…",           // subagents only (optional)
   "projectId": "…",               // resolved from cwd by the pipeline (optional)
-  "repositoryId": "…",            // Phase 8 (optional)
+  "repositoryId": "…",            // set by the Git service: the repository's main folder (optional)
   "source": "hook",               // hook | protocol | process | git | internal | simulation
   "type": "tool.started",
   "payload": { … }
@@ -47,7 +47,9 @@ state, database, UI — only understands this model. Rust definitions live in
 | `permission.approved` / `permission.denied` | `requestId`, `resolvedBy`, `message` | Clears the pending request |
 | `permission.expired` | `requestId`, `resolvedBy: timeout`, `message` | Agent Office stopped offering an answer; the agent keeps waiting in its own prompt |
 | `subagent.started` / `subagent.updated` / `subagent.ended` | `agentType`, `description`, `reason` | New character linked to its parent / walks out |
-| `git.branch_changed` / `git.commit_created` / `git.status_changed` | branch, sha/summary, dirty/staged/ahead/behind | Session git info (Phase 8) |
+| `git.branch_changed` | `branch` (absent when detached), `previous` | Session branch |
+| `git.status_changed` | `dirty` (not staged: edits, new files, conflicts), `staged`, `untracked`, `conflicted`, `ahead`, `behind` (only with an upstream) | Session Git changes |
+| `git.commit_created` | `sha`, `summary` | Session commit count; only sent to a session that ran the commit (see below) |
 | `context.compacted` | `text` | `THINKING` ("Compacting context") |
 | `usage.updated` | `inputTokens`, `outputTokens`, `cachedInputTokens`, `reasoningTokens`, `totalTokens`, `contextWindow`, `contextTokens` (tokens currently in the context, ACP), `costUsd`, `costIsEstimate` | Session usage (cumulative, only reported values) |
 | `provider.error` | `component`, `message` | Diagnostics; last error on the agent if the session exists |
@@ -110,3 +112,21 @@ well under a second (`crates/ao-core/tests/load.rs`), and the UI store absorbs
 Provider mappings are tested with fixture files (see `crates/ao-testkit`):
 `fixtures/<provider>/<channel>/*.json` hold a real-shaped input and the
 expected events as a subset match, ignoring `eventId` and `timestamp`.
+
+## Git events
+
+Git events come from Agent Office's own Git service (`source: git`), not from
+the providers. They describe the working tree a session works in, so they
+never count as agent activity: they do not end a "silent" warning and never
+create a session.
+
+* `git.branch_changed` and `git.status_changed` are facts about the working
+  tree; every active session in that tree receives them.
+* `git.commit_created` is a claim that *this session* made the commit. It is
+  sent only with evidence: the session ran a commit-creating `git` command
+  (`commit`, `merge`, `cherry-pick`, `revert`, `am`, `rebase`, `pull`) in that
+  tree, and the commit's time falls within that command's run. When no
+  session, or more than one, has such evidence, the commit is shown in the
+  repository and credited to nobody.
+* A linked worktree is reported with `session.updated` (`worktree`).
+

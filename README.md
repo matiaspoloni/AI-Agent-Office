@@ -6,7 +6,7 @@ living pixel-art office. Each session is an employee: you can see who is coding,
 is running tests, who is waiting for your permission and who just hit an error, and
 you can act on them when the provider allows it.
 
-> **Status: early development (Phase 7 of 10).** The desktop shell, unified event
+> **Status: early development (Phase 8 of 10).** The desktop shell, unified event
 > pipeline, SQLite storage, provider detection, a clearly-labelled *demo* provider,
 > **Claude Code** and **Codex CLI** (sessions launched from the app, and sessions
 > in your own terminal through hooks) work. **Cursor CLI** sessions launched from
@@ -109,6 +109,26 @@ and why it ended ("finished", "exited with code 1", "stopped by Agent Office", �
 Diagnostics → *Processes started by Agent Office* lists every agent process the
 app started, with its status and how many processes are running under it.
 
+## Git
+
+Agent Office reads the Git repositories your agents work in with your own
+Git (it never changes them):
+
+* The agent panel shows the repository, branch (or worktree), changes not
+  staged / staged / new, how far the branch is ahead of or behind its
+  upstream, and the commits that agent made.
+* **Projects** shows a card per repository: branch, changed files, recent
+  commits and worktrees, refreshed every 15 seconds while you look at it.
+* A file shows "written by" an agent only when that agent's tool wrote it, and
+  a commit shows "by" an agent only when that agent ran the `git commit`.
+  Everything else is shown without a name: Agent Office does not guess.
+* **Open project** opens the folder; **Show** selects a changed file in
+  Explorer. Files are never opened with their default program, because on
+  Windows that would run scripts and programs an agent may have created.
+
+Git for Windows 2.15 or newer is needed for this part; without it the rest
+of the app works and Diagnostics says so.
+
 **Before uninstalling Agent Office**, press **Uninstall** next to Claude Code and
 Codex CLI in Diagnostics so they stop calling it (the installer will do this
 automatically in a later phase).
@@ -140,8 +160,9 @@ More in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
   for Codex, trusted).
 * Token usage and cost come only from providers that report them. Claude's cost is a
   client-side estimate reported by Claude Code and is labelled as such.
-* File changes are attributed to an agent only when a tool call proves it; other
-  repository changes are shown as unattributed.
+* File changes are attributed to an agent only when a tool call proves it, and
+  commits only when the agent ran the `git commit`; everything else is shown
+  without a name. Nested repositories (submodules) are not read separately.
 * Cursor CLI support is experimental until it is verified with a real Cursor on
   Windows 11 (checklist in [docs/ROADMAP.md](docs/ROADMAP.md) §8). Cursor sessions
   started in your own terminal are not shown yet.

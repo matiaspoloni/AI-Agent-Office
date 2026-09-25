@@ -141,6 +141,15 @@ It prints the frames drawn per second and the cost per frame; a frame fits a
   left running, exit descriptions, the process list, relay ↔ server round trips,
   bad tokens, app not running). On Windows CI a real `.cmd` shim is started to
   check arguments, exit codes and that its whole tree dies with it.
+* **Git tests** need `git` on PATH (like the app). `crates/ao-git/tests/repos.rs`
+  builds real temporary repositories (changes of every kind, no commits yet,
+  upstream ahead/behind, linked worktrees, conflicts, detached HEAD) and shows
+  that Agent Office's reads do not start a configured `core.fsmonitor` program
+  and do not rewrite the index — with controls proving that a plain
+  `git status` does both. `src-tauri/tests/git_e2e.rs` drives the real host:
+  branch/status/worktree events, files linked to the agent that wrote them,
+  commits credited only with evidence (and not when two agents commit at once),
+  project folders, and a missing Git.
 * **Mapping fixtures**: every file in `fixtures/claude/hooks` and
   `fixtures/claude/stream` is an input plus the expected unified events
   (`crates/providers/ao-provider-claude/tests/fixtures.rs`). Add a fixture for every
