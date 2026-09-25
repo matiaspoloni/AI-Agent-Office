@@ -6,7 +6,7 @@ living pixel-art office. Each session is an employee: you can see who is coding,
 is running tests, who is waiting for your permission and who just hit an error, and
 you can act on them when the provider allows it.
 
-> **Status: early development (Phase 6 of 10).** The desktop shell, unified event
+> **Status: early development (Phase 7 of 10).** The desktop shell, unified event
 > pipeline, SQLite storage, provider detection, a clearly-labelled *demo* provider,
 > **Claude Code** and **Codex CLI** (sessions launched from the app, and sessions
 > in your own terminal through hooks) work. **Cursor CLI** sessions launched from
@@ -84,6 +84,31 @@ answer them from the app (Claude shows its own prompt if you don't answer in tim
    Codex CLI launches a session from the app, with Approve / Reject for its
    commands and file changes.
 
+## Controlling agents
+
+Click a character to open its panel. What you can do depends on the provider
+and on who started the session (buttons that do not apply are greyed out, with
+the reason in their tooltip):
+
+* **Stop** — sessions started from Agent Office: asks the agent to finish (up to
+  10 s), then ends it and everything it started.
+* **Restart** — Claude Code and Codex sessions started from Agent Office:
+  continues the *same conversation* in a new process, in the same folder, with
+  the same model and permission mode (it stops the agent first if it is still
+  running, and asks you once more before doing so). Not available for Cursor yet.
+* **Open terminal** — any session whose folder exists on this computer: opens
+  your terminal (Windows Terminal, else PowerShell) in that folder. It is yours:
+  Agent Office types nothing into it and never closes it.
+* **No news for N minutes** — when a busy agent has not reported anything for a
+  while (5 minutes by default; Diagnostics → Settings), it shows an hourglass in
+  the office and a note in its panel. It may just be running a long build, so
+  Agent Office never stops it on its own.
+
+The panel also shows the process ID, how many times the session was restarted,
+and why it ended ("finished", "exited with code 1", "stopped by Agent Office", …).
+Diagnostics → *Processes started by Agent Office* lists every agent process the
+app started, with its status and how many processes are running under it.
+
 **Before uninstalling Agent Office**, press **Uninstall** next to Claude Code and
 Codex CLI in Diagnostics so they stop calling it (the installer will do this
 automatically in a later phase).
@@ -110,7 +135,7 @@ More in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 * Agent Office never kills or types into a process it did not start. External
   sessions can be observed, not controlled (except Claude background sessions via the
-  official `claude stop`).
+  official `claude stop`). Restart works only for sessions started from Agent Office.
 * External sessions only appear if the provider's hook integration is installed (and,
   for Codex, trusted).
 * Token usage and cost come only from providers that report them. Claude's cost is a

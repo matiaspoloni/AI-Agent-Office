@@ -89,7 +89,7 @@ Notes:
 | **Hooks** (`hooks` key in `settings.json`) | External sessions (global `%USERPROFILE%\.claude\settings.json`) and managed sessions (per-process `--settings <json>`). | Documented, stable. |
 | **Headless / Agent SDK CLI mode**: `claude -p --input-format stream-json --output-format stream-json --verbose` | Managed sessions: prompts in, typed messages out (`system/init`, `assistant`, `user`, `result`, `system/api_retry`, `system/permission_denied`). | Documented. |
 | `--session-id <uuid>` | Managed sessions get an ID chosen by us, so hook events and the process are correlated from the first byte. | Documented. |
-| `--resume <id>` | Restart a managed session. | Documented. |
+| `--resume <id>` | Restart a managed session (Agent Office → *Restart*): same session id, same folder, model and permission mode. | Documented. With 2.1.282, an unknown id prints `No conversation found with session ID: <id>` on stderr and a `result` line (`subtype: error_during_execution`, `is_error: true`, `errors: [...]`) on stdout, then exits 1 (recorded without an API call: `fixtures/claude/stream/08-resume-unknown-session-real.json`). |
 | `claude agents --json` | List active interactive + background sessions (`pid`, `cwd`, `kind`, `startedAt`, `sessionId`, `name`, `status`). | In CLI help of 2.1.281; version-gated (checked at runtime). |
 | `claude stop <id>` | Stop a *background* (`--bg`) session only. | In CLI help. |
 | Transcript `.jsonl` files | **Not used.** Format is not a documented contract. | — |
@@ -218,7 +218,8 @@ Permission answers:
 ### 4.2 app-server v2 surface used
 
 * Client → server: `initialize` (+ `initialized` notification), `thread/start`
-  (`cwd`, `model`, `approvalPolicy`), `turn/start` (`threadId`,
+  (`cwd`, `model`, `approvalPolicy`), `thread/resume` (`threadId`,
+  `excludeTurns: true`; used by *Restart*), `turn/start` (`threadId`,
   `input: [{type: "text", text, text_elements: []}]`), `turn/steer` (while a
   turn runs), `turn/interrupt`, `hooks/list` (trust status).
 * Server → client notifications mapped: `turn/started`, `turn/completed`
@@ -303,6 +304,7 @@ external `codex exec` session through the hooks).
 | Hook trust is stored per key `<file>:<event>:<group>:<handler>` with a content hash. | Our groups are only appended; a removed group that is not the last stays as `{"hooks": []}` so the user's hooks keep their keys and trust. |
 | `SessionEnd` hooks always run synchronously; `SessionEnd` and `Interrupt` timeouts are clamped to 3 s. | `SessionEnd` is a quick synchronous hook (`--wait 2`, timeout 3 s). |
 | `hooks/list` works without an account and reports `trustStatus` / `enabled` per hook. | Diagnostics shows *Needs your action* until the hooks are trusted in Codex; Agent Office never writes trust state. |
+| `thread/resume` keeps the thread id, returns no turns with `excludeTurns`, and sends no `thread/started` (only `warning`, `thread/status/changed` idle and `thread/goal/cleared`). An unknown id fails with `-32600` "no rollout found for thread id …". Verified with threads saved by earlier local runs (no network, no cost). | *Restart* announces the session itself, checks that the returned id is the one asked for, and shows Codex's error message when the thread is gone. |
 | `codex --help` documents approval policies `on-request` and `never`; the protocol also accepts `untrusted` (asks before commands Codex does not consider safe). | New agent offers these three; nothing is sent when left at "Use my Codex settings". |
 
 Approval answers:
@@ -409,7 +411,9 @@ Not implemented:
   Agent Office does **not** touch `~/.cursor/hooks.json` and shows no terminal
   Cursor sessions. Cursor sessions launched from Agent Office are fully visible.
 * Subagents (no ACP concept), session listing and resume (`session/list`,
-  `session/load` exist in ACP but are not used yet), images in prompts, MCP
+  `session/load` exist in ACP but are optional for agents and could not be
+  tested against Cursor, so *Restart* is refused for Cursor sessions with a
+  clear message), images in prompts, MCP
   servers passed to the agent, Cursor's plan / question / todo extension requests.
 
 Verification done without a Cursor account or network:

@@ -137,8 +137,10 @@ It prints the frames drawn per second and the cost per frame; a frame fits a
   stop), preview recording, and the host runtime (event → state → UI → disk,
   restart behaviour).
 * **Process and IPC tests** start real helper binaries built on demand by
-  `ao_testkit::bins::cargo_bin` (process-tree kill, relay ↔ server round trips,
-  bad tokens, app not running).
+  `ao_testkit::bins::cargo_bin` (process-tree kill, processes a finished agent
+  left running, exit descriptions, the process list, relay ↔ server round trips,
+  bad tokens, app not running). On Windows CI a real `.cmd` shim is started to
+  check arguments, exit codes and that its whole tree dies with it.
 * **Mapping fixtures**: every file in `fixtures/claude/hooks` and
   `fixtures/claude/stream` is an input plus the expected unified events
   (`crates/providers/ao-provider-claude/tests/fixtures.rs`). Add a fixture for every
@@ -165,6 +167,10 @@ It prints the frames drawn per second and the cost per frame; a frame fits a
   in the project folder switch it to "logged out", "login fails" or "older model
   API"; words in the prompt pick a scripted turn (`permission`, `edit`, `plan`,
   `wait`, `fail`).
+  *Restart* is covered in all three: `fake-claude` and `fake-codex` remember the
+  sessions/threads they created (in their temporary config folder) and answer
+  `--resume` / `thread/resume` like the real CLIs, including the real error for
+  an unknown id; Cursor must refuse it.
 
 ### Re-recording provider fixtures
 
@@ -189,6 +195,11 @@ configuration folders, never a personal account:
 * **Claude Code**: a temporary `CLAUDE_CONFIG_DIR`. Hook payloads and
   `stream-json` shapes can be captured this way; a real prompt needs an
   authenticated CLI and **costs tokens**, so it is never part of the tests.
+  A temporary config folder alone does **not** keep a prompt free: credentials
+  given through environment variables (for example when working inside another
+  Claude Code session) are still used. Only record things that end before any
+  API call (like the unknown `--resume` id), or start the CLI with a cleaned
+  environment.
 
 When a new CLI version changes a shape, re-record, update the fixture and the
 mapping together, and note the finding in PROVIDER_CAPABILITIES.md.
@@ -196,7 +207,8 @@ mapping together, and note the finding in PROVIDER_CAPABILITIES.md.
   pods, subagents next to their lead, settle delay, exit) incl. 20 sessions + 50
   subagents and a logic speed check, sprite frames, team grouping, the renderer
   against a stand-in canvas, the stress generator, path finding, store merging,
-  timestamp shifting, capability gating.
+  timestamp shifting, capability gating, which agents show the "silent"
+  warning (and its hourglass in the renderer).
 * **Smoke test**: `npm run smoke` runs the real binary headless with a temporary
   data folder; CI runs it on `windows-latest`.
 * Provider tests must never need real accounts: use fixtures and fake binaries

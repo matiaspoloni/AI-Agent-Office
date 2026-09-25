@@ -19,14 +19,24 @@ to add as little attack surface as possible.
    explicitly allowed in `src-tauri/capabilities/`. No shell/fs plugins are exposed to
    the renderer. A strict Content-Security-Policy blocks remote scripts.
 5. **Never kill what we didn't start.** Only processes created by Agent Office (and
-   tracked in their own Job Object) can be stopped or killed.
+   tracked in their own Job Object) can be stopped or killed. They start suspended
+   and only run once they are inside that job, so everything they start is in it
+   too. Diagnostics lists them (*Processes started by Agent Office*). An agent that
+   goes quiet is only flagged, never stopped automatically.
 6. **Safe config edits.** Provider config files (e.g. `%USERPROFILE%\.claude\settings.json`)
    are parsed first (invalid JSON → refuse), backed up with a timestamp (last 5 kept),
    written atomically (temporary file + rename), and only hook entries that run the
    Agent Office executable for that provider are ever changed or removed. Uninstall
    restores the file to the user's own content. Every change needs an explicit click
    and confirmation in Diagnostics.
-7. **Fail open for the agent.** If the app is closed or the relay fails, the hook exits
+7. **Restart and Open terminal add nothing new.** *Restart* stops our own process
+   (gracefully) and continues the conversation through the provider's official
+   resume (`claude --resume`, Codex `thread/resume`); no prompt is replayed.
+   *Open terminal* starts the user's own terminal program in the session's folder
+   and lets go: the folder must exist and is passed as a single argument (never
+   through a shell), no command is typed into the terminal, and Agent Office never
+   tracks or stops it.
+8. **Fail open for the agent.** If the app is closed or the relay fails, the hook exits
    0 with no output, so the agent behaves as if Agent Office did not exist. Agent Office
    never auto-approves anything; approvals only happen after an explicit user click.
    An unanswered request is denied (managed sessions) or handed back to the agent's

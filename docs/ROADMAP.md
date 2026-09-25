@@ -53,7 +53,7 @@ then continue.
 | R3 | **Codex hook trust** requires a manual `/hooks` confirmation by the user, again after any change to the hook. | External Codex sessions stay invisible until trusted. | Implemented: status read from Codex (`hooks/list` `trustStatus`), *Needs your action* with the exact step in Diagnostics; our entries are only appended so the user's hooks keep their trust; trust is never written by Agent Office. |
 | R4 | Editing `~/.claude/settings.json` could damage user config. | Lost settings/plugins. | Parse-or-refuse, timestamped backup, atomic write (temp + rename), only touch entries carrying our marker, idempotent install, uninstall/repair, tests with real-world settings fixtures. |
 | R5 | A synchronous permission hook would hide the terminal prompt. | User confusion, stuck agents. | Observe-only by default; opt-in "answer from app" with bounded timeout and fallback to the terminal prompt. |
-| R6 | Windows process trees (`.cmd` shims, `node` children, shells spawned by agents). | Orphans or wrong process killed. | Job Objects per managed session, kill only our jobs, PID + creation-time guard. |
+| R6 | Windows process trees (`.cmd` shims, `node` children, shells spawned by agents). | Orphans or wrong process killed. | Implemented: one Job Object per managed process, started suspended so nothing escapes it; only our jobs are ever terminated; the process handle is held for its whole life (no action on a bare PID); leftovers stopped when the agent exits; tested on Windows CI. |
 | R7 | Hook latency slows the agent. | Worse agent UX. | Relay is the native app exe in `hook` mode (≈25 ms per call in a debug build when the app is closed), async hooks for non-decision events, 300 ms connect timeout, exit 0 when the app is closed. |
 | R13 | App uninstalled while hooks remain in `~/.claude/settings.json` or `~/.codex/hooks.json`. | The agent reports a failing hook command on every event. | Phase 10: the NSIS uninstaller runs the hook removal first; until then Diagnostics → *Uninstall* must be used before removing the app (documented in the README). |
 | R8 | Event floods (streaming deltas, command output). | UI jank, DB growth. | Batching (100 ms), UI never re-renders per token, output truncation, retention, virtualized lists. |
@@ -233,3 +233,42 @@ installed and `agent login` was done once in a terminal. Note the Cursor version
   millisecond.
 * Not done (later phases): layout editor and saved layouts, furniture moves and
   unlockables (data types exist), provider-specific sprites.
+
+## 10. Phase 7 checklist
+
+- [x] Agents start suspended, are put in their own Job Object, then run: nothing they start can escape the job (killed if they cannot be resumed)
+- [x] Stop (close input, wait 10 s, end the tree) and Force stop (end the tree at once)
+- [x] Exit details: exit code, signal, Windows crash names, "stopped by Agent Office", processes left running by the agent (stopped and counted)
+- [x] `.cmd` shims: arguments, exit codes and tree kill tested with a real shim on Windows CI
+- [x] PID-reuse guard: the process handle is held for the process's whole life; nothing acts on a bare PID
+- [x] Silent agents: busy but quiet for N minutes (preference, default 5) → hourglass and a note; never stopped automatically
+- [x] Restart counter per session; **Restart** for Claude (`--resume`) and Codex (`thread/resume`); refused for Cursor
+- [x] **Open terminal** in the session's folder (Windows Terminal, else PowerShell, else `cmd`)
+- [x] Diagnostics: *Processes started by Agent Office* (PID, status, tree size, last output)
+- [x] Process tests on Windows CI with fake agents (tree kill, leftovers, no foreign kill)
+- [ ] On Windows 11 by hand: Open terminal with and without Windows Terminal; Restart of a real Claude and a real Codex session (uses a few tokens of the user's own account)
+
+### Phase 7 findings
+
+* Until this phase a new agent process was placed in its job right after it
+  started; anything it launched in that first instant would have escaped. It
+  now starts suspended and runs only once it is inside the job.
+* When an agent exits it can leave processes behind (a dev server, a watcher).
+  They belong to the finished session and would die anyway when the job is
+  closed; they are now stopped at once and counted in the end reason.
+* Real Codex 0.156.1 (checked locally with threads saved by earlier runs, no
+  account, no cost): `thread/resume` keeps the thread id, sends no
+  `thread/started`, and an unknown id fails with "no rollout found". The adapter
+  announces the resumed session itself.
+* Real Claude Code 2.1.282: `--resume` with an unknown id fails before any API
+  call, with a clear message on stderr and an error `result` line (recorded as a
+  fixture).
+* Cursor: ACP's `session/load` is optional and could not be tried against a real
+  Cursor, so Restart is refused for Cursor sessions instead of guessing.
+* "Stuck" cannot be told apart from "running a long build" from the outside, so
+  a silent agent is only flagged. The rule is per session: some agent is busy
+  and no event arrived for N minutes.
+* During development one real Claude prompt was sent by mistake (about
+  US$0.04): a temporary `CLAUDE_CONFIG_DIR` does not hide credentials passed in
+  environment variables. DEVELOPMENT.md now warns about it; tests never call a
+  real provider.

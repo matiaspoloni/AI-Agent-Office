@@ -297,28 +297,56 @@ managed Claude session the two channels split the work:
 
 ## 6. Process Manager (Windows-first)
 
-Implemented in `ao-process` (Phase 3):
+Implemented in `ao-process` (Phases 3 and 7):
 
 * Spawns through `tokio::process` with `CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP`.
   `.cmd` shims (npm installs) are started by Rust's standard library, which runs
   them through `cmd.exe` with its own argument escaping and refuses arguments it
   cannot escape safely; Agent Office puts nothing user-typed on command lines
-  (prompts go through stdin, hook settings through a file).
-* Each managed process is assigned to its **own Job Object**
-  (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`): the whole tree (agent + shells it spawned)
-  is terminated with the job, and nothing outside the job can be affected. The
-  process is assigned right after it starts; a grandchild spawned in that first
-  instant would escape the job (known limitation; the CLIs we launch do not do that).
-* Captures stdout/stderr line by line, owns stdin, and keeps the process handle for
-  its whole life, so it never acts on a PID that could have been reused.
-* Stop = close stdin → wait (grace period) → terminate the job. Dropping a
-  `ManagedProcess` also terminates its tree.
+  (prompts go through stdin, hook settings through a file). A Windows CI test
+  starts a real `.cmd` shim, checks its arguments and exit code, and kills its tree.
+* Each managed process gets its **own Job Object**
+  (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`). The process is created **suspended**
+  (`CREATE_SUSPENDED`), put in the job, then resumed: it runs its first
+  instruction inside the job, so nothing it starts can escape. If it cannot be
+  resumed it is killed rather than left behind.
+* Captures stdout/stderr line by line (and remembers when the last line came),
+  owns stdin, and keeps the process handle for its whole life, so it never acts
+  on a PID that could have been reused.
+* **Stop** = close stdin → wait 10 s → terminate the job. **Force stop**
+  terminates the job at once. Dropping a `ManagedProcess` also terminates its tree.
+* **Exit details** (`ExitInfo`): exit code, Unix signal, whether Agent Office
+  stopped it, and how many processes the agent left running when it exited
+  (they are stopped: they belong to the finished session). `describe()` turns
+  this into the session's end reason ("finished", "exited with code 2",
+  "crashed (access violation), code 0xC0000005", "stopped by Agent Office;
+  2 leftover processes stopped").
+* A **registry** lists every process Agent Office started and still tracks
+  (label, PID, start, status, live processes in its tree, last output):
+  Diagnostics → *Processes started by Agent Office*.
+* **Never kills a process it did not create.** Only our own jobs / process
+  groups are ever terminated. External sessions have no kill action (except
+  Claude background sessions via the official `claude stop <id>`).
+* Non-Windows builds use process groups (`killpg`) behind the same API.
 
-Planned (Phase 7): stall detection (busy but silent for N minutes, shown as a
-warning, never auto-killed) and restart counters.
-* **Never kills a process it did not create.** External sessions have no kill action
-  (except Claude background sessions via the official `claude stop <id>`).
-* Non-Windows builds use process groups (`setsid`/`killpg`) behind the same API.
+Built on top of it:
+
+* **Silent agents.** When an agent is busy (thinking, reading, coding, running a
+  command or tests) and nothing has been heard from its session for N minutes
+  (preference, default 5, 0 = off), the session gets `silentSince`. The office
+  shows an hourglass and the panel explains it. It is only a warning: a long
+  build or test run is normal, so nothing is stopped automatically.
+* **Restart counter.** A session that starts again after it ended (Restart, or
+  `--resume` in a terminal) increments `restarts`.
+* **Restart** (managed sessions): stops the session gracefully if it is running,
+  then continues the same conversation in a new process through the provider's
+  official resume: Claude `claude -p --resume <id>`, Codex `thread/resume`. The
+  folder, model and permission mode are kept. Cursor: not implemented (its ACP
+  `session/load` is optional and could not be tested without a real Cursor).
+* **Open terminal**: opens the user's own terminal in the session's folder
+  (Windows Terminal `wt.exe -d <folder>`, else PowerShell or `cmd` in a new
+  console with that working directory). It is started detached and never
+  managed; no command is typed into it, and the folder is passed as one argument.
 
 ## 7. Persistence
 
