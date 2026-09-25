@@ -772,6 +772,24 @@ impl Host {
             .map_err(|e| e.to_string())
     }
 
+    /// Opens the user's terminal in a session's folder (see `terminal.rs`).
+    /// Works for any session whose folder exists on this computer.
+    pub fn open_terminal(&self, provider: &ProviderId, session: &SessionId) -> Result<(), String> {
+        let key = ao_core::ids::session_key(provider, session);
+        let cwd = self
+            .inner
+            .lock()
+            .expect("host lock")
+            .world
+            .session(&key)
+            .ok_or_else(|| format!("Session {session} is not known"))?
+            .cwd
+            .clone()
+            .unwrap_or_default();
+        let dir = crate::terminal::resolve_folder(&cwd)?;
+        crate::terminal::open_in(&dir).map(|_| ())
+    }
+
     pub async fn stop(
         &self,
         provider: ProviderId,
@@ -965,6 +983,38 @@ mod tests {
             SessionStatus::Active,
             "a quiet session is never ended"
         );
+        let _ = std::fs::remove_dir_all(paths.data_dir);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn open_terminal_only_uses_known_sessions_with_existing_folders() {
+        let paths = temp_paths();
+        let host = Host::start(paths.clone(), test_options());
+        let demo = ProviderId::new("demo");
+        let err = host
+            .open_terminal(&demo, &SessionId::new("nobody"))
+            .unwrap_err();
+        assert!(err.contains("not known"), "{err}");
+        let gone = paths.data_dir.join("deleted-project");
+        host.adapter_context().sink.emit(AgentEvent::for_session(
+            "demo",
+            "t1",
+            EventSource::Simulation,
+            EventKind::SessionStarted(SessionInfo {
+                cwd: Some(gone.display().to_string()),
+                ..Default::default()
+            }),
+        ));
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while host.snapshot().sessions.is_empty() {
+            assert!(std::time::Instant::now() < deadline);
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        // No terminal is started for a folder that is not there.
+        let err = host
+            .open_terminal(&demo, &SessionId::new("t1"))
+            .unwrap_err();
+        assert!(err.contains("does not exist"), "{err}");
         let _ = std::fs::remove_dir_all(paths.data_dir);
     }
 

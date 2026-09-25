@@ -7,6 +7,8 @@
 import type { Activity } from "../bindings/Activity";
 import type { AgentState } from "../bindings/AgentState";
 import type { ProviderInfo } from "../bindings/ProviderInfo";
+import type { SessionState } from "../bindings/SessionState";
+import { silentSince } from "../state/silence";
 import { type Furniture, type OfficeLayout, TILE } from "./layout";
 import { EXIT_FADE_MS, type Entity, type OfficeScene } from "./scene";
 import {
@@ -39,6 +41,8 @@ export interface RenderInput {
   hoverKey: string | null;
   pendingApprovals: number;
   now: number;
+  /** Sessions, to show which busy agents have gone quiet (optional). */
+  sessions?: Record<string, SessionState>;
 }
 
 const ATTENTION: ReadonlySet<Activity> = new Set(["WAITING_PERMISSION", "WAITING_INPUT", "ERROR"]);
@@ -440,20 +444,27 @@ function drawThoughtCloud(ctx: CanvasRenderingContext2D, x: number, y: number, n
   for (let i = 0; i < 3; i++) if (i < phase) ctx.fillRect(x + 3 + i * 3, y + 4, 2, 2);
 }
 
-/** Draws the activity bubble; returns false when the activity has none. */
-function drawBubble(ctx: CanvasRenderingContext2D, entity: Entity, lift: number, now: number): boolean {
+/**
+ * Draws the activity bubble; returns false when the activity has none. A busy
+ * agent that has gone quiet shows an hourglass instead (only a warning).
+ */
+function drawBubble(ctx: CanvasRenderingContext2D, entity: Entity, lift: number, now: number, silent = false): boolean {
   const activity = entity.celebrating ? "DONE" : entity.activity;
   const bx = Math.round(entity.x + 3);
-  if (activity === "THINKING") {
+  if (activity === "THINKING" && !silent) {
     drawThoughtCloud(ctx, bx, Math.round(entity.y - 32 - lift), now);
     return true;
   }
-  const name = BUBBLE_ICON[activity];
+  const name = silent ? "hourglass" : BUBBLE_ICON[activity];
   if (!name || (activity === "IDLE" && entity.zone !== "lounge")) return false;
   const waiting = activity === "WAITING_PERMISSION" || activity === "WAITING_INPUT";
   const bob = waiting ? Math.round(Math.abs(Math.sin(now / 160)) * -3) : 0;
   const by = Math.round(entity.y - 30 + bob - lift);
-  ctx.fillStyle = activity === "WAITING_PERMISSION" || activity === "ERROR" ? "#fff1f1" : "#ffffff";
+  ctx.fillStyle = silent
+    ? "#fff4dc"
+    : activity === "WAITING_PERMISSION" || activity === "ERROR"
+      ? "#fff1f1"
+      : "#ffffff";
   ctx.fillRect(bx, by, 11, 10);
   ctx.fillStyle = "#2b2f3a";
   ctx.fillRect(bx, by - 1, 11, 1);
@@ -643,10 +654,13 @@ export class OfficeRenderer {
     const withBubble = new Set<string>();
     for (const e of entities) {
       if (e.fadeMs > 0) continue;
-      const important = e.isMain || e.celebrating || ATTENTION.has(e.activity);
+      const agent = input.agents[e.key];
+      const silent = !e.celebrating && !!input.sessions && silentSince(agent, input.sessions[agent?.sessionKey ?? ""]) !== null;
+      const important = e.isMain || e.celebrating || silent || ATTENTION.has(e.activity);
       const focused = e.key === focusKey || (familyRoot !== null && (e.key === familyRoot || e.parentKey === familyRoot));
       if (!important && !focused) continue;
-      if (drawBubble(ctx, e, e.celebrating ? Math.round(Math.abs(Math.sin(now / 130)) * 4) : 0, now)) withBubble.add(e.key);
+      const lift = e.celebrating ? Math.round(Math.abs(Math.sin(now / 130)) * 4) : 0;
+      if (drawBubble(ctx, e, lift, now, silent)) withBubble.add(e.key);
     }
 
     // CEO inbox: pending approvals waiting for the user.

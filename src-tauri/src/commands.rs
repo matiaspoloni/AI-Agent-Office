@@ -1,6 +1,6 @@
 //! Tauri commands: the only surface the UI can call.
 
-use crate::diagnostics::DiagnosticsReport;
+use crate::diagnostics::{DiagnosticsReport, ManagedProcessInfo};
 use crate::host::{Host, IntegrationAction};
 use crate::prefs::Preferences;
 use ao_core::batch::UiBatch;
@@ -133,6 +133,21 @@ pub async fn restart_session(
 ) -> Result<SessionHandle, String> {
     host.restart(ProviderId::new(provider), SessionId::new(session_id))
         .await
+}
+
+#[tauri::command]
+pub fn open_terminal(
+    host: HostState<'_>,
+    provider: String,
+    session_id: String,
+) -> Result<(), String> {
+    host.open_terminal(&ProviderId::new(provider), &SessionId::new(session_id))
+}
+
+/// Agent processes Agent Office started and still tracks.
+#[tauri::command]
+pub fn list_processes() -> Vec<ManagedProcessInfo> {
+    crate::diagnostics::managed_processes()
 }
 
 #[tauri::command]

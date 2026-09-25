@@ -7,8 +7,8 @@ import { DEFAULT_LAYOUT } from "./layout";
 import { frameFor, OfficeRenderer } from "./renderer";
 import { type Entity, OfficeScene, type TeamResolver } from "./scene";
 
-/** A 2D context that records nothing: enough to run the renderer without a browser. */
-function fakeContext(calls: { n: number }): CanvasRenderingContext2D {
+/** A 2D context that only counts calls and remembers fill colors: enough to run the renderer without a browser. */
+function fakeContext(calls: { n: number }, fills?: Set<string>): CanvasRenderingContext2D {
   const target: Record<string, unknown> = {
     measureText: (text: string) => ({ width: text.length * 6 }),
   };
@@ -21,6 +21,7 @@ function fakeContext(calls: { n: number }): CanvasRenderingContext2D {
     },
     set(obj, prop: string, value) {
       obj[prop] = value;
+      if (prop === "fillStyle") fills?.add(String(value));
       return true;
     },
   }) as unknown as CanvasRenderingContext2D;
@@ -73,6 +74,33 @@ describe("OfficeRenderer", () => {
     expect(boxes.filter((b) => b.kind === "agent").length).toBe(scene.entities.size);
     expect(boxes.some((b) => b.kind === "inbox")).toBe(true);
     expect(calls.n).toBeGreaterThan(500); // furniture, screens, bubbles, tags…
+  });
+});
+
+describe("silent agents", () => {
+  it("get an hourglass bubble, even as a subagent out of focus", () => {
+    const lead = agent("lead-1-0", 0, { activity: "IDLE", sessionKey: "demo:s" });
+    const sub = agent("sub-1-1", 1, { activity: "RUNNING_COMMAND", isMain: false, parentKey: lead.key, sessionKey: "demo:s" });
+    const scene = new OfficeScene(DEFAULT_LAYOUT);
+    scene.sync([lead, sub], 0, byTeam);
+    const renderer = new OfficeRenderer(DEFAULT_LAYOUT);
+    const draw = (silentSince?: number) => {
+      const fills = new Set<string>();
+      renderer.draw(fakeContext({ n: 0 }, fills), 1600, 1000, {
+        scene,
+        agents: { [lead.key]: lead, [sub.key]: sub },
+        providers,
+        selectedKey: null,
+        hoverKey: null,
+        pendingApprovals: 0,
+        now: 1_000,
+        sessions: { "demo:s": { status: "active", silentSince } as never },
+      });
+      return fills;
+    };
+    const SILENT_BUBBLE = "#fff4dc";
+    expect(draw(undefined).has(SILENT_BUBBLE)).toBe(false);
+    expect(draw(500).has(SILENT_BUBBLE)).toBe(true);
   });
 });
 

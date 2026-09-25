@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "../bindings/Project";
 import type { SessionState } from "../bindings/SessionState";
 import { ACTIVITY_COLOR, ACTIVITY_LABEL, formatDuration } from "../state/format";
+import { silentSince } from "../state/silence";
 import { useOfficeStore } from "../state/store";
 import { DEFAULT_LAYOUT } from "./layout";
 import { type Hitbox, OfficeRenderer } from "./renderer";
@@ -107,6 +108,7 @@ export function OfficeView() {
         hoverKey: hoverRef.current,
         pendingApprovals,
         now,
+        sessions: state.sessions,
       });
       hitboxesRef.current = boxes.map((b) => ({ ...b, x: b.x / dpr, y: b.y / dpr, w: b.w / dpr, h: b.h / dpr }));
       probe?.frames.push(performance.now() - started);
@@ -242,6 +244,7 @@ function HoverCard({ agentKey, ref }: { agentKey: string; ref: React.Ref<HTMLDiv
     [agent, session, projects],
   );
   if (!agent) return null;
+  const quietSince = silentSince(agent, session);
   return (
     <div className="office-hovercard" ref={ref} role="tooltip">
       <div className="office-hovercard-title">
@@ -261,6 +264,9 @@ function HoverCard({ agentKey, ref }: { agentKey: string; ref: React.Ref<HTMLDiv
         <span className="muted"> · {formatDuration(now - agent.activitySince)}</span>
       </div>
       {agent.currentAction && <div className="small office-hovercard-action">{agent.currentAction}</div>}
+      {quietSince !== null && (
+        <div className="small office-hovercard-silent">No news for {formatDuration(now - quietSince)}</div>
+      )}
       <div className="muted small">Click for details</div>
     </div>
   );
@@ -275,6 +281,7 @@ const LEGEND: { icon: string; text: string }[] = [
   { icon: "terminal", text: "Running a command (terminal room)" },
   { icon: "flask", text: "Running tests (QA lab)" },
   { icon: "coffee", text: "Idle, waiting for a new prompt (lounge)" },
+  { icon: "hourglass", text: "Busy but silent for a while (a warning; nothing is stopped)" },
   { icon: "check", text: "Finished: celebrates, then leaves" },
 ];
 

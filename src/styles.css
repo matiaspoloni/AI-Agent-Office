@@ -180,6 +180,10 @@ code,
   white-space: nowrap;
 }
 
+.office-hovercard-silent {
+  color: var(--warn);
+}
+
 .office-legend-toggle {
   position: absolute;
   top: 10px;
@@ -410,6 +414,17 @@ code,
   margin: 6px 0;
 }
 
+.silence-box {
+  border: 1px solid #7a5a2a;
+  background: #2a2112;
+  border-radius: var(--radius);
+  padding: 10px;
+}
+
+.silence-box p {
+  margin: 6px 0 0;
+}
+
 .panel-section {
   border-top: 1px solid var(--border);
   padding-top: 8px;
@@ -524,6 +539,17 @@ code,
 }
 
 /* Cards, tables, forms */
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-title-row h3 {
+  margin: 0;
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--border);

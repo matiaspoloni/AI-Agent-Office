@@ -4,6 +4,7 @@ import type { DiagnosticsReport } from "../bindings/DiagnosticsReport";
 import type { ExternalSessionInfo } from "../bindings/ExternalSessionInfo";
 import { IntegrationControls } from "../components/IntegrationControls";
 import { PreferencesCard } from "../components/PreferencesCard";
+import { ProcessesCard } from "../components/ProcessesCard";
 import { errorMessage } from "../ipc/backend";
 import { useBackend } from "../ipc/BackendContext";
 import { formatDuration, formatTime, SUPPORT_LABEL } from "../state/format";
@@ -71,6 +72,8 @@ export function DiagnosticsView() {
       </div>
 
       <PreferencesCard onSaved={run} />
+
+      <ProcessesCard />
 
       {report && (
         <>

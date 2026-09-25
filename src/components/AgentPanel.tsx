@@ -14,6 +14,7 @@ import {
   isAvailable,
   shortPath,
 } from "../state/format";
+import { silentSince } from "../state/silence";
 import { useOfficeStore } from "../state/store";
 import { VirtualList } from "./VirtualList";
 
@@ -52,7 +53,16 @@ export function AgentPanel() {
   const [prompt, setPrompt] = useState("");
   const [onlyThisAgent, setOnlyThisAgent] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Restarting a running session stops it first: the button asks once more.
+  const [confirmRestart, setConfirmRestart] = useState(false);
   const now = useNow(1000);
+
+  useEffect(() => {
+    if (!confirmRestart) return;
+    const id = window.setTimeout(() => setConfirmRestart(false), 4000);
+    return () => window.clearTimeout(id);
+  }, [confirmRestart]);
+  useEffect(() => setConfirmRestart(false), [agent?.sessionKey]);
 
   // Older events come from the database; newer ones stream in live.
   useEffect(() => {
@@ -93,6 +103,25 @@ export function AgentPanel() {
   const stop = preview ? previewOnly : actionAvailability(provider, session.mode, "stop");
   const send = preview ? previewOnly : actionAvailability(provider, session.mode, "sendPrompt");
   const perms = preview ? previewOnly : actionAvailability(provider, session.mode, "permissions");
+  const resume = preview ? previewOnly : actionAvailability(provider, session.mode, "resume");
+  const restart =
+    resume.enabled && session.mode !== "managed"
+      ? { enabled: false, reason: "Only sessions started from Agent Office can be restarted" }
+      : resume.enabled
+        ? {
+            enabled: true,
+            reason:
+              session.status === "active"
+                ? "Stops this agent, then continues the same conversation in a new process"
+                : "Continues the same conversation in a new process",
+          }
+        : { enabled: false, reason: resume.reason };
+  const terminal = preview
+    ? previewOnly
+    : session.cwd
+      ? { enabled: true, reason: `Open your terminal in ${session.cwd}` }
+      : { enabled: false, reason: "This session did not report its folder" };
+  const quietSince = silentSince(agent, session);
   const pending = agent.pendingPermission;
   const canResolve = !!pending?.canResolve && perms.enabled;
 
@@ -130,6 +159,16 @@ export function AgentPanel() {
         {ACTIVITY_LABEL[agent.activity]}
         <span className="muted"> · {formatDuration(now - agent.activitySince)}</span>
       </div>
+
+      {quietSince !== null && (
+        <div className="silence-box" role="status">
+          <strong>No news for {formatDuration(now - quietSince)}</strong>
+          <p className="small">
+            This agent is busy but has not reported anything since {formatTime(quietSince)}. It may be waiting on a slow
+            command, or it may be stuck. Agent Office will not stop it — use Stop if you want to.
+          </p>
+        </div>
+      )}
 
       {pending && (
         <div className="permission-box">
@@ -193,6 +232,14 @@ export function AgentPanel() {
         <Row label="Model">{session.model ?? (caps && isAvailable(caps.model) ? "Not reported yet" : "Unavailable")}</Row>
         <Row label="Current action">{agent.currentAction ?? "—"}</Row>
         <Row label="Elapsed">{formatDuration((session.endedAt ?? now) - session.startedAt)}</Row>
+        {session.status === "ended" && session.endReason && <Row label="Ended">{session.endReason}</Row>}
+        {session.pid != null && agent.isMain && (
+          <Row label="Process">
+            PID {session.pid}
+            {session.mode === "managed" ? " · started by Agent Office" : ""}
+          </Row>
+        )}
+        {session.restarts > 0 && <Row label="Restarts">{session.restarts}</Row>}
         <Row label="Branch">{session.branch ?? "—"}</Row>
         <Row label="Files changed">{session.stats.filesChanged.length}</Row>
         <Row label="Tool calls">
@@ -240,10 +287,27 @@ export function AgentPanel() {
           >
             Stop
           </button>
-          <button className="btn" disabled title="Restart arrives with the process manager (Phase 7)">
-            Restart
+          <button
+            className={`btn${confirmRestart ? " bad" : ""}`}
+            disabled={!restart.enabled || busy}
+            title={restart.reason}
+            onClick={() => {
+              if (session.status === "active" && !confirmRestart) {
+                setConfirmRestart(true);
+                return;
+              }
+              setConfirmRestart(false);
+              void run("Restart", () => backend.restartSession(agent.provider, agent.sessionId));
+            }}
+          >
+            {confirmRestart ? "Stop and restart?" : "Restart"}
           </button>
-          <button className="btn" disabled title="Opening terminals arrives with the process manager (Phase 7)">
+          <button
+            className="btn"
+            disabled={!terminal.enabled || busy}
+            title={terminal.reason}
+            onClick={() => run("Open terminal", () => backend.openTerminal(agent.provider, agent.sessionId))}
+          >
             Open terminal
           </button>
           <button className="btn" disabled title="Opening folders/files arrives with the Git integration (Phase 8)">

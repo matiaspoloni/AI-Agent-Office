@@ -6,6 +6,7 @@ import type { DiagnosticsReport } from "../bindings/DiagnosticsReport";
 import type { ExternalSessionInfo } from "../bindings/ExternalSessionInfo";
 import type { InitialState } from "../bindings/InitialState";
 import type { IntegrationStatus } from "../bindings/IntegrationStatus";
+import type { ManagedProcessInfo } from "../bindings/ManagedProcessInfo";
 import type { Preferences } from "../bindings/Preferences";
 import type { Project } from "../bindings/Project";
 import type { SessionHandle } from "../bindings/SessionHandle";
@@ -34,6 +35,8 @@ export function createTauriBackend(): Backend {
     startDemoOffice: () => invoke<SessionHandle[]>("start_demo_office"),
     stopSession: (provider, sessionId, force) => invoke<void>("stop_session", { provider, sessionId, force }),
     restartSession: (provider, sessionId) => invoke<SessionHandle>("restart_session", { provider, sessionId }),
+    openTerminal: (provider, sessionId) => invoke<void>("open_terminal", { provider, sessionId }),
+    listProcesses: () => invoke<ManagedProcessInfo[]>("list_processes"),
     sendPrompt: (provider, sessionId, prompt) => invoke<void>("send_prompt", { provider, sessionId, prompt }),
     resolvePermission: (provider, sessionId, requestId, decision) =>
       invoke<void>("resolve_permission", { provider, sessionId, requestId, decision }),

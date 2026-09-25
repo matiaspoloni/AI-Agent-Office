@@ -82,6 +82,65 @@ pub struct DiagnosticsReport {
     pub hooks: HookBridgeStatus,
 }
 
+/// A process Agent Office started (an agent CLI) and still tracks.
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ManagedProcessInfo {
+    pub pid: u32,
+    pub label: String,
+    /// The executable's file name.
+    pub program: String,
+    #[ts(type = "number")]
+    pub started_at: i64,
+    pub running: bool,
+    /// "running", or how it ended ("finished", "exited with code 2", …).
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub exit_code: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional, type = "number")]
+    pub last_output_at: Option<i64>,
+    /// Processes alive in its tree (the agent plus what it started).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tree_processes: Option<u32>,
+}
+
+impl From<ao_process::ProcessSnapshot> for ManagedProcessInfo {
+    fn from(p: ao_process::ProcessSnapshot) -> Self {
+        let program = std::path::Path::new(&p.program)
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or(p.program);
+        Self {
+            pid: p.pid,
+            label: p.label,
+            program,
+            started_at: p.started_at_ms,
+            running: p.exit.is_none(),
+            status: p
+                .exit
+                .as_ref()
+                .map_or_else(|| "running".to_owned(), |e| e.describe()),
+            exit_code: p.exit.as_ref().and_then(|e| e.code),
+            last_output_at: p.last_output_ms,
+            tree_processes: p.tree_processes,
+        }
+    }
+}
+
+/// Every agent process Agent Office started and still tracks, newest first.
+pub fn managed_processes() -> Vec<ManagedProcessInfo> {
+    let mut list: Vec<ManagedProcessInfo> = ao_process::managed_processes()
+        .into_iter()
+        .map(ManagedProcessInfo::from)
+        .collect();
+    list.sort_by(|a, b| b.started_at.cmp(&a.started_at));
+    list
+}
+
 const GIT_DIRS: &[&str] = if cfg!(windows) {
     &[
         "%ProgramFiles%\\Git\\cmd",

@@ -171,6 +171,7 @@ export const ICONS: Record<string, string[]> = {
   code: ["..b.b..", ".b...b.", "b..k..b", "b..k..b", "b..k..b", ".b...b.", "..b.b.."],
   coffee: [".......", "..k.k..", ".......", "kkkkkk.", "kbbbbkk", "kbbbbk.", ".kkkk.."],
   zzz: ["kkkk...", "..k....", ".k.....", "kkkk...", "....kkk", ".....k.", "....kkk"],
+  hourglass: ["kkkkkkk", ".koook.", "..kok..", "...k...", "..k.k..", ".k.o.k.", "kkkkkkk"],
 };
 
 export const ICON_PALETTE: Palette = {
