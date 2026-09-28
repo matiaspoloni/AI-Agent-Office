@@ -984,6 +984,20 @@ impl ProviderAdapter for CodexAdapter {
         self.with_trust(status, &file).await
     }
 
+    async fn integration_present(&self, ctx: &AdapterContext) -> bool {
+        // The hooks file only: the trust check would start Codex.
+        let Some(file) = self.hooks_file() else {
+            return false;
+        };
+        let plan = ctx.relay.as_ref().map(|r| self.plan(r));
+        matches!(
+            settings::status(&file, plan.as_ref()).state,
+            IntegrationState::Installed
+                | IntegrationState::NeedsRepair
+                | IntegrationState::NeedsUserAction
+        )
+    }
+
     async fn install_integration(
         &self,
         ctx: &AdapterContext,

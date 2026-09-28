@@ -5,6 +5,7 @@ pub mod diagnostics;
 pub mod git;
 pub mod hooks;
 pub mod host;
+pub mod integrations_cli;
 pub mod logging;
 pub mod logs;
 pub mod notify;
@@ -59,6 +60,27 @@ pub fn smoke_test() -> i32 {
             1
         }
     })
+}
+
+/// `agent-office integrations …` (used by the installer): runs without the
+/// window, prints JSON, returns the exit code.
+pub fn integrations_command(args: &[String]) -> i32 {
+    let paths = AppPaths::resolve();
+    let _log_guards = logging::init(&paths.log_dir);
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(err) => {
+            eprintln!("{err}");
+            return 1;
+        }
+    };
+    let options = HostOptions::for_app(&paths);
+    let outcome = runtime.block_on(integrations_cli::run(args, &paths, options));
+    println!("{}", outcome.output);
+    outcome.code
 }
 
 /// Shows notices as Windows notifications; a click opens the agent.

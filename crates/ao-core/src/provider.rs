@@ -408,6 +408,13 @@ pub trait ProviderAdapter: Send + Sync + 'static {
         IntegrationStatus::unsupported("No integration available for this provider in this build.")
     }
 
+    /// Whether Agent Office's entries are present in the provider's
+    /// configuration (installed, even if they need repair or trust). Must be
+    /// cheap and never start the provider: the uninstaller uses it.
+    async fn integration_present(&self, _ctx: &AdapterContext) -> bool {
+        false
+    }
+
     async fn install_integration(
         &self,
         _ctx: &AdapterContext,

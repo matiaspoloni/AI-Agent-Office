@@ -7,6 +7,10 @@ fn main() {
     if std::env::args().nth(1).as_deref() == Some("hook") {
         std::process::exit(ao_hook_relay::main_from_env());
     }
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().map(String::as_str) == Some("integrations") {
+        std::process::exit(agent_office_lib::integrations_command(&args[1..]));
+    }
     if std::env::args().any(|a| a == "--smoke-test") {
         std::process::exit(agent_office_lib::smoke_test());
     }

@@ -844,6 +844,16 @@ impl ProviderAdapter for ClaudeAdapter {
         settings::status(&file, plan.as_ref())
     }
 
+    async fn integration_present(&self, ctx: &AdapterContext) -> bool {
+        // Reading the settings file only: cheap.
+        matches!(
+            self.integration_status(ctx).await.state,
+            ao_core::provider::IntegrationState::Installed
+                | ao_core::provider::IntegrationState::NeedsRepair
+                | ao_core::provider::IntegrationState::NeedsUserAction
+        )
+    }
+
     async fn install_integration(
         &self,
         ctx: &AdapterContext,
