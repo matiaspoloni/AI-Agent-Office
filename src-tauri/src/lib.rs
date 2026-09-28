@@ -12,6 +12,7 @@ pub mod prefs;
 pub mod providers;
 pub mod reveal;
 pub mod terminal;
+pub mod toast;
 
 use host::{Host, HostOptions};
 use paths::AppPaths;
@@ -59,6 +60,49 @@ pub fn smoke_test() -> i32 {
     })
 }
 
+/// Shows notices as Windows notifications; a click opens the agent.
+fn notice_sink(app: tauri::AppHandle) -> notify::NoticeSink {
+    let identifier = app.config().identifier.clone();
+    let app_id = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|dir| toast::app_id_for(dir, &identifier)))
+        .unwrap_or(identifier);
+    Arc::new(move |notice: notify::Notice, show_when_focused: bool| {
+        let (app, app_id) = (app.clone(), app_id.clone());
+        // Off the caller's thread: asking for the window's focus waits for
+        // the UI thread.
+        std::thread::spawn(move || {
+            let focused = app
+                .get_webview_window("main")
+                .and_then(|w| w.is_focused().ok())
+                .unwrap_or(false);
+            if focused && !show_when_focused {
+                return;
+            }
+            let click = app.clone();
+            let agent = notice.agent_key.clone();
+            if let Err(err) =
+                toast::show(&app_id, &notice, move || open_agent(&click, agent.clone()))
+            {
+                tracing::warn!(%err, "could not show a notification");
+            }
+        });
+    })
+}
+
+/// Brings the window to the front and asks the UI to open `agent`.
+fn open_agent(app: &tauri::AppHandle, agent: Option<String>) {
+    use tauri::Emitter;
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+    if let Some(agent) = agent {
+        let _ = app.emit("open-agent", agent);
+    }
+}
+
 pub fn run() {
     let paths = AppPaths::resolve();
     let _log_guards = logging::init(&paths.log_dir);
@@ -71,6 +115,7 @@ pub fn run() {
             let options = HostOptions::for_app(&paths);
             let host: Arc<Host> =
                 tauri::async_runtime::block_on(async { Host::start(paths.clone(), options) });
+            host.set_notice_sink(Some(notice_sink(app.handle().clone())));
             app.manage(host);
             Ok(())
         })
@@ -92,6 +137,7 @@ pub fn run() {
             commands::list_repositories,
             commands::open_folder,
             commands::reveal_file,
+            commands::test_notification,
             commands::send_prompt,
             commands::resolve_permission,
             commands::recent_events,

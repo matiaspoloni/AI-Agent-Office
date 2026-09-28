@@ -469,8 +469,17 @@ impl Host {
     /// Hands a notice to the desktop shell (nothing happens headless).
     fn deliver(&self, notice: Notice, force: bool) {
         tracing::info!(kind = ?notice.kind, title = %notice.title, "notification");
-        if let Some(sink) = self.notice_sink.lock().expect("notice sink").as_ref() {
-            sink(notice, force);
+        let show_when_focused = force
+            || !self
+                .prefs
+                .lock()
+                .expect("prefs lock")
+                .notifications
+                .only_in_background;
+        // Called without holding any lock: the shell may wait on its UI thread.
+        let sink = self.notice_sink.lock().expect("notice sink").clone();
+        if let Some(sink) = sink {
+            sink(notice, show_when_focused);
         }
     }
 
@@ -1240,7 +1249,7 @@ mod tests {
         let host = Host::start(paths.clone(), test_options());
         let seen: Arc<Mutex<Vec<(Notice, bool)>>> = Arc::default();
         let sink_seen = seen.clone();
-        host.set_notice_sink(Some(Box::new(move |notice, force| {
+        host.set_notice_sink(Some(Arc::new(move |notice, force| {
             sink_seen.lock().unwrap().push((notice, force));
         })));
         let sink = host.adapter_context().sink;

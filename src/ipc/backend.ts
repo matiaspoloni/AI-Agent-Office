@@ -46,6 +46,10 @@ export interface Backend {
   openFolder(folder: string): Promise<void>;
   /** Select a file (relative to `folder`) in the file manager. Never runs it. */
   revealFile(folder: string, path: string): Promise<void>;
+  /** Called when a desktop notification is clicked; returns an unsubscribe function. */
+  onOpenAgent(handler: (agentKey: string) => void): Promise<() => void>;
+  /** Diagnostics: show a sample notification. */
+  testNotification(): Promise<void>;
   sendPrompt(provider: string, sessionId: string, prompt: string): Promise<void>;
   resolvePermission(
     provider: string,

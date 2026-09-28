@@ -41,3 +41,8 @@ tauri-plugin-dialog = "2"
 
 [dev-dependencies]
 ao-testkit.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+# Windows notifications with click activation (the same library Tauri's
+# notification plugin uses on Windows; 0.7 keeps the Rust 1.80 minimum).
+tauri-winrt-notification = "0.7"

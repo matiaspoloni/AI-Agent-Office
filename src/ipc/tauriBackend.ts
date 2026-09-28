@@ -1,4 +1,5 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { AgentEvent } from "../bindings/AgentEvent";
 import type { AppInfo } from "../bindings/AppInfo";
@@ -41,6 +42,8 @@ export function createTauriBackend(): Backend {
     listRepositories: (refresh) => invoke<RepositoriesReport>("list_repositories", { refresh }),
     openFolder: (folder) => invoke<void>("open_folder", { folder }),
     revealFile: (folder, path) => invoke<void>("reveal_file", { folder, path }),
+    onOpenAgent: (handler) => listen<string>("open-agent", (event) => handler(event.payload)),
+    testNotification: () => invoke<void>("test_notification"),
     sendPrompt: (provider, sessionId, prompt) => invoke<void>("send_prompt", { provider, sessionId, prompt }),
     resolvePermission: (provider, sessionId, requestId, decision) =>
       invoke<void>("resolve_permission", { provider, sessionId, requestId, decision }),

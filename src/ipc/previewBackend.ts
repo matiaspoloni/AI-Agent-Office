@@ -137,6 +137,11 @@ export async function createPreviewBackend(): Promise<Backend> {
     revealFile: async () => {
       throw new Error(PREVIEW_ONLY);
     },
+    // No desktop notifications in the browser preview.
+    onOpenAgent: async () => () => undefined,
+    testNotification: async () => {
+      throw new Error(PREVIEW_ONLY);
+    },
     sendPrompt: async () => {
       throw new Error(PREVIEW_ONLY);
     },

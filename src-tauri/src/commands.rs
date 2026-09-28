@@ -167,6 +167,13 @@ pub fn reveal_file(host: HostState<'_>, folder: String, path: String) -> Result<
     host.reveal_file(&folder, &path)
 }
 
+/// Diagnostics: shows a sample desktop notification.
+#[tauri::command]
+pub async fn test_notification(host: HostState<'_>) -> Result<(), String> {
+    host.test_notification();
+    Ok(())
+}
+
 /// Agent processes Agent Office started and still tracks.
 #[tauri::command]
 pub fn list_processes() -> Vec<ManagedProcessInfo> {

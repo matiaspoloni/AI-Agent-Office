@@ -95,9 +95,9 @@ pub struct Notice {
     pub at: i64,
 }
 
-/// Delivers notices; `force` skips the "only in the background" check
-/// (test notices).
-pub type NoticeSink = Box<dyn Fn(Notice, bool) + Send + Sync>;
+/// Delivers notices. The flag says whether to show it even while Agent
+/// Office is the active window (test notices, or the preference is off).
+pub type NoticeSink = std::sync::Arc<dyn Fn(Notice, bool) + Send + Sync>;
 
 /// What the rules need to know about the event's provider.
 pub struct ProviderLabel<'a> {

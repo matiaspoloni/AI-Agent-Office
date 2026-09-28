@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { NotificationPrefs } from "../bindings/NotificationPrefs";
 import type { Preferences } from "../bindings/Preferences";
 import { errorMessage } from "../ipc/backend";
 import { useBackend } from "../ipc/BackendContext";
@@ -25,6 +26,17 @@ export function PreferencesCard({ onSaved }: { onSaved?: () => void }) {
   if (!draft || !saved) return null;
   const set = <K extends keyof Preferences>(key: K, value: Preferences[K]) => setDraft({ ...draft, [key]: value });
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const n = draft.notifications;
+  const setN = <K extends keyof NotificationPrefs>(key: K, value: NotificationPrefs[K]) =>
+    setDraft({ ...draft, notifications: { ...n, [key]: value } });
+  const KINDS: { key: keyof NotificationPrefs; label: string }[] = [
+    { key: "permission", label: "An agent needs permission" },
+    { key: "input", label: "An agent waits for your answer" },
+    { key: "errors", label: "An agent stopped with an error" },
+    { key: "tests", label: "Tests finished" },
+    { key: "finished", label: "An agent finished a long task (30 s or more)" },
+    { key: "sessionEnded", label: "A session ended" },
+  ];
 
   const save = async () => {
     setBusy(true);
@@ -122,6 +134,56 @@ export function PreferencesCard({ onSaved }: { onSaved?: () => void }) {
               onChange={(e) => set("maxOutputChars", Number(e.target.value))}
             />
           </label>
+        </div>
+      </div>
+      <h4>Notifications</h4>
+      <div className="grid-2">
+        <div>
+          <label className="check">
+            <input type="checkbox" checked={n.enabled} onChange={(e) => setN("enabled", e.target.checked)} />
+            <span>
+              Show Windows notifications
+              <small className="muted"> — clicking one opens the agent. Simulated demo agents never notify.</small>
+            </span>
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              disabled={!n.enabled}
+              checked={n.onlyInBackground}
+              onChange={(e) => setN("onlyInBackground", e.target.checked)}
+            />
+            <span>Only when Agent Office is not the active window</span>
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              disabled={!n.enabled}
+              checked={n.showDetails}
+              onChange={(e) => setN("showDetails", e.target.checked)}
+            />
+            <span>
+              Include the command or message
+              <small className="muted">
+                {" "}
+                — shortened, with secrets removed. Notifications can appear on the lock screen; turn this off to show only
+                who needs you.
+              </small>
+            </span>
+          </label>
+        </div>
+        <div>
+          {KINDS.map(({ key, label }) => (
+            <label key={key} className="check">
+              <input
+                type="checkbox"
+                disabled={!n.enabled}
+                checked={Boolean(n[key])}
+                onChange={(e) => setN(key, e.target.checked)}
+              />
+              <span>{label}</span>
+            </label>
+          ))}
         </div>
       </div>
       <div className="button-row">

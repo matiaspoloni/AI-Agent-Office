@@ -81,6 +81,24 @@ export default function App() {
     };
   }, []);
 
+  // A clicked desktop notification opens its agent in the office.
+  useEffect(() => {
+    if (!backend) return;
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    void backend
+      .onOpenAgent((agentKey) => {
+        const store = useOfficeStore.getState();
+        store.setView("office");
+        store.select(store.agents[agentKey] ? agentKey : null);
+      })
+      .then((stop) => (cancelled ? stop() : (unlisten = stop)));
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, [backend]);
+
   if (fatal) {
     return (
       <div className="fatal">
