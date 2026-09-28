@@ -44,7 +44,16 @@ to add as little attack surface as possible.
    `safe.directory` check on. Other repository settings still apply, as they do
    when the agent itself runs `git` in that folder. Changed files are shown
    selected in Explorer, never opened with their default program.
-9. **Fail open for the agent.** If the app is closed or the relay fails, the hook exits
+9. **Notifications stay on this computer.** They are Windows notifications
+   (no service, no network). Their details (command, message) can be switched
+   off because notifications may appear on the lock screen; when on, they are
+   clipped to one line and come from events whose secrets were already redacted.
+   Simulated demo sessions never notify.
+10. **Diagnostics exports are explicit.** A report is only written when the user
+    picks a `.json` file in a save dialog; paths inside the user's folder are
+    replaced by `%USERPROFILE%`, and the file says nothing else is removed. The
+    log viewer reads only Agent Office's own log folder.
+11. **Fail open for the agent.** If the app is closed or the relay fails, the hook exits
    0 with no output, so the agent behaves as if Agent Office did not exist. Agent Office
    never auto-approves anything; approvals only happen after an explicit user click.
    An unanswered request is denied (managed sessions) or handed back to the agent's

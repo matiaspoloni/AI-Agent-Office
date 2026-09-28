@@ -27,7 +27,7 @@ state, database, UI — only understands this model. Rust definitions live in
 
 | Type | Payload | Effect on the office |
 | --- | --- | --- |
-| `session.started` | `mode`, `cwd`, `model`, `title`, `reason`, `permissionMode`, `worktree`, `pid` | Creates the session and its main character; re-opens an ended session (resume) |
+| `session.started` | `mode`, `cwd`, `model`, `title`, `reason`, `permissionMode`, `worktree`, `pid` | Creates the session and its main character; re-opens an ended session (resume) — only when the start happened at or after the end (a late, asynchronous start of the previous run does not reopen it) |
 | `session.updated` | same as above (only present fields change) | Updates session metadata |
 | `session.ended` | `reason`, `exitCode` | Every agent → `DONE`, then they walk out |
 | `prompt.submitted` | `text` (omitted if prompt storage is off) | `THINKING` |

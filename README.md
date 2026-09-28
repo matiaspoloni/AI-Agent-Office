@@ -6,7 +6,7 @@ living pixel-art office. Each session is an employee: you can see who is coding,
 is running tests, who is waiting for your permission and who just hit an error, and
 you can act on them when the provider allows it.
 
-> **Status: early development (Phase 8 of 10).** The desktop shell, unified event
+> **Status: early development (Phase 9 of 10).** The desktop shell, unified event
 > pipeline, SQLite storage, provider detection, a clearly-labelled *demo* provider,
 > **Claude Code** and **Codex CLI** (sessions launched from the app, and sessions
 > in your own terminal through hooks) work. **Cursor CLI** sessions launched from
@@ -108,6 +108,26 @@ The panel also shows the process ID, how many times the session was restarted,
 and why it ended ("finished", "exited with code 1", "stopped by Agent Office", …).
 Diagnostics → *Processes started by Agent Office* lists every agent process the
 app started, with its status and how many processes are running under it.
+
+## Notifications
+
+Agent Office tells you, with a Windows notification, when an agent needs you:
+"Claude Code needs permission", "Codex CLI finished tests", "Cursor CLI
+encountered an error", an agent waiting for your answer, or finishing a long
+task. Click the notification and Agent Office opens with that agent selected.
+
+By default you only get them while Agent Office is in the background, never for
+the simulated demo, and never more than a few at once. Choose which ones you
+want (and whether they include the command or message, which can show on the
+lock screen) in **Diagnostics → Settings → Notifications**, and try them with
+**Send a test notification**.
+
+## When something does not work
+
+**Diagnostics** checks everything Agent Office depends on (the agent CLIs, hooks,
+database, Git, notifications) and shows its own logs. **Export report…** saves all
+of it as a file you can attach to a bug report; paths inside your user folder are
+replaced by `%USERPROFILE%`, but read it before sharing it.
 
 ## Git
 

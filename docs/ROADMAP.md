@@ -57,7 +57,7 @@ then continue.
 | R7 | Hook latency slows the agent. | Worse agent UX. | Relay is the native app exe in `hook` mode (≈25 ms per call in a debug build when the app is closed), async hooks for non-decision events, 300 ms connect timeout, exit 0 when the app is closed. |
 | R13 | App uninstalled while hooks remain in `~/.claude/settings.json` or `~/.codex/hooks.json`. | The agent reports a failing hook command on every event. | Phase 10: the NSIS uninstaller runs the hook removal first; until then Diagnostics → *Uninstall* must be used before removing the app (documented in the README). |
 | R8 | Event floods (streaming deltas, command output). | UI jank, DB growth. | Batching (100 ms), UI never re-renders per token, output truncation, retention, virtualized lists. |
-| R9 | Windows toast click-activation is limited in the Tauri notification plugin on desktop. | Click-to-open may not work in MVS. | Use WinRT toast activation (`tauri-winrt-notification`) in Phase 9; fall back to focusing the app. |
+| R9 | Windows toast click-activation is limited in the Tauri notification plugin on desktop. | Click-to-open may not work in MVS. | Implemented with WinRT toast activation (`tauri-winrt-notification`): a click on the toast while it is on screen opens the agent. A toast clicked later from the notification center is not handled (that needs a registered COM activator; Phase 10 candidate). To verify on Windows 11. |
 | R10 | Unsigned installer triggers SmartScreen. | Install friction. | Document; add signing step once a certificate exists. |
 | R11 | Provider docs change faster than code. | Silent breakage. | Capabilities documented with versions; Diagnostics shows detected versions vs tested ranges. |
 | R12 | Attributing Git changes to agents incorrectly. | Misleading UI. | Implemented: a file is linked to an agent only when its tool reported writing it; a commit only when the agent ran a commit-creating `git` command in that tree and the commit's time falls within that command's run (never when two agents qualify); everything else is shown without a name. |
@@ -308,3 +308,37 @@ installed and `agent login` was done once in a terminal. Note the Cursor version
   fixed.
 * Not done: diffs of a file inside the app, submodules as separate repositories,
   and Git state of projects no agent works in outside the Projects view.
+
+## 12. Phase 9 checklist
+
+- [x] Windows notifications: permission requested, waiting for input, errors, tests finished, long work finished, (optional) session ended
+- [x] Click on a notification: Agent Office comes to the front with that agent open
+- [x] Quiet by design: no demo notices, cooldown per session and kind, burst cap, only in the background by default, details optional
+- [x] Settings → Notifications; Diagnostics → Send a test notification
+- [x] Log viewer (application / providers, level filter, open log folder)
+- [x] Export report (JSON; user folder paths replaced) — exit criterion "Diagnostics report exportable"
+- [x] Hook events observed per provider (from Phase 3), Git version check, processes (Phase 7)
+- [ ] On Windows 11 by hand: toasts of the installed app show "Agent Office"; clicking one opens the agent; the development build shows "Windows PowerShell"; export a report and read it
+
+### Phase 9 findings
+
+* Tauri's notification plugin cannot report clicks on Windows, so toasts are
+  shown directly with `tauri-winrt-notification` 0.7 (0.8 needs Rust 1.82, above
+  the project's 1.80 minimum); it uses the same `windows` 0.61 crate the app
+  already builds, so it adds almost nothing.
+* Windows shows a toast only for an application id with a Start Menu shortcut;
+  the installer creates one, a build folder does not, so development builds
+  borrow PowerShell's id (as Tauri does).
+* Asking whether the window is active waits for the UI thread; doing that while
+  holding the host's lock could freeze the app if the UI thread were waiting on
+  that lock. Delivery therefore runs on its own thread with no lock held.
+* Notifications could leak what an agent is doing onto the lock screen; the
+  details can be switched off, and they are clipped and come from events whose
+  secrets were already redacted.
+* Running the whole suite repeatedly found a second, rarer Restart problem (1
+  run in 5): Claude's `SessionStart` hook runs asynchronously, and on a busy
+  machine the old run's hook arrived after that run had ended, reopening it;
+  the new run then counted as a second restart. For sessions Agent Office
+  launches, that hook now only adds details (the launch starts the session),
+  and a start stamped before the session's end never reopens it (this also
+  protects sessions started in a terminal).

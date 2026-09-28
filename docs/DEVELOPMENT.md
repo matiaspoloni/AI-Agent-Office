@@ -218,6 +218,12 @@ mapping together, and note the finding in PROVIDER_CAPABILITIES.md.
   against a stand-in canvas, the stress generator, path finding, store merging,
   timestamp shifting, capability gating, which agents show the "silent"
   warning (and its hourglass in the renderer).
+* **Notifications**: `src-tauri/src/notify.rs` tests the rules with a real world
+  state (the spec's three examples, quiet cases, demo sessions, backlog events,
+  preferences, cooldown and burst cap); a host test checks that notices reach
+  the shell for real providers only. Toasts themselves need Windows: a
+  development build shows them as "Windows PowerShell" (Diagnostics → Send a test
+  notification).
 * **Smoke test**: `npm run smoke` runs the real binary headless with a temporary
   data folder; CI runs it on `windows-latest`.
 * Provider tests must never need real accounts: use fixtures and fake binaries

@@ -410,8 +410,39 @@ SQLite at `%LOCALAPPDATA%\AgentOffice\agent-office.db` (WAL mode). Tables:
   Levels DEBUG/INFO/WARN/ERROR, configurable.
 * Diagnostics screen: installation + version per provider, integration/hook status,
   backend status, database status (path, size, schema version, integrity check),
-  Git detection, all relevant paths, adapter health, and hook events actually observed
-  per provider. "Run diagnostics" re-runs everything.
+  Git detection (and whether it is new enough), all relevant paths, adapter health,
+  hook events actually observed per provider, the processes Agent Office started,
+  notifications, and a **log viewer** (newest `app.log` / `providers.log`, last 500
+  lines at a chosen level; only files in the log folder are read). "Run
+  diagnostics" re-runs everything.
+* **Export report** writes the report, the agent processes and recent warnings to
+  a `.json` file the user picks in a save dialog. Paths inside the user's folder
+  become `%USERPROFILE%`; the file says that nothing else is removed.
+
+## 8a. Notifications (`src-tauri/src/notify.rs`, `toast.rs`)
+
+* **Rules** over unified events and the resulting state, identical for every
+  provider: permission requested; waiting for the user's answer; an
+  unrecoverable error; a test command finished (passed / failed with its exit
+  code; a command counts as a test run when it ran while the agent was
+  `TESTING` or looks like one); work of 30 s or more finished (`agent.idle`);
+  optionally a session ended. Titles follow the spec: "Claude Code needs
+  permission", "Codex CLI finished tests", "Cursor CLI encountered an error".
+* **Quiet by design:** simulated (demo) sessions and events older than two
+  minutes never notify; one notice per session and kind per 20 s; at most three
+  per 10 s, the next one saying how many were held back; by default only while
+  Agent Office is not the active window. Each kind can be switched off, and
+  details (command, message) can be left out; they are clipped to one line and
+  come from already-redacted events.
+* **Delivery:** the host hands notices to a sink the desktop shell provides. On
+  Windows it shows a WinRT toast (`tauri-winrt-notification`, the library behind
+  Tauri's own plugin) under the app's AppUserModelID (the installer's Start Menu
+  shortcut carries the bundle identifier; development builds borrow
+  PowerShell's). Clicking the toast while it is on screen brings the window to
+  the front and emits `open-agent`; the UI switches to the office and selects
+  the agent. Delivery runs on its own thread and the host holds no lock while
+  handing a notice over (checking the window's focus waits for the UI thread).
+  Other systems (development) only log the notice.
 
 ## 9. Fault isolation
 
