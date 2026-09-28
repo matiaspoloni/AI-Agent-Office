@@ -23,7 +23,8 @@ on Ubuntu: `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindica
 | `npm install` | Install UI + Tauri CLI dependencies |
 | `npm run dev` | Desktop app with hot reload (Vite + `tauri dev`) |
 | `npm run dev:web` | UI only, in a browser, replaying a recorded **simulated** demo |
-| `npm run build` | Production build + NSIS installer, copied to `dist-installer/AgentOfficeSetup.exe` |
+| `npm run build` | Production build + NSIS installer, copied to `dist-installer/AgentOfficeSetup.exe` (signed when `AGENT_OFFICE_SIGN_THUMBPRINT` is set) |
+| `node scripts/installer-smoke.mjs --yes` | Windows: installs that installer for the current user, checks it, uninstalls it (CI runs it) |
 | `npm run build:ui` | Typecheck + bundle the UI into `dist/` |
 | `npm run test` | All Rust tests (`cargo test --workspace`) + UI tests (Vitest) |
 | `npm run lint` | TypeScript typecheck, `cargo fmt --check`, `cargo clippy -D warnings` |
@@ -241,3 +242,21 @@ mapping together, and note the finding in PROVIDER_CAPABILITIES.md.
 * **No events from Claude** — Diagnostics → Providers must show *Installed* for the
   hooks; inside Claude, `/hooks` lists them. Hooks also need the folder to be trusted
   and `disableAllHooks` to be off.
+
+## Releasing
+
+1. Set the same version in `Cargo.toml` (`[workspace.package]`),
+   `src-tauri/tauri.conf.json` and `package.json` (a test fails otherwise).
+2. `npm run build` on Windows (or take the *AgentOfficeSetup* artifact from CI,
+   where the installer smoke test has already installed and uninstalled it).
+3. Optional signing: import the code-signing certificate into the Windows
+   certificate store and set `AGENT_OFFICE_SIGN_THUMBPRINT` (and, if needed,
+   `AGENT_OFFICE_SIGN_TIMESTAMP_URL`) before `npm run build`; Tauri signs the
+   app and the installer with `signtool`.
+4. Users update by running the new installer; see the README.
+
+What the installer adds to Tauri's NSIS template is in
+`src-tauri/windows/installer-hooks.nsh`: before uninstalling it runs
+`agent-office integrations uninstall --remember`, after installing
+`agent-office integrations restore`, and "Delete the application data" also
+removes `%LOCALAPPDATA%\AgentOffice`.

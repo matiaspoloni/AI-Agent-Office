@@ -133,6 +133,7 @@ pub trait ProviderAdapter: Send + Sync + 'static {
     async fn resolve_permission(&self, id: &SessionId, request: &PermissionRequestId, decision: PermissionDecision) -> Result<(), ProviderError>;
     async fn list_sessions(&self) -> Result<Vec<ExternalSessionInfo>, ProviderError>;
     async fn integration_status(&self, ctx: &AdapterContext) -> IntegrationStatus;
+    async fn integration_present(&self, ctx: &AdapterContext) -> bool;   // cheap, never starts the provider (uninstaller)
     async fn install_integration(&self, ctx: &AdapterContext) -> Result<IntegrationStatus, ProviderError>;
     async fn uninstall_integration(&self, ctx: &AdapterContext) -> Result<IntegrationStatus, ProviderError>;
     async fn repair_integration(&self, ctx: &AdapterContext) -> Result<IntegrationStatus, ProviderError>;
@@ -501,6 +502,26 @@ drawing), `sprites.ts` (pixel art), `renderer.ts` (Canvas 2D), `teams.ts`
   vCPU, software rendering): about 1 ms per frame on average, 1.5 ms at the 95th
   percentile, 59–60 fps drawn, both at 1600 × 1000 and at 1920 × 1080 × 2
   (HiDPI). The frame budget at 60 fps is 16.7 ms.
+
+## 10a. Packaging (`tauri.conf.json`, `src-tauri/windows/installer-hooks.nsh`)
+
+* Tauri's NSIS bundler builds `AgentOfficeSetup.exe`: per-user install (no
+  administrator rights) in `%LOCALAPPDATA%\Agent Office`, Start Menu and desktop
+  shortcuts carrying the app's AppUserModelID (needed for notifications), an
+  Installed apps entry, English or Spanish following Windows, and the WebView2
+  bootstrapper only when the runtime is missing.
+* Installer hooks call the app itself in a windowless mode,
+  `agent-office integrations …`: before uninstalling, Agent Office's hook
+  entries are removed from Claude Code and Codex (after making sure the app is
+  closed) and noted; after installing, a note from the last hour is restored,
+  which keeps the hooks across upgrades (a new version first runs the old
+  uninstaller). In-place updates skip both. "Delete the application data" also
+  removes `%LOCALAPPDATA%\AgentOffice`.
+* `npm run build` signs with `signtool` when a certificate thumbprint is set.
+  There is no auto-updater (it would need a release server, an update signing
+  key and network access).
+* CI installs, checks, runs and uninstalls the installer on a clean Windows VM
+  (`scripts/installer-smoke.mjs`).
 
 ## 11. Security summary
 

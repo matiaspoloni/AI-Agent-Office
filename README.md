@@ -6,13 +6,15 @@ living pixel-art office. Each session is an employee: you can see who is coding,
 is running tests, who is waiting for your permission and who just hit an error, and
 you can act on them when the provider allows it.
 
-> **Status: early development (Phase 9 of 10).** The desktop shell, unified event
-> pipeline, SQLite storage, provider detection, a clearly-labelled *demo* provider,
-> **Claude Code** and **Codex CLI** (sessions launched from the app, and sessions
-> in your own terminal through hooks) work. **Cursor CLI** sessions launched from
-> the app are implemented as *experimental*: built from the official Agent Client
-> Protocol and tested without a real Cursor, which still has to be checked on
-> Windows 11. See [docs/ROADMAP.md](docs/ROADMAP.md).
+> **Status: all ten planned phases are implemented; not yet verified by hand on
+> a Windows 11 PC.** Everything is tested automatically (Linux and Windows CI,
+> including installing and uninstalling the app on a clean Windows machine), but
+> the manual checks listed in [docs/ROADMAP.md](docs/ROADMAP.md) — real Claude,
+> Codex and Cursor accounts, notifications, the installed app — are still open.
+> **Claude Code** and **Codex CLI** work for sessions launched from the app and
+> sessions in your own terminal; **Cursor CLI** sessions launched from the app are
+> *experimental* (built from the official Agent Client Protocol without a real
+> Cursor).
 
 ![The office with the built-in demo: each person is a simulated agent session](docs/images/office.png)
 
@@ -52,10 +54,28 @@ shows **"Unavailable"** instead of guessing.
 
 ## Installation
 
-End users (once Phase 10 ships): download and run **`AgentOfficeSetup.exe`**. It
-installs Agent Office with a Start Menu entry, an optional desktop shortcut and an
-uninstaller. Nothing else is required — no Node, Rust, Python, WSL or Bash. The
-installer uses the WebView2 runtime that ships with Windows 11.
+Download and run **`AgentOfficeSetup.exe`** (the CI build is attached to each run
+as the *AgentOfficeSetup* artifact). It installs Agent Office for your Windows
+user only (no administrator rights) in `%LOCALAPPDATA%\Agent Office`, with a
+Start Menu entry, a desktop shortcut and an entry in **Settings → Apps →
+Installed apps**. Nothing else is required — no Node, Rust, Python, WSL or Bash;
+the app uses the WebView2 runtime that ships with Windows 11. The installer
+speaks Spanish or English, following Windows.
+
+The installer is **not signed yet**: Windows SmartScreen shows "Windows protected
+your PC" the first time; choose *More info → Run anyway* only for a file you got
+from this project.
+
+**Updating:** run the newer `AgentOfficeSetup.exe`. Your data and your Claude /
+Codex hook integrations are kept (the old version's uninstaller takes the hooks
+out and the new installer puts them back). There is no automatic updater: Agent
+Office does not contact any server.
+
+**Uninstalling** (Installed apps → Agent Office → Uninstall) first removes Agent
+Office's hook entries from your Claude Code and Codex settings — only its own,
+with a backup of each file — so those tools do not keep calling a program that
+is gone. Tick *Delete the application data* to also remove the database and logs
+in `%LOCALAPPDATA%\AgentOffice`.
 
 You need the agent CLIs you want to watch installed as usual (`claude`, `codex`,
 `agent`). Agent Office detects them automatically.
@@ -149,9 +169,6 @@ Git (it never changes them):
 Git for Windows 2.15 or newer is needed for this part; without it the rest
 of the app works and Diagnostics says so.
 
-**Before uninstalling Agent Office**, press **Uninstall** next to Claude Code and
-Codex CLI in Diagnostics so they stop calling it (the installer will do this
-automatically in a later phase).
 
 ## Quick start (development build)
 

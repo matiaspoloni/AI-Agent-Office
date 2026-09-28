@@ -102,7 +102,9 @@ in the provider's config in **exec form** (program + args, no shell).
   reply means "carry on as if Agent Office did not exist".
 * The host counts every call per provider/event for Diagnostics, so new payload shapes
   are visible on real machines — turn them into fixtures.
-* Implement `integration_status`, `install_integration`, `uninstall_integration` and
+* Implement `integration_present` (a cheap "are our entries there?" that never
+  starts the provider: the uninstaller calls it to know what to remove and restore
+  on upgrades), `integration_status`, `install_integration`, `uninstall_integration` and
   `repair_integration` with: parse-or-refuse, timestamped backup, atomic write
   (all three come from `ao_config::JsonConfigFile`), ownership of our entries only
   (recognise them by program name + provider argument), idempotency and

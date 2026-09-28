@@ -42,7 +42,7 @@ then continue.
 | **7 – Process management** | `ao-process`: Job Objects, graceful stop, force kill, exit/stall/restart detection, `.cmd` shim handling, PID-reuse guard | Process tests on Windows CI with a fake agent (tree kill, no foreign kill) |
 | **8 – Git integration** | `ao-git` (repo, branch, worktree, dirty/staged, ahead/behind, recent commits), refresh on tool/cwd events, conservative attribution | Tests on temporary repositories |
 | **9 – Diagnostics & notifications** | Full diagnostics screen, observed-hook evidence, log viewer, Windows toast notifications with click-to-open | Diagnostics report exportable; notification click opens the session |
-| **10 – Packaging** | NSIS `AgentOfficeSetup.exe` (Start Menu, desktop shortcut, uninstaller that first removes Agent Office hooks from provider settings), WebView2 bootstrapper, version metadata, optional signing hook, updater plumbing | Clean-VM install/uninstall smoke test |
+| **10 – Packaging** | NSIS `AgentOfficeSetup.exe` (Start Menu, desktop shortcut, uninstaller that first removes Agent Office hooks from provider settings), WebView2 bootstrapper, version metadata, optional signing hook; auto-updater deliberately left out (§13) | Clean-VM install/uninstall smoke test |
 
 ## 3. Technical risks
 
@@ -55,10 +55,10 @@ then continue.
 | R5 | A synchronous permission hook would hide the terminal prompt. | User confusion, stuck agents. | Observe-only by default; opt-in "answer from app" with bounded timeout and fallback to the terminal prompt. |
 | R6 | Windows process trees (`.cmd` shims, `node` children, shells spawned by agents). | Orphans or wrong process killed. | Implemented: one Job Object per managed process, started suspended so nothing escapes it; only our jobs are ever terminated; the process handle is held for its whole life (no action on a bare PID); leftovers stopped when the agent exits; tested on Windows CI. |
 | R7 | Hook latency slows the agent. | Worse agent UX. | Relay is the native app exe in `hook` mode (≈25 ms per call in a debug build when the app is closed), async hooks for non-decision events, 300 ms connect timeout, exit 0 when the app is closed. |
-| R13 | App uninstalled while hooks remain in `~/.claude/settings.json` or `~/.codex/hooks.json`. | The agent reports a failing hook command on every event. | Phase 10: the NSIS uninstaller runs the hook removal first; until then Diagnostics → *Uninstall* must be used before removing the app (documented in the README). |
+| R13 | App uninstalled while hooks remain in `~/.claude/settings.json` or `~/.codex/hooks.json`. | The agent reports a failing hook command on every event. | Implemented: the uninstaller runs `agent-office integrations uninstall --remember` first (only our entries, backups kept); an upgrade restores them. Tested on a clean Windows VM in CI. |
 | R8 | Event floods (streaming deltas, command output). | UI jank, DB growth. | Batching (100 ms), UI never re-renders per token, output truncation, retention, virtualized lists. |
-| R9 | Windows toast click-activation is limited in the Tauri notification plugin on desktop. | Click-to-open may not work in MVS. | Implemented with WinRT toast activation (`tauri-winrt-notification`): a click on the toast while it is on screen opens the agent. A toast clicked later from the notification center is not handled (that needs a registered COM activator; Phase 10 candidate). To verify on Windows 11. |
-| R10 | Unsigned installer triggers SmartScreen. | Install friction. | Document; add signing step once a certificate exists. |
+| R9 | Windows toast click-activation is limited in the Tauri notification plugin on desktop. | Click-to-open may not work in MVS. | Implemented with WinRT toast activation (`tauri-winrt-notification`): a click on the toast while it is on screen opens the agent. A toast clicked later from the notification center is not handled (that needs a registered COM activator; future work). To verify on Windows 11. |
+| R10 | Unsigned installer triggers SmartScreen. | Install friction. | Documented in the README; `npm run build` signs with signtool when `AGENT_OFFICE_SIGN_THUMBPRINT` names a certificate (none exists yet). |
 | R11 | Provider docs change faster than code. | Silent breakage. | Capabilities documented with versions; Diagnostics shows detected versions vs tested ranges. |
 | R12 | Attributing Git changes to agents incorrectly. | Misleading UI. | Implemented: a file is linked to an agent only when its tool reported writing it; a commit only when the agent ran a commit-creating `git` command in that tree and the commit's time falls within that command's run (never when two agents qualify); everything else is shown without a name. |
 
@@ -342,3 +342,38 @@ installed and `agent login` was done once in a terminal. Note the Cursor version
   launches, that hook now only adds details (the launch starts the session),
   and a start stamped before the session's end never reopens it (this also
   protects sessions started in a terminal).
+
+## 13. Phase 10 checklist
+
+- [x] `AgentOfficeSetup.exe` (NSIS, current user, no admin): Start Menu entry, desktop shortcut, Installed apps entry with version and publisher, uninstaller
+- [x] The uninstaller removes Agent Office's hook entries from Claude Code and Codex first (only ours, backups kept); upgrades keep them; "Delete the application data" also removes `%LOCALAPPDATA%\AgentOffice`
+- [x] `agent-office integrations status | install | uninstall | restore` (used by the installer)
+- [x] WebView2: silent bootstrapper, only used when the runtime is missing (Windows 11 has it)
+- [x] Installer in English or Spanish (follows Windows); copyright and version metadata; one version in Cargo, `tauri.conf.json` and `package.json` (tested)
+- [x] Optional code signing (`AGENT_OFFICE_SIGN_THUMBPRINT`)
+- [x] Installer smoke test on a clean Windows VM in CI: install, files, shortcuts, registry, installed app's self-check, hooks removed with the user's settings kept, reinstall restores them, uninstall cleans up
+- [ ] Automatic updates: not included (see findings)
+- [ ] On Windows 11 by hand: install, first start (SmartScreen), notifications named "Agent Office", upgrade over an older version keeps hooks and data, uninstall with and without "Delete the application data"
+
+### Phase 10 findings
+
+* Installing a new version over an old one first runs the **old** uninstaller.
+  Removing the hooks there would silently disconnect Claude and Codex on every
+  upgrade, so the uninstaller notes what it removed and the new installer puts
+  it back — only within an hour, so a reinstall weeks later adds nothing by
+  itself.
+* Tauri's uninstaller asks to close a running Agent Office only after the
+  pre-uninstall hook; the hook runs the same check first, so cancelling there
+  leaves the hooks untouched.
+* The NSIS uninstaller copies itself to `%TEMP%` and returns at once; the smoke
+  test waits for the files and the registry entry to disappear.
+* Tauri's "Delete the application data" removes only the WebView folder
+  (`%LOCALAPPDATA%\com.agentoffice.desktop`); Agent Office's own data folder is
+  removed by our hook.
+* **No auto-updater.** Tauri's updater needs a release server and an update
+  signing key, and it would make Agent Office contact the network, which the
+  local-first rules avoid without a reason. Updating = running the new
+  installer (hooks and data kept). An opt-in updater can be added once releases
+  are published somewhere.
+* **Unsigned.** A code-signing certificate is needed to avoid SmartScreen; the
+  build signs as soon as one is configured.

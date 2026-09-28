@@ -53,7 +53,12 @@ to add as little attack surface as possible.
     picks a `.json` file in a save dialog; paths inside the user's folder are
     replaced by `%USERPROFILE%`, and the file says nothing else is removed. The
     log viewer reads only Agent Office's own log folder.
-11. **Fail open for the agent.** If the app is closed or the relay fails, the hook exits
+11. **Installation without administrator rights.** The installer writes only to
+    the current user's folders and registry (`%LOCALAPPDATA%`, the Start Menu,
+    HKCU). The uninstaller removes Agent Office's hook entries (only its own,
+    with backups) before deleting the program. There is no auto-updater and no
+    network call; builds are signed only when a certificate is configured.
+12. **Fail open for the agent.** If the app is closed or the relay fails, the hook exits
    0 with no output, so the agent behaves as if Agent Office did not exist. Agent Office
    never auto-approves anything; approvals only happen after an explicit user click.
    An unanswered request is denied (managed sessions) or handed back to the agent's
