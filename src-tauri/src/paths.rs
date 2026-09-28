@@ -47,30 +47,58 @@ impl PathEntry {
     }
 }
 
-/// Paths shown in Diagnostics (read-only; nothing here is modified in Phase 1).
+/// Paths shown in Diagnostics (read-only). The provider files are the ones
+/// the adapters edit, so `CLAUDE_CONFIG_DIR` and `CODEX_HOME` are honoured.
 pub fn known_paths(paths: &AppPaths) -> Vec<PathEntry> {
     let mut out = vec![
         PathEntry::new("Agent Office data", paths.data_dir.clone()),
         PathEntry::new("Database", paths.db_path.clone()),
         PathEntry::new("Logs", paths.log_dir.clone()),
     ];
+    if let Some(file) = ao_provider_claude::settings::default_location() {
+        out.push(PathEntry::new("Claude Code user settings", file.path));
+    }
+    if let Some(file) = ao_provider_codex::settings::default_location() {
+        let config = file.path.with_file_name("config.toml");
+        out.push(PathEntry::new("Codex hooks", file.path));
+        out.push(PathEntry::new("Codex config", config));
+    }
     if let Some(home) = ao_detect::home_dir() {
-        out.push(PathEntry::new(
-            "Claude Code user settings",
-            home.join(".claude").join("settings.json"),
-        ));
-        out.push(PathEntry::new(
-            "Codex hooks",
-            home.join(".codex").join("hooks.json"),
-        ));
-        out.push(PathEntry::new(
-            "Codex config",
-            home.join(".codex").join("config.toml"),
-        ));
         out.push(PathEntry::new(
             "Cursor user hooks",
             home.join(".cursor").join("hooks.json"),
         ));
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn shown(entries: &[PathEntry], label: &str) -> Option<String> {
+        entries
+            .iter()
+            .find(|e| e.label == label)
+            .map(|e| e.path.clone())
+    }
+
+    #[test]
+    fn diagnostics_shows_the_files_the_adapters_edit() {
+        let entries = known_paths(&AppPaths::at(PathBuf::from("data")));
+        let claude = ao_provider_claude::settings::default_location().map(|f| f.path);
+        let codex = ao_provider_codex::settings::default_location().map(|f| f.path);
+        assert_eq!(
+            shown(&entries, "Claude Code user settings"),
+            claude.map(|p| p.display().to_string())
+        );
+        assert_eq!(
+            shown(&entries, "Codex hooks"),
+            codex.as_ref().map(|p| p.display().to_string())
+        );
+        assert_eq!(
+            shown(&entries, "Codex config"),
+            codex.map(|p| p.with_file_name("config.toml").display().to_string())
+        );
+    }
 }

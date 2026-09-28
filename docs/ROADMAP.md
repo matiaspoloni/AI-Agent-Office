@@ -367,6 +367,10 @@ installed and `agent login` was done once in a terminal. Note the Cursor version
   leaves the hooks untouched.
 * The NSIS uninstaller copies itself to `%TEMP%` and returns at once; the smoke
   test waits for the files and the registry entry to disappear.
+* The first CI run of that test showed Diagnostics listing
+  `~\.claude\settings.json` and `~\.codex\…` although `CLAUDE_CONFIG_DIR` and
+  `CODEX_HOME` pointed elsewhere (the hooks themselves went to the right
+  place). Diagnostics now shows the files the adapters actually edit.
 * Tauri's "Delete the application data" removes only the WebView folder
   (`%LOCALAPPDATA%\com.agentoffice.desktop`); Agent Office's own data folder is
   removed by our hook.
