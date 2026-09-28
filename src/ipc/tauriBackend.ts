@@ -1,12 +1,13 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import type { AgentEvent } from "../bindings/AgentEvent";
 import type { AppInfo } from "../bindings/AppInfo";
 import type { DiagnosticsReport } from "../bindings/DiagnosticsReport";
 import type { ExternalSessionInfo } from "../bindings/ExternalSessionInfo";
 import type { InitialState } from "../bindings/InitialState";
 import type { IntegrationStatus } from "../bindings/IntegrationStatus";
+import type { LogTail } from "../bindings/LogTail";
 import type { ManagedProcessInfo } from "../bindings/ManagedProcessInfo";
 import type { Preferences } from "../bindings/Preferences";
 import type { Project } from "../bindings/Project";
@@ -44,6 +45,19 @@ export function createTauriBackend(): Backend {
     revealFile: (folder, path) => invoke<void>("reveal_file", { folder, path }),
     onOpenAgent: (handler) => listen<string>("open-agent", (event) => handler(event.payload)),
     testNotification: () => invoke<void>("test_notification"),
+    readLogs: (kind, maxLines, minLevel) => invoke<LogTail>("read_logs", { kind, maxLines, minLevel }),
+    openLogFolder: () => invoke<void>("open_log_folder"),
+    async exportDiagnostics() {
+      const stamp = new Date().toISOString().slice(0, 10);
+      const path = await save({
+        title: "Save the diagnostics report",
+        defaultPath: `agent-office-diagnostics-${stamp}.json`,
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+      if (!path) return false;
+      await invoke<void>("export_diagnostics", { path });
+      return true;
+    },
     sendPrompt: (provider, sessionId, prompt) => invoke<void>("send_prompt", { provider, sessionId, prompt }),
     resolvePermission: (provider, sessionId, requestId, decision) =>
       invoke<void>("resolve_permission", { provider, sessionId, requestId, decision }),

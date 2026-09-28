@@ -10,6 +10,9 @@ import type { InitialState } from "../bindings/InitialState";
 import type { IntegrationAction } from "../bindings/IntegrationAction";
 import type { IntegrationStatus } from "../bindings/IntegrationStatus";
 import type { LaunchRequest } from "../bindings/LaunchRequest";
+import type { LogKind } from "../bindings/LogKind";
+import type { LogLevel } from "../bindings/LogLevel";
+import type { LogTail } from "../bindings/LogTail";
 import type { ManagedProcessInfo } from "../bindings/ManagedProcessInfo";
 import type { NewProject } from "../bindings/NewProject";
 import type { PermissionDecision } from "../bindings/PermissionDecision";
@@ -50,6 +53,11 @@ export interface Backend {
   onOpenAgent(handler: (agentKey: string) => void): Promise<() => void>;
   /** Diagnostics: show a sample notification. */
   testNotification(): Promise<void>;
+  /** Diagnostics: the newest application or provider log. */
+  readLogs(kind: LogKind, maxLines: number, minLevel: LogLevel): Promise<LogTail>;
+  openLogFolder(): Promise<void>;
+  /** Ask where to save the diagnostics report, then write it. False when cancelled. */
+  exportDiagnostics(): Promise<boolean>;
   sendPrompt(provider: string, sessionId: string, prompt: string): Promise<void>;
   resolvePermission(
     provider: string,

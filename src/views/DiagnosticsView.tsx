@@ -3,6 +3,7 @@ import type { Capabilities } from "../bindings/Capabilities";
 import type { DiagnosticsReport } from "../bindings/DiagnosticsReport";
 import type { ExternalSessionInfo } from "../bindings/ExternalSessionInfo";
 import { IntegrationControls } from "../components/IntegrationControls";
+import { LogsCard } from "../components/LogsCard";
 import { PreferencesCard } from "../components/PreferencesCard";
 import { ProcessesCard } from "../components/ProcessesCard";
 import { errorMessage } from "../ipc/backend";
@@ -32,6 +33,22 @@ export function DiagnosticsView() {
       setListed({ provider, sessions: await backend.listExternalSessions(provider) });
     } catch (error) {
       pushToast("error", `Could not list sessions: ${errorMessage(error)}`);
+    }
+  };
+
+  const exportReport = async () => {
+    try {
+      if (await backend.exportDiagnostics()) pushToast("info", "Diagnostics report saved");
+    } catch (error) {
+      pushToast("error", `Could not export the report: ${errorMessage(error)}`);
+    }
+  };
+
+  const testNotification = async () => {
+    try {
+      await backend.testNotification();
+    } catch (error) {
+      pushToast("error", `Notification: ${errorMessage(error)}`);
     }
   };
 
@@ -69,12 +86,50 @@ export function DiagnosticsView() {
         <button className="btn primary" onClick={run} disabled={running}>
           {running ? "Running…" : "Run diagnostics"}
         </button>
+        <button
+          className="btn"
+          onClick={exportReport}
+          title="Save this report, the agent processes and recent warnings as a JSON file (to attach to a bug report)"
+        >
+          Export report…
+        </button>
         {report && <span className="muted small">Last run {formatTime(report.generatedAt)}</span>}
       </div>
 
       <PreferencesCard onSaved={run} />
 
       <ProcessesCard />
+
+      {report && (
+        <section className="card">
+          <div className="card-title-row">
+            <h3>Notifications</h3>
+            <button className="btn small" onClick={testNotification}>
+              Send a test notification
+            </button>
+          </div>
+          {report.notifications.supported ? (
+            <p className="small">
+              Windows notifications for agents that need you, errors and finished work; clicking one opens the agent.
+              Choose which ones in Settings above.
+              {report.notifications.developmentBuild && (
+                <span className="muted">
+                  {" "}
+                  This is a development build: its notifications appear as “Windows PowerShell”. The installed app shows
+                  its own name.
+                </span>
+              )}
+            </p>
+          ) : (
+            <p className="small muted">
+              Desktop notifications are shown on Windows. On this system they are only written to the application
+              log.
+            </p>
+          )}
+        </section>
+      )}
+
+      <LogsCard />
 
       {report && (
         <>

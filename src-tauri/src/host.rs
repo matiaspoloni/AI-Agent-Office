@@ -1002,6 +1002,64 @@ impl Host {
         diagnostics::run(self.clone()).await
     }
 
+    /// The newest application or provider log, last lines at `min_level`+.
+    pub fn read_logs(
+        &self,
+        kind: crate::logs::LogKind,
+        max_lines: usize,
+        min_level: crate::logs::LogLevel,
+    ) -> crate::logs::LogTail {
+        crate::logs::read_tail(
+            &self.paths.log_dir,
+            kind,
+            max_lines.clamp(1, 2000),
+            min_level,
+        )
+    }
+
+    pub fn open_log_folder(&self) -> Result<(), String> {
+        crate::reveal::open_folder(&self.paths.log_dir)
+    }
+
+    /// Writes the diagnostics report, the agent processes and recent log
+    /// warnings to `path` (a `.json` file the user chose). Paths inside the
+    /// user's folder are written as `%USERPROFILE%` (`~` elsewhere).
+    pub async fn export_diagnostics(self: &Arc<Self>, path: &str) -> Result<(), String> {
+        let target = std::path::Path::new(path.trim());
+        if !target
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("json"))
+        {
+            return Err("The report is saved as a .json file.".into());
+        }
+        if !target.parent().is_some_and(|p| p.is_dir()) {
+            return Err("That folder does not exist.".into());
+        }
+        let mut warnings = Vec::new();
+        for kind in [crate::logs::LogKind::App, crate::logs::LogKind::Providers] {
+            warnings.extend(
+                crate::logs::read_tail(&self.paths.log_dir, kind, 200, crate::logs::LogLevel::Warn)
+                    .lines,
+            );
+        }
+        let export = diagnostics::ExportedDiagnostics {
+            format: "agent-office-diagnostics/1".into(),
+            note: "Created by Agent Office on request. Paths inside your user folder are shown as \
+                   %USERPROFILE% (or ~); nothing else is removed, so read it before sharing it."
+                .into(),
+            report: self.diagnostics().await,
+            processes: diagnostics::managed_processes(),
+            recent_warnings: warnings,
+        };
+        let mut value = serde_json::to_value(&export).map_err(|e| e.to_string())?;
+        if let Some(home) = ao_detect::home_dir() {
+            let replacement = if cfg!(windows) { "%USERPROFILE%" } else { "~" };
+            diagnostics::redact_home(&mut value, &home.display().to_string(), replacement);
+        }
+        let text = serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?;
+        std::fs::write(target, text).map_err(|e| format!("Could not write the report: {e}"))
+    }
+
     /// Current sanitize limits (exposed for diagnostics).
     pub fn sanitize_limits(&self) -> SanitizeLimits {
         self.prefs.lock().expect("prefs lock").sanitize_limits()
@@ -1295,6 +1353,32 @@ mod tests {
         }
         host.test_notification();
         assert!(seen.lock().unwrap()[1].1, "the test notice is forced");
+        let _ = std::fs::remove_dir_all(paths.data_dir);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn diagnostics_are_exported_as_json_only() {
+        let paths = temp_paths();
+        let host = Host::start(paths.clone(), test_options());
+        let bad = paths.data_dir.join("report.txt");
+        let err = host
+            .export_diagnostics(&bad.display().to_string())
+            .await
+            .unwrap_err();
+        assert!(err.contains(".json"), "{err}");
+        assert!(!bad.exists());
+        let file = paths.data_dir.join("report.json");
+        host.export_diagnostics(&file.display().to_string())
+            .await
+            .expect("export");
+        let value: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+        assert_eq!(value["format"], "agent-office-diagnostics/1");
+        assert!(value["report"]["providers"]
+            .as_array()
+            .is_some_and(|p| !p.is_empty()));
+        assert!(value["processes"].is_array());
+        assert!(value["recentWarnings"].is_array());
         let _ = std::fs::remove_dir_all(paths.data_dir);
     }
 

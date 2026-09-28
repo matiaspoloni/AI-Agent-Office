@@ -174,6 +174,28 @@ pub async fn test_notification(host: HostState<'_>) -> Result<(), String> {
     Ok(())
 }
 
+/// Diagnostics: the newest application or provider log.
+#[tauri::command]
+pub fn read_logs(
+    host: HostState<'_>,
+    kind: crate::logs::LogKind,
+    max_lines: usize,
+    min_level: crate::logs::LogLevel,
+) -> crate::logs::LogTail {
+    host.read_logs(kind, max_lines, min_level)
+}
+
+#[tauri::command]
+pub fn open_log_folder(host: HostState<'_>) -> Result<(), String> {
+    host.open_log_folder()
+}
+
+/// Diagnostics → "Export report": `path` comes from the save dialog.
+#[tauri::command]
+pub async fn export_diagnostics(host: HostState<'_>, path: String) -> Result<(), String> {
+    host.inner().export_diagnostics(&path).await
+}
+
 /// Agent processes Agent Office started and still tracks.
 #[tauri::command]
 pub fn list_processes() -> Vec<ManagedProcessInfo> {

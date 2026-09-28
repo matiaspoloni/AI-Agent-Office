@@ -3,8 +3,9 @@ import type { BackendStatus } from "./BackendStatus";
 import type { DatabaseStatus } from "./DatabaseStatus";
 import type { HookBridgeStatus } from "./HookBridgeStatus";
 import type { InstallationInfo } from "./InstallationInfo";
+import type { NotificationSupport } from "./NotificationSupport";
 import type { PathEntry } from "./PathEntry";
 import type { ProviderDiagnostics } from "./ProviderDiagnostics";
 import type { ProviderErrorRecord } from "./ProviderErrorRecord";
 
-export type DiagnosticsReport = { generatedAt: number, appVersion: string, platform: string, backend: BackendStatus, database: DatabaseStatus, git: InstallationInfo, providers: Array<ProviderDiagnostics>, paths: Array<PathEntry>, providerErrors: Array<ProviderErrorRecord>, hooks: HookBridgeStatus, };
+export type DiagnosticsReport = { generatedAt: number, appVersion: string, platform: string, backend: BackendStatus, database: DatabaseStatus, git: InstallationInfo, providers: Array<ProviderDiagnostics>, paths: Array<PathEntry>, providerErrors: Array<ProviderErrorRecord>, hooks: HookBridgeStatus, notifications: NotificationSupport, };

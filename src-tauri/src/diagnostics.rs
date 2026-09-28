@@ -80,6 +80,98 @@ pub struct DiagnosticsReport {
     pub paths: Vec<PathEntry>,
     pub provider_errors: Vec<ProviderErrorRecord>,
     pub hooks: HookBridgeStatus,
+    pub notifications: NotificationSupport,
+}
+
+/// Whether desktop notifications can be shown here.
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct NotificationSupport {
+    /// Windows only.
+    pub supported: bool,
+    /// Run from a build folder: toasts appear as "Windows PowerShell".
+    pub development_build: bool,
+}
+
+impl NotificationSupport {
+    pub fn current() -> Self {
+        let development_build = std::env::current_exe()
+            .ok()
+            .and_then(|exe| {
+                exe.parent().map(|dir| {
+                    crate::toast::app_id_for(dir, crate::toast::IDENTIFIER)
+                        == crate::toast::DEV_APP_ID
+                })
+            })
+            .unwrap_or(false);
+        Self {
+            supported: cfg!(windows),
+            development_build,
+        }
+    }
+}
+
+/// The file written by Diagnostics → "Export report".
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ExportedDiagnostics {
+    pub format: String,
+    pub note: String,
+    pub report: DiagnosticsReport,
+    pub processes: Vec<ManagedProcessInfo>,
+    /// Warnings and errors from the newest application and provider logs.
+    pub recent_warnings: Vec<crate::logs::LogLine>,
+}
+
+/// Replaces the user's home folder in every string with `replacement`
+/// (case-insensitively on Windows, with either slash).
+pub fn redact_home(value: &mut serde_json::Value, home: &str, replacement: &str) {
+    let home = home.trim_end_matches(['/', '\\']);
+    if home.len() < 3 {
+        return;
+    }
+    let variants = [
+        home.to_owned(),
+        home.replace('\\', "/"),
+        home.replace('/', "\\"),
+    ];
+    match value {
+        serde_json::Value::String(text) => {
+            for variant in &variants {
+                *text = replace_all(text, variant, replacement);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                redact_home(item, home, replacement);
+            }
+        }
+        serde_json::Value::Object(map) => {
+            for (_, item) in map.iter_mut() {
+                redact_home(item, home, replacement);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn replace_all(text: &str, needle: &str, replacement: &str) -> String {
+    if !cfg!(windows) {
+        return text.replace(needle, replacement);
+    }
+    // Case-insensitive (ASCII) search: Windows paths ignore case.
+    let (lower_text, lower_needle) = (text.to_ascii_lowercase(), needle.to_ascii_lowercase());
+    let mut out = String::with_capacity(text.len());
+    let mut last = 0;
+    for (index, _) in lower_text.match_indices(&lower_needle) {
+        out.push_str(&text[last..index]);
+        out.push_str(replacement);
+        last = index + needle.len();
+    }
+    out.push_str(&text[last..]);
+    out
 }
 
 /// A process Agent Office started (an agent CLI) and still tracks.
@@ -219,5 +311,34 @@ pub async fn run(host: Arc<Host>) -> DiagnosticsReport {
         paths: known_paths(&host.paths),
         provider_errors: host.provider_errors(),
         hooks: host.hook_status(),
+        notifications: NotificationSupport::current(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn home_folder_is_replaced_everywhere() {
+        let mut value = serde_json::json!({
+            "paths": [{"path": "/home/matia/.claude/settings.json"}],
+            "note": "log at /home/matia/AppData and /home/matiax/other",
+            "n": 3
+        });
+        redact_home(&mut value, "/home/matia", "~");
+        assert_eq!(value["paths"][0]["path"], "~/.claude/settings.json");
+        // A longer name that merely starts the same is still replaced as a
+        // prefix; the rest of the name stays visible.
+        assert_eq!(value["note"], "log at ~/AppData and ~x/other");
+        assert_eq!(value["n"], 3);
+    }
+
+    #[test]
+    fn windows_paths_with_either_slash() {
+        let mut value = serde_json::json!(["C:\\Users\\Matia\\x", "C:/Users/Matia/y"]);
+        redact_home(&mut value, "C:\\Users\\Matia", "%USERPROFILE%");
+        assert_eq!(value[0], "%USERPROFILE%\\x");
+        assert_eq!(value[1], "%USERPROFILE%/y");
     }
 }

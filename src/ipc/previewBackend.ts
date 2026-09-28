@@ -142,6 +142,13 @@ export async function createPreviewBackend(): Promise<Backend> {
     testNotification: async () => {
       throw new Error(PREVIEW_ONLY);
     },
+    readLogs: async () => ({ lines: [], truncated: false }),
+    openLogFolder: async () => {
+      throw new Error(PREVIEW_ONLY);
+    },
+    exportDiagnostics: async () => {
+      throw new Error(PREVIEW_ONLY);
+    },
     sendPrompt: async () => {
       throw new Error(PREVIEW_ONLY);
     },

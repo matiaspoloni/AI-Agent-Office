@@ -877,3 +877,9 @@ label.check input {
 .repo-card h4 .muted {
   font-weight: normal;
 }
+
+.log-level {
+  flex-shrink: 0;
+  width: 3.5em;
+  color: #8a93a6;
+}

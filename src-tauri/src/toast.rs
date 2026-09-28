@@ -13,6 +13,9 @@
 use crate::notify::Notice;
 use std::path::Path;
 
+/// The bundle identifier (`identifier` in `tauri.conf.json`).
+pub const IDENTIFIER: &str = "com.agentoffice.desktop";
+
 /// PowerShell's application id, for development builds.
 pub const DEV_APP_ID: &str =
     "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe";
@@ -63,6 +66,13 @@ pub fn show(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn identifier_matches_the_tauri_configuration() {
+        let conf: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        assert_eq!(conf["identifier"], IDENTIFIER);
+    }
 
     #[test]
     fn development_builds_borrow_powershells_id() {

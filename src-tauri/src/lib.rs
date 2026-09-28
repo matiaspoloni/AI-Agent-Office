@@ -6,6 +6,7 @@ pub mod git;
 pub mod hooks;
 pub mod host;
 pub mod logging;
+pub mod logs;
 pub mod notify;
 pub mod paths;
 pub mod prefs;
@@ -138,6 +139,9 @@ pub fn run() {
             commands::open_folder,
             commands::reveal_file,
             commands::test_notification,
+            commands::read_logs,
+            commands::open_log_folder,
+            commands::export_diagnostics,
             commands::send_prompt,
             commands::resolve_permission,
             commands::recent_events,

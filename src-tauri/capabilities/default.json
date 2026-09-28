@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permissions for the main window. Only core APIs and the folder picker are exposed to the UI.",
+  "description": "Permissions for the main window. Only core APIs, the folder picker and the save dialog (diagnostics export) are exposed to the UI.",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:allow-open"]
+  "permissions": ["core:default", "dialog:allow-open", "dialog:allow-save"]
 }
