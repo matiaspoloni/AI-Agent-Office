@@ -4,6 +4,7 @@
 use crate::diagnostics::{self, DiagnosticsReport, ProviderErrorRecord};
 use crate::git::{relative_to_tree, GitService, RepositoriesReport};
 use crate::hooks::{HookBridge, HookBridgeStatus};
+use crate::notify::{Notice, NoticeRules, NoticeSink, ProviderLabel};
 use crate::paths::AppPaths;
 use crate::prefs::Preferences;
 use ao_core::batch::{Batcher, UiBatch};
@@ -114,6 +115,8 @@ pub struct Host {
     store_error: Option<String>,
     writer: StoreWriter,
     ui: Mutex<Option<UiSink>>,
+    notices: Mutex<NoticeRules>,
+    notice_sink: Mutex<Option<NoticeSink>>,
     prefs: Mutex<Preferences>,
     provider_errors: Mutex<VecDeque<ProviderErrorRecord>>,
     pub started_at: i64,
@@ -180,6 +183,8 @@ impl Host {
             store_error,
             writer: StoreWriter::spawn_with(writer_store),
             ui: Mutex::new(None),
+            notices: Mutex::new(NoticeRules::default()),
+            notice_sink: Mutex::new(None),
             prefs: Mutex::new(prefs),
             provider_errors: Mutex::new(VecDeque::new()),
             started_at: now_ms(),
@@ -406,6 +411,7 @@ impl Host {
 
     fn ingest(&self, event: AgentEvent) {
         self.ingested.fetch_add(1, Ordering::Relaxed);
+        let notice_prefs = self.prefs.lock().expect("prefs lock").notifications.clone();
         if let EventKind::ProviderError(err) = &event.kind {
             self.record_provider_error(&event.provider.0, &err.component, &err.message);
         }
@@ -427,12 +433,55 @@ impl Host {
                 return;
             }
         };
+        let agent_key =
+            ao_core::ids::agent_key(&event.provider, &event.session_id, &event.agent_id);
+        let before = inner.world.agent(&agent_key).map(|a| a.activity);
         let touched = inner.world.apply(&event);
         let key = ao_core::ids::session_key(&event.provider, &event.session_id);
         let folder = inner.world.session(&key).and_then(|s| s.cwd.clone());
         self.git.observe(&event, folder.as_deref());
+        let notice = {
+            let descriptor = self.registry.get(&event.provider).map(|a| a.descriptor());
+            let label = ProviderLabel {
+                name: descriptor
+                    .as_ref()
+                    .map_or(event.provider.0.as_str(), |d| d.display_name.as_str()),
+                simulated: descriptor.as_ref().map_or(true, |d| d.simulated),
+            };
+            self.notices.lock().expect("notices lock").observe(
+                &event,
+                before,
+                inner.world.agent(&agent_key),
+                inner.world.session(&key),
+                &label,
+                &notice_prefs,
+                now_ms(),
+            )
+        };
         inner.batcher.note(&event, touched);
         inner.persist.push(event);
+        drop(inner);
+        if let Some(notice) = notice {
+            self.deliver(notice, false);
+        }
+    }
+
+    /// Hands a notice to the desktop shell (nothing happens headless).
+    fn deliver(&self, notice: Notice, force: bool) {
+        tracing::info!(kind = ?notice.kind, title = %notice.title, "notification");
+        if let Some(sink) = self.notice_sink.lock().expect("notice sink").as_ref() {
+            sink(notice, force);
+        }
+    }
+
+    /// Where notices go (the app shell shows them as Windows notifications).
+    pub fn set_notice_sink(&self, sink: Option<NoticeSink>) {
+        *self.notice_sink.lock().expect("notice sink") = sink;
+    }
+
+    /// Diagnostics → "Send a test notification" (shown even when focused).
+    pub fn test_notification(&self) {
+        self.deliver(crate::notify::test_notice(now_ms()), true);
     }
 
     /// Sends pending changes to the UI and to the database writer.
@@ -1182,6 +1231,61 @@ mod tests {
             .reveal_file(&work_text, "gone/deleted.txt")
             .unwrap_err();
         assert!(err.contains("no longer exists"), "{err}");
+        let _ = std::fs::remove_dir_all(paths.data_dir);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn notices_reach_the_shell_for_real_providers_only() {
+        let paths = temp_paths();
+        let host = Host::start(paths.clone(), test_options());
+        let seen: Arc<Mutex<Vec<(Notice, bool)>>> = Arc::default();
+        let sink_seen = seen.clone();
+        host.set_notice_sink(Some(Box::new(move |notice, force| {
+            sink_seen.lock().unwrap().push((notice, force));
+        })));
+        let sink = host.adapter_context().sink;
+        let permission = || {
+            EventKind::PermissionRequested(ao_core::event::PermissionRequested {
+                request_id: "p1".into(),
+                tool_name: Some("Bash".into()),
+                description: "Run: npm install".into(),
+                can_resolve: false,
+                options: vec![],
+            })
+        };
+        for (provider, source) in [
+            ("demo", EventSource::Simulation),
+            ("claude", EventSource::Hook),
+        ] {
+            sink.emit(AgentEvent::for_session(
+                provider,
+                "n1",
+                source,
+                EventKind::SessionStarted(SessionInfo::default()),
+            ));
+            sink.emit(AgentEvent::for_session(
+                provider,
+                "n1",
+                source,
+                permission(),
+            ));
+        }
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while host.snapshot().sessions.len() < 2 || seen.lock().unwrap().is_empty() {
+            assert!(std::time::Instant::now() < deadline, "no notice");
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        {
+            let seen = seen.lock().unwrap();
+            assert_eq!(seen.len(), 1, "the simulated session stays quiet: {seen:?}");
+            let (notice, force) = &seen[0];
+            assert_eq!(notice.title, "Claude Code needs permission");
+            assert_eq!(notice.agent_key.as_deref(), Some("claude:n1:n1"));
+            assert!(!force);
+        }
+        host.test_notification();
+        assert!(seen.lock().unwrap()[1].1, "the test notice is forced");
         let _ = std::fs::remove_dir_all(paths.data_dir);
     }
 

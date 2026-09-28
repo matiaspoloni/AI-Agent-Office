@@ -6,6 +6,7 @@ pub mod git;
 pub mod hooks;
 pub mod host;
 pub mod logging;
+pub mod notify;
 pub mod paths;
 pub mod prefs;
 pub mod providers;

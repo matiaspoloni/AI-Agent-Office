@@ -28,6 +28,8 @@ pub struct Preferences {
     /// Warn when a busy agent has been silent this many minutes (0 = never).
     /// Only a warning: quiet sessions are never stopped automatically.
     pub silence_warning_minutes: u32,
+    /// Desktop notifications.
+    pub notifications: crate::notify::NotificationPrefs,
 }
 
 impl Default for Preferences {
@@ -40,6 +42,7 @@ impl Default for Preferences {
             permission_timeout_secs: 120,
             discover_external_sessions: true,
             silence_warning_minutes: 5,
+            notifications: crate::notify::NotificationPrefs::default(),
         }
     }
 }
