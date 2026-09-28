@@ -381,7 +381,9 @@ impl ProviderAdapter for ClaudeAdapter {
         };
         let mut hook_ctx = hooks::HookContext {
             received_at_ms: call.received_at_ms,
-            managed,
+            // A hook from the per-session settings always belongs to a run
+            // Agent Office launched, even when it arrives after that run ended.
+            managed: managed || call.managed_origin,
             permission: None,
             session_agent_type,
         };

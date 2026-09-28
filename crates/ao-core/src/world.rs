@@ -590,7 +590,11 @@ impl WorldState {
                 if info.pid.is_some() {
                     session.pid = info.pid;
                 }
-                let reopen = resumed && session.status == SessionStatus::Ended;
+                // A start that happened before the end was delivered late
+                // (hooks run asynchronously): it does not reopen the session.
+                let reopen = resumed
+                    && session.status == SessionStatus::Ended
+                    && session.ended_at.map_or(true, |end| at >= end);
                 if reopen {
                     session.restarts += 1;
                     session.status = SessionStatus::Active;
@@ -1294,6 +1298,30 @@ mod tests {
             10_000_001,
         ));
         assert!(w.mark_silent(99_000_000, 0).is_empty());
+    }
+
+    #[test]
+    fn a_start_delivered_after_the_end_does_not_reopen() {
+        let mut w = WorldState::new();
+        w.apply(&ev(
+            EventKind::SessionStarted(SessionInfo::default()),
+            1_000,
+        ));
+        w.apply(&ev(EventKind::SessionEnded(SessionEnded::default()), 5_000));
+        // The (asynchronous) start hook of that run, arriving late.
+        w.apply(&ev(
+            EventKind::SessionStarted(SessionInfo::default()),
+            1_010,
+        ));
+        let s = w.session("claude:s1").unwrap();
+        assert_eq!((s.status, s.restarts), (SessionStatus::Ended, 0));
+        // A real new start still reopens it.
+        w.apply(&ev(
+            EventKind::SessionStarted(SessionInfo::default()),
+            6_000,
+        ));
+        let s = w.session("claude:s1").unwrap();
+        assert_eq!((s.status, s.restarts), (SessionStatus::Active, 1));
     }
 
     #[test]

@@ -76,19 +76,29 @@ pub fn map_hook(payload: &Value, ctx: &HookContext) -> Vec<AgentEvent> {
     let ev = |kind| event(payload, ctx, kind);
 
     match event_name(payload) {
-        "SessionStart" => vec![ev(EventKind::SessionStarted(SessionInfo {
-            mode: Some(if ctx.managed {
-                SessionMode::Managed
+        "SessionStart" => {
+            let info = SessionInfo {
+                mode: Some(if ctx.managed {
+                    SessionMode::Managed
+                } else {
+                    SessionMode::External
+                }),
+                cwd: cwd.map(str::to_owned),
+                model: owned(payload, "model"),
+                title: owned(payload, "session_title"),
+                reason: owned(payload, "source"),
+                permission_mode: owned(payload, "permission_mode"),
+                ..Default::default()
+            };
+            // A session Agent Office launched is started (and restarted) by
+            // the launch itself. This hook runs asynchronously and can arrive
+            // late, even after that run ended: it only adds details.
+            vec![ev(if ctx.managed {
+                EventKind::SessionUpdated(info)
             } else {
-                SessionMode::External
-            }),
-            cwd: cwd.map(str::to_owned),
-            model: owned(payload, "model"),
-            title: owned(payload, "session_title"),
-            reason: owned(payload, "source"),
-            permission_mode: owned(payload, "permission_mode"),
-            ..Default::default()
-        }))],
+                EventKind::SessionStarted(info)
+            })]
+        }
         "SessionEnd" => vec![ev(EventKind::SessionEnded(SessionEnded {
             reason: owned(payload, "reason"),
             exit_code: None,

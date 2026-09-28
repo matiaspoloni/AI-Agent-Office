@@ -513,3 +513,72 @@ async fn resuming_right_after_stop_waits_for_the_old_run() {
         .expect("stop");
     wait_status(&host, &sid, SessionStatus::Ended, 1).await;
 }
+
+/// Claude runs the SessionStart hook asynchronously, so it can reach Agent
+/// Office after that run ended (seen on a busy machine). It must not reopen
+/// the session, whether it was stamped before the end or after it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_late_start_hook_of_an_ended_run_does_not_reopen_it() {
+    let tmp = TempDir::new("late-start");
+    let (data, config, project) = (
+        tmp.sub("data"),
+        tmp.sub("claude-config"),
+        tmp.sub("project"),
+    );
+    let host: Arc<Host> = Host::start(AppPaths::at(data.clone()), options(&data, &config));
+    wait_listening(&host).await;
+    let handle = host
+        .launch(
+            claude(),
+            LaunchRequest {
+                cwd: project.display().to_string(),
+                prompt: Some("hello".into()),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("launch");
+    let sid = handle.session_id.0.clone();
+    let started_at = ao_core::time::now_ms();
+    wait_for("first answer", &host, |s| {
+        main_agent(s, &sid)
+            .filter(|a| a.last_message.as_deref() == Some("Read README.md"))
+            .map(|_| ())
+    })
+    .await;
+    host.stop(claude(), SessionId::new(&sid), StopMode::Graceful)
+        .await
+        .expect("stop");
+    wait_status(&host, &sid, SessionStatus::Ended, 0).await;
+
+    for stamped in [started_at, ao_core::time::now_ms() + 10] {
+        host.handle_hook(ao_ipc::HookRequest {
+            v: 1,
+            token: String::new(),
+            provider: "claude".into(),
+            origin: ao_ipc::HookOrigin::Managed,
+            received_at_ms: stamped,
+            relay_pid: 0,
+            payload: json!({
+                "session_id": sid,
+                "hook_event_name": "SessionStart",
+                "source": "startup",
+                "cwd": project.display().to_string(),
+            }),
+            payload_truncated: false,
+        })
+        .await;
+    }
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    host.flush();
+    let session = host
+        .snapshot()
+        .sessions
+        .into_iter()
+        .find(|s| s.session_id.0 == sid)
+        .unwrap();
+    assert_eq!(
+        (session.status, session.restarts),
+        (SessionStatus::Ended, 0)
+    );
+}

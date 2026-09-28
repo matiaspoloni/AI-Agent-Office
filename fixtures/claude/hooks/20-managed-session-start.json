@@ -1,5 +1,5 @@
 {
-  "description": "SessionStart from a session launched by Agent Office is managed",
+  "description": "SessionStart from a session launched by Agent Office only adds details: the launch itself started the session, and this asynchronous hook can arrive after that run ended",
   "input": {
     "session_id": "11111111-2222-4333-8444-555555555555",
     "transcript_path": "/home/u/.claude/projects/-tmp-proj/11111111-2222-4333-8444-555555555555.jsonl",
@@ -10,7 +10,7 @@
   },
   "expected": [
     {
-      "type": "session.started",
+      "type": "session.updated",
       "payload": {
         "mode": "managed",
         "model": "claude-opus-5-5"
