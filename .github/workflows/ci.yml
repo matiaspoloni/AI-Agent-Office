@@ -59,3 +59,5 @@ jobs:
           name: AgentOfficeSetup
           path: dist-installer/AgentOfficeSetup.exe
           if-no-files-found: error
+      - name: Installer smoke test (install, run, uninstall on this clean VM)
+        run: node scripts/installer-smoke.mjs
