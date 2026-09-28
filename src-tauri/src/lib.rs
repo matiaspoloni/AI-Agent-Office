@@ -182,3 +182,21 @@ pub fn run() {
             }
         });
 }
+
+#[cfg(test)]
+mod tests {
+    /// The installer, the About data and the npm package show one version.
+    #[test]
+    fn versions_agree() {
+        let conf: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let npm: serde_json::Value =
+            serde_json::from_str(include_str!("../../package.json")).unwrap();
+        assert_eq!(
+            conf["version"],
+            env!("CARGO_PKG_VERSION"),
+            "tauri.conf.json"
+        );
+        assert_eq!(npm["version"], env!("CARGO_PKG_VERSION"), "package.json");
+    }
+}

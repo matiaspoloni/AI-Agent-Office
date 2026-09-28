@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "tauri dev",
     "dev:web": "vite",
-    "build": "tauri build && node scripts/collect-installer.mjs",
+    "build": "node scripts/build.mjs",
     "build:ui": "tsc --noEmit && vite build",
     "preview:record": "cargo run -q -p ao-provider-demo --example record_preview -- src/ipc/preview-recording.json 90",
     "bindings": "cargo test -q -p ao-core -p ao-store -p ao-git -p agent-office --lib export_bindings",

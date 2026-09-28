@@ -30,6 +30,7 @@
     "active": true,
     "targets": ["nsis"],
     "publisher": "Agent Office",
+    "copyright": "Copyright © 2026 Agent Office contributors",
     "category": "DeveloperTool",
     "shortDescription": "Pixel-art office for your AI coding agents",
     "longDescription": "Agent Office shows Claude Code, Codex CLI and Cursor CLI sessions as characters in a pixel-art office.",
@@ -41,11 +42,13 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "webviewInstallMode": { "type": "downloadBootstrapper" },
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
       "nsis": {
         "installMode": "currentUser",
+        "languages": ["English", "SpanishInternational"],
         "displayLanguageSelector": false,
-        "startMenuFolder": "Agent Office"
+        "startMenuFolder": "Agent Office",
+        "installerHooks": "windows/installer-hooks.nsh"
       }
     }
   }
