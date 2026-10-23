@@ -5,6 +5,7 @@
 // uses the demo provider: it is labelled SIM like the rest of the preview.
 
 import type { Activity } from "../bindings/Activity";
+import type { AgentEvent } from "../bindings/AgentEvent";
 import type { AgentState } from "../bindings/AgentState";
 import type { SessionState } from "../bindings/SessionState";
 import type { UiBatch } from "../bindings/UiBatch";
@@ -44,6 +45,8 @@ export class StressOffice {
   private readonly sessions = new Map<string, SessionState>();
   private readonly agents = new Map<string, AgentState>();
   private seq = 0;
+  /** Moments that need the user, sent with the next batch for the timeline. */
+  private events: AgentEvent[] = [];
   private spawned = 0;
 
   constructor(seed = 42) {
@@ -87,6 +90,10 @@ export class StressOffice {
       next.pendingPermission = { requestId: `stress-${this.seq}-${a.key}`, toolName: "Bash", description: "Run: npm install", canResolve: false, options: [] };
       next.pendingPermissionAt = now;
     }
+    const base = { eventId: `stress-${this.events.length}-${now}-${a.key}`, timestamp: now, provider: a.provider, sessionId: a.sessionId, agentId: a.agentId, source: "simulation" as const };
+    if (next.pendingPermission) this.events.push({ ...base, type: "permission.requested", payload: next.pendingPermission });
+    else if (activity === "WAITING_INPUT") this.events.push({ ...base, type: "agent.waiting", payload: { reason: "input" } });
+    else if (activity === "ERROR") this.events.push({ ...base, type: "agent.error", payload: { message: "Simulated failure", recoverable: true } });
     return next;
   }
 
@@ -171,7 +178,9 @@ export class StressOffice {
   }
 
   private batch(sessions: SessionState[], agents: AgentState[], removedAgents: string[] = []): UiBatch {
-    return { seq: ++this.seq, sessions, agents, removedSessions: [], removedAgents, events: [], skippedEvents: 0 };
+    const events = this.events;
+    this.events = [];
+    return { seq: ++this.seq, sessions, agents, removedSessions: [], removedAgents, events, skippedEvents: 0 };
   }
 
   liveCounts(): { leads: number; subagents: number } {

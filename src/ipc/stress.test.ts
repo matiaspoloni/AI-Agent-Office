@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { UiBatch } from "../bindings/UiBatch";
 import { STRESS_SESSIONS, STRESS_SUBAGENTS, StressOffice } from "./stress";
 
 describe("stress office", () => {
@@ -12,11 +13,18 @@ describe("stress office", () => {
     const waits = (agents: { activity: string; pendingPermission?: unknown }[]) =>
       agents.every((a) => (a.activity === "WAITING_PERMISSION") === !!a.pendingPermission);
     expect(waits(first.agents)).toBe(true);
+    // Every request in the batch reaches the timeline as an event.
+    const asks = (b: UiBatch) => {
+      const sent = new Set(b.events.flatMap((e) => (e.type === "permission.requested" ? [e.payload.requestId] : [])));
+      return b.agents.every((a) => !a.pendingPermission || sent.has(a.pendingPermission.requestId));
+    };
+    expect(asks(first)).toBe(true);
     let changed = 0;
     for (let t = 1; t <= 200; t++) {
       const batch = office.tick(t * 400);
       changed += batch.agents.length;
       expect(waits(batch.agents)).toBe(true);
+      expect(asks(batch)).toBe(true);
     }
     expect(changed).toBeGreaterThan(200 * 8 * 0.9);
     expect(office.liveCounts()).toEqual({ leads: STRESS_SESSIONS, subagents: STRESS_SUBAGENTS });
