@@ -80,8 +80,18 @@ export class StressOffice {
     };
   }
 
+  /** An agent switched to `activity`; a permission wait comes with its request, like a real provider sends. */
+  private withActivity(a: AgentState, activity: Activity, now: number): AgentState {
+    const next: AgentState = { ...a, activity, activitySince: now, pendingPermission: undefined, pendingPermissionAt: undefined };
+    if (activity === "WAITING_PERMISSION") {
+      next.pendingPermission = { requestId: `stress-${this.seq}-${a.key}`, toolName: "Bash", description: "Run: npm install", canResolve: false, options: [] };
+      next.pendingPermissionAt = now;
+    }
+    return next;
+  }
+
   private agent(session: SessionState, key: string, isMain: boolean, name: string, now: number): AgentState {
-    return {
+    return this.withActivity({
       key,
       sessionKey: session.key,
       provider: "demo",
@@ -91,13 +101,13 @@ export class StressOffice {
       parentKey: isMain ? undefined : session.mainAgentKey,
       name,
       agentType: isMain ? undefined : name,
-      activity: this.pickActivity(),
+      activity: "IDLE",
       activitySince: now,
       currentAction: "Simulated work",
       runningTools: [],
       toolCalls: 0,
       ended: false,
-    };
+    }, this.pickActivity(), now);
   }
 
   private spawnSubagent(now: number): AgentState {
@@ -134,7 +144,7 @@ export class StressOffice {
     const live = [...this.agents.values()].filter((a) => !a.ended);
     for (let i = 0; i < 8; i++) {
       const a = live[Math.floor(this.random() * live.length)];
-      const next = { ...a, activity: this.pickActivity(), activitySince: now, toolCalls: a.toolCalls + 1 };
+      const next = { ...this.withActivity(a, this.pickActivity(), now), toolCalls: a.toolCalls + 1 };
       this.agents.set(a.key, next);
       changed.set(a.key, next);
     }
@@ -142,7 +152,7 @@ export class StressOffice {
       const subs = live.filter((a) => !a.isMain);
       const done = subs[Math.floor(this.random() * subs.length)];
       if (done) {
-        const ended = { ...done, ended: true, endedAt: now, activity: "DONE" as Activity, activitySince: now };
+        const ended = { ...this.withActivity(done, "DONE", now), ended: true, endedAt: now };
         this.agents.set(done.key, ended);
         changed.set(done.key, ended);
         const fresh = this.spawnSubagent(now);
