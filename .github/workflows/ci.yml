@@ -61,3 +61,21 @@ jobs:
           if-no-files-found: error
       - name: Installer smoke test (install, run, uninstall on this clean VM)
         run: node scripts/installer-smoke.mjs
+
+  macos:
+    name: macOS build, tests and disk image
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build:ui
+      - run: cargo test --workspace --no-fail-fast
+      - run: npx vitest run
+      - name: macOS smoke test (headless)
+        run: node scripts/smoke.mjs
