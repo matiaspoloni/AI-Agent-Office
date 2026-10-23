@@ -11,7 +11,7 @@
 // Claude Code, Codex CLI and Agent Office data are redirected to a temporary
 // folder for everything but the last step (CI only: an app opened by Finder
 // gets the system's environment, so it uses the default data folder).
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
   lstatSync,
@@ -142,22 +142,67 @@ check(
   "backup of the settings file kept",
 );
 
-// 6. CI only: opened like Finder does (by launchd, with its minimal
-//    environment), the app starts and adopts the login shell's environment.
+// 6. CI only: the app with its window. First started directly (its output is
+//    captured: a crash shows here), then opened like Finder does (by launchd,
+//    with its minimal environment), where it adopts the login shell's
+//    environment.
+const readLogs = (dir) =>
+  existsSync(dir)
+    ? readdirSync(dir)
+        .filter((f) => f.startsWith("app.log"))
+        .map((f) => readFileSync(join(dir, f), "utf8"))
+        .join("\n")
+    : "";
+const tail = (text, lines = 40) => text.split("\n").slice(-lines).join("\n");
+function crashReports() {
+  const dir = join(homedir(), "Library", "Logs", "DiagnosticReports");
+  if (!existsSync(dir)) return "(no DiagnosticReports folder)";
+  const reports = readdirSync(dir).filter((f) => f.toLowerCase().includes("agent-office"));
+  return reports.length
+    ? reports.map((f) => `--- ${f}\n${readFileSync(join(dir, f), "utf8").slice(0, 6000)}`).join("\n")
+    : "(no crash report)";
+}
+const running = () => run("pgrep", ["-f", exe(app)]).stdout.trim().split("\n").filter(Boolean).map(Number);
+
 if (process.env.CI) {
+  const direct = spawn(exe(app), [], { env: { ...env, RUST_BACKTRACE: "1" }, stdio: ["ignore", "pipe", "pipe"] });
+  let output = "";
+  direct.stdout.on("data", (d) => (output += d));
+  direct.stderr.on("data", (d) => (output += d));
+  const directLogs = join(env.AGENT_OFFICE_DATA_DIR, "logs");
+  await until(() => readLogs(directLogs).includes("starting Agent Office") || direct.exitCode !== null, "window app writes its log", 30);
+  await sleep(8000);
+  const alive = direct.exitCode === null && direct.signalCode === null;
+  check(alive, "window app keeps running (started directly)");
+  if (!alive) {
+    console.log(`exit ${direct.exitCode} signal ${direct.signalCode}\n${tail(output, 60)}`);
+    console.log(tail(readLogs(directLogs)));
+    console.log(crashReports());
+  }
+  direct.kill("SIGTERM");
+  await until(() => direct.exitCode !== null || direct.signalCode !== null, "directly started app quit", 30);
+
   const logDir = join(homedir(), "Library", "Application Support", "AgentOffice", "logs");
-  const appLog = () =>
-    existsSync(logDir)
-      ? readdirSync(logDir)
-          .filter((f) => f.startsWith("app.log"))
-          .map((f) => readFileSync(join(logDir, f), "utf8"))
-          .join("\n")
-      : "";
   check(run("open", ["-n", app]).status === 0, "opened like Finder does");
-  await until(() => appLog().includes("adopted the login shell's environment"), "login shell environment adopted", 60);
-  check(appLog().includes("starting Agent Office"), "app started");
+  const adopted = await until(
+    () => readLogs(logDir).includes("adopted the login shell's environment"),
+    "login shell environment adopted",
+    60,
+  );
+  check(readLogs(logDir).includes("starting Agent Office"), "app started");
+  if (!adopted) {
+    console.log(`running: ${JSON.stringify(running())}`);
+    console.log(`log folder: ${existsSync(logDir) ? readdirSync(logDir).join(", ") : "missing"}`);
+    console.log(tail(readLogs(logDir)));
+    console.log(crashReports());
+    console.log(
+      tail(
+        run("log", ["show", "--last", "3m", "--style", "compact", "--predicate", 'process == "agent-office"']).stdout ?? "",
+        60,
+      ),
+    );
+  }
   // Stop only the app opened here.
-  const running = () => run("pgrep", ["-f", exe(app)]).stdout.trim().split("\n").filter(Boolean).map(Number);
   for (const pid of running()) process.kill(pid, "SIGTERM");
   await until(() => running().length === 0, "app quit", 30);
 }
