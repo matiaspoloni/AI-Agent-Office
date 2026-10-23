@@ -1,14 +1,15 @@
 # Agent Office
 
-**Agent Office** is a native Windows desktop app that shows the AI coding agents you
-have running — Claude Code, OpenAI Codex CLI and Cursor CLI — as characters in a
+**Agent Office** is a native desktop app for Windows 11 and macOS that shows the AI
+coding agents you have running — Claude Code, OpenAI Codex CLI and Cursor CLI — as characters in a
 living pixel-art office. Each session is an employee: you can see who is coding, who
 is running tests, who is waiting for your permission and who just hit an error, and
 you can act on them when the provider allows it.
 
-> **Status: all ten planned phases are implemented; not yet verified by hand on
-> a Windows 11 PC.** Everything is tested automatically (Linux and Windows CI,
-> including installing and uninstalling the app on a clean Windows machine), but
+> **Status: all planned phases are implemented, for Windows 11 and macOS; not yet
+> verified by hand on a real PC or Mac.** Everything is tested automatically
+> (Linux, Windows and macOS CI, including installing and uninstalling the app on
+> a clean Windows machine and installing the Mac app from its disk image), but
 > the manual checks listed in [docs/ROADMAP.md](docs/ROADMAP.md) — real Claude,
 > Codex and Cursor accounts, notifications, the installed app — are still open.
 > **Claude Code** and **Codex CLI** work for sessions launched from the app and
@@ -37,22 +38,26 @@ you can act on them when the provider allows it.
   official events (hooks, JSON-RPC protocols, stream-json) into one unified event
   model. The UI never sees provider-specific data.
 * **Local-first**: no accounts, no cloud, no telemetry. Data stays in
-  `%LOCALAPPDATA%\AgentOffice`.
+  `%LOCALAPPDATA%\AgentOffice` (Windows) or `~/Library/Application Support/AgentOffice`
+  (macOS).
 
 ## Supported providers
 
 | Provider | Managed sessions (launched by the app) | External sessions (your own terminal) |
 | --- | --- | --- |
-| Claude Code | `claude -p` stream-json + hooks | Global hooks in `%USERPROFILE%\.claude\settings.json` (install/uninstall/repair from the app) |
-| OpenAI Codex CLI | `codex app-server` (JSON-RPC) | Hooks in `%USERPROFILE%\.codex\hooks.json` (needs one-time trust via `/hooks` in Codex) |
+| Claude Code | `claude -p` stream-json + hooks | Global hooks in `~/.claude/settings.json` (install/uninstall/repair from the app) |
+| OpenAI Codex CLI | `codex app-server` (JSON-RPC) | Hooks in `~/.codex/hooks.json` (needs one-time trust via `/hooks` in Codex) |
 | Cursor CLI | `agent acp` (Agent Client Protocol) — experimental; run `agent login` once first | Not yet (Cursor's hook format could not be verified) |
 
-The exact, honest list of what each provider supports is in
+`~` is your user folder (`%USERPROFILE%` on Windows); `CLAUDE_CONFIG_DIR` and
+`CODEX_HOME` are honoured. The exact, honest list of what each provider supports is in
 [docs/PROVIDER_CAPABILITIES.md](docs/PROVIDER_CAPABILITIES.md). When a provider
 does not expose something (for example token usage for external sessions), the app
 shows **"Unavailable"** instead of guessing.
 
 ## Installation
+
+### Windows 11
 
 Download and run **`AgentOfficeSetup.exe`** (the CI build is attached to each run
 as the *AgentOfficeSetup* artifact). It installs Agent Office for your Windows
@@ -76,6 +81,33 @@ Office's hook entries from your Claude Code and Codex settings — only its own,
 with a backup of each file — so those tools do not keep calling a program that
 is gone. Tick *Delete the application data* to also remove the database and logs
 in `%LOCALAPPDATA%\AgentOffice`.
+
+### macOS (11 Big Sur or later, Apple silicon or Intel)
+
+Download **`AgentOffice.dmg`** (the *AgentOffice-macOS* artifact of each CI run),
+open it and drag **Agent Office** to **Applications**. Open it from Applications —
+not from the disk image, where Agent Office refuses to install hooks because that
+path disappears when the image is ejected.
+
+The app is **not signed by Apple yet** (that needs a paid Apple Developer
+account). The first time, macOS says it cannot check the app: open **System
+Settings → Privacy & Security**, find the message about Agent Office and choose
+**Open Anyway** — only for a file you got from this project. macOS then asks
+whether Agent Office may send notifications.
+
+An app opened from the Dock does not get the settings of your terminal, so at
+startup Agent Office asks your login shell once for its environment: agent CLIs
+installed with Homebrew, npm or nvm, `CLAUDE_CONFIG_DIR`, `CODEX_HOME` or API keys
+set in `~/.zshrc` work as they do in Terminal.
+
+**Updating:** replace the app in Applications with the newer one. The hooks keep
+working (they point to `/Applications/Agent Office.app`) and your data stays.
+
+**Uninstalling:** macOS has no uninstaller, so first remove Agent Office's hook
+entries from Claude Code and Codex — **Diagnostics → Uninstall** for each, or in
+Terminal `"/Applications/Agent Office.app/Contents/MacOS/agent-office" integrations
+uninstall` — then drag the app to the Trash. To also remove its data, delete
+`~/Library/Application Support/AgentOffice`.
 
 You need the agent CLIs you want to watch installed as usual (`claude`, `codex`,
 `agent`). Agent Office detects them automatically.
@@ -117,7 +149,7 @@ the reason in their tooltip):
   the same model and permission mode (it stops the agent first if it is still
   running, and asks you once more before doing so). Not available for Cursor yet.
 * **Open terminal** — any session whose folder exists on this computer: opens
-  your terminal (Windows Terminal, else PowerShell) in that folder. It is yours:
+  your terminal (Windows Terminal, else PowerShell; Terminal on a Mac) in that folder. It is yours:
   Agent Office types nothing into it and never closes it.
 * **No news for N minutes** — when a busy agent has not reported anything for a
   while (5 minutes by default; Diagnostics → Settings), it shows an hourglass in
@@ -131,7 +163,7 @@ app started, with its status and how many processes are running under it.
 
 ## Notifications
 
-Agent Office tells you, with a Windows notification, when an agent needs you:
+Agent Office tells you, with a Windows or macOS notification, when an agent needs you:
 "Claude Code needs permission", "Codex CLI finished tests", "Cursor CLI
 encountered an error", an agent waiting for your answer, or finishing a long
 task. Click the notification and Agent Office opens with that agent selected.
@@ -147,7 +179,7 @@ lock screen) in **Diagnostics → Settings → Notifications**, and try them wit
 **Diagnostics** checks everything Agent Office depends on (the agent CLIs, hooks,
 database, Git, notifications) and shows its own logs. **Export report…** saves all
 of it as a file you can attach to a bug report; paths inside your user folder are
-replaced by `%USERPROFILE%`, but read it before sharing it.
+replaced by `%USERPROFILE%` (`~` on a Mac), but read it before sharing it.
 
 ## Git
 
@@ -163,23 +195,25 @@ Git (it never changes them):
   a commit shows "by" an agent only when that agent ran the `git commit`.
   Everything else is shown without a name: Agent Office does not guess.
 * **Open project** opens the folder; **Show** selects a changed file in
-  Explorer. Files are never opened with their default program, because on
-  Windows that would run scripts and programs an agent may have created.
+  Explorer or Finder. Files are never opened with their default program,
+  because that could run scripts and programs an agent may have created.
 
-Git for Windows 2.15 or newer is needed for this part; without it the rest
-of the app works and Diagnostics says so.
+Git 2.15 or newer is needed for this part (Git for Windows; on a Mac, Apple's
+Command Line Tools — `xcode-select --install` — or Homebrew's `git`); without
+it the rest of the app works and Diagnostics says so.
 
 
 ## Quick start (development build)
 
 Requirements for **development only**: Node.js 20+, Rust (stable, MSVC toolchain on
-Windows), and the Tauri prerequisites for Windows (WebView2, Visual Studio Build Tools).
+Windows), and the Tauri prerequisites for your system (Windows: WebView2 and Visual
+Studio Build Tools; macOS: Xcode Command Line Tools).
 
 ```powershell
 npm install
 npm run dev        # start the desktop app with hot reload
 npm run test       # Rust + UI tests
-npm run build      # Windows installer → dist-installer\AgentOfficeSetup.exe
+npm run build      # installer → dist-installer\AgentOfficeSetup.exe (Windows) or dist-installer/AgentOffice.dmg (macOS)
 ```
 
 `npm run dev:web` starts only the UI in a browser with a replayed demo timeline —
@@ -200,14 +234,17 @@ More in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 * File changes are attributed to an agent only when a tool call proves it, and
   commits only when the agent ran the `git commit`; everything else is shown
   without a name. Nested repositories (submodules) are not read separately.
-* Cursor CLI support is experimental until it is verified with a real Cursor on
-  Windows 11 (checklist in [docs/ROADMAP.md](docs/ROADMAP.md) §8). Cursor sessions
+* Cursor CLI support is experimental until it is verified with a real Cursor
+  (checklist in [docs/ROADMAP.md](docs/ROADMAP.md) §8). Cursor sessions
   started in your own terminal are not shown yet.
 * The office layout is fixed for now (four project rows of six desks; more projects
   share rows). Moving furniture and unlocking objects are planned; the layout is
   already plain data for that.
-* Windows 11 x64 is the only packaged target for now; the code keeps OS-specific parts
-  behind interfaces so macOS/Linux can be added later.
+* Packaged for Windows 11 x64 and macOS 11+ (Apple silicon and Intel). Linux runs
+  for development and CI only. Neither package is signed yet (Windows SmartScreen and
+  macOS Gatekeeper warn the first time).
+* A development build on macOS (`npm run dev`, not `Agent Office.app`) cannot show
+  notifications: macOS allows them only for an app bundle. They go to the log.
 
 ## Documentation
 

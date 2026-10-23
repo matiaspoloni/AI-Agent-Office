@@ -522,6 +522,16 @@ drawing), `sprites.ts` (pixel art), `renderer.ts` (Canvas 2D), `teams.ts`
   key and network access).
 * CI installs, checks, runs and uninstalls the installer on a clean Windows VM
   (`scripts/installer-smoke.mjs`).
+* **macOS**: `npm run build` on a Mac builds a universal `Agent Office.app`
+  (Apple silicon + Intel, macOS 11+, ad hoc signed: `bundle.macOS` in
+  `tauri.conf.json`) inside `AgentOffice.dmg`. There is no installer program:
+  the user copies the app to Applications, and removes the hook integrations
+  from Diagnostics (or `agent-office integrations uninstall`) before deleting
+  it. Hooks are refused while the app runs from the disk image or from a
+  translocated copy (`platform::relay_location_problem`), since those paths
+  disappear. CI checks the image and the app in it, the refusal, the copied
+  app's self-check, the hooks and a Finder-style start
+  (`scripts/dmg-smoke.mjs`).
 
 ## 11. Security summary
 
@@ -531,6 +541,13 @@ telemetry, no upload of prompts/code/tool output. See [SECURITY.md](SECURITY.md)
 
 ## 12. Portability
 
-Windows 11 x64 is the target. All OS-specific code sits behind small interfaces
-(`ao-process` job control, `ao-ipc` local socket naming, `ao-detect` executable
-lookup) with Unix implementations used for development and CI on Linux/macOS.
+Windows 11 x64 and macOS 11+ are the targets; Linux runs for development and
+CI. All OS-specific code sits behind small interfaces: `ao-process` (Job
+Objects on Windows, process groups on Unix), `ao-ipc` (named pipe; Unix socket
+in a folder that depends only on the user), `ao-detect` (executable lookup;
+on Unix also `login_env`, the login shell's environment), `toast`
+(notifications: WinRT toasts, the User Notifications framework on macOS, the
+log elsewhere), `platform` (macOS: adopting that environment at startup, the
+Git stub, install-location checks), `terminal` and `reveal` (Windows Terminal /
+Explorer, Terminal / Finder, the desktop's tools on Linux). CI runs the whole
+test suite on Linux, Windows and macOS.

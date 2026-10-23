@@ -43,6 +43,7 @@ then continue.
 | **8 – Git integration** | `ao-git` (repo, branch, worktree, dirty/staged, ahead/behind, recent commits), refresh on tool/cwd events, conservative attribution | Tests on temporary repositories |
 | **9 – Diagnostics & notifications** | Full diagnostics screen, observed-hook evidence, log viewer, Windows toast notifications with click-to-open | Diagnostics report exportable; notification click opens the session |
 | **10 – Packaging** | NSIS `AgentOfficeSetup.exe` (Start Menu, desktop shortcut, uninstaller that first removes Agent Office hooks from provider settings), WebView2 bootstrapper, version metadata, optional signing hook; auto-updater deliberately left out (§13) | Clean-VM install/uninstall smoke test |
+| **11 – macOS** | Tests on macOS CI; login-shell environment for apps opened from the Dock; hook socket and data folder independent of the environment; Git stub without Command Line Tools; native notifications with click-to-open; universal `Agent Office.app` in `AgentOffice.dmg` (ad hoc signed); refusing hooks from the disk image (§14) | Test suite, smoke test and disk-image test green on `macos-latest` |
 
 ## 3. Technical risks
 
@@ -56,6 +57,7 @@ then continue.
 | R6 | Windows process trees (`.cmd` shims, `node` children, shells spawned by agents). | Orphans or wrong process killed. | Implemented: one Job Object per managed process, started suspended so nothing escapes it; only our jobs are ever terminated; the process handle is held for its whole life (no action on a bare PID); leftovers stopped when the agent exits; tested on Windows CI. |
 | R7 | Hook latency slows the agent. | Worse agent UX. | Relay is the native app exe in `hook` mode (≈25 ms per call in a debug build when the app is closed), async hooks for non-decision events, 300 ms connect timeout, exit 0 when the app is closed. |
 | R13 | App uninstalled while hooks remain in `~/.claude/settings.json` or `~/.codex/hooks.json`. | The agent reports a failing hook command on every event. | Implemented: the uninstaller runs `agent-office integrations uninstall --remember` first (only our entries, backups kept); an upgrade restores them. Tested on a clean Windows VM in CI. |
+| R14 | macOS: an app opened from the Dock has launchd's minimal environment, and the app is not signed by Apple. | Agent CLIs or their settings not found; Gatekeeper blocks the first start; notifications may be refused for an ad hoc signed app. | Implemented: the login shell's environment is adopted at startup (§14); Gatekeeper's *Open Anyway* documented; a refusal of notifications is shown in Diagnostics. A Developer ID certificate (Apple Developer Program) removes the warning; Tauri's `APPLE_*` variables sign with it. To verify on a real Mac. |
 | R8 | Event floods (streaming deltas, command output). | UI jank, DB growth. | Batching (100 ms), UI never re-renders per token, output truncation, retention, virtualized lists. |
 | R9 | Windows toast click-activation is limited in the Tauri notification plugin on desktop. | Click-to-open may not work in MVS. | Implemented with WinRT toast activation (`tauri-winrt-notification`): a click on the toast while it is on screen opens the agent. A toast clicked later from the notification center is not handled (that needs a registered COM activator; future work). To verify on Windows 11. |
 | R10 | Unsigned installer triggers SmartScreen. | Install friction. | Documented in the README; `npm run build` signs with signtool when `AGENT_OFFICE_SIGN_THUMBPRINT` names a certificate (none exists yet). |
@@ -381,3 +383,57 @@ installed and `agent login` was done once in a terminal. Note the Cursor version
   are published somewhere.
 * **Unsigned.** A code-signing certificate is needed to avoid SmartScreen; the
   build signs as soon as one is configured.
+
+## 14. Phase 11 checklist (macOS)
+
+- [x] The whole test suite, the UI tests and the headless smoke test run on `macos-latest` in CI
+- [x] Apps opened from the Dock/Finder adopt the login shell's environment once at startup (PATH merged, missing variables added, 5 s limit, a hanging shell is stopped with what it started; tested with stand-in shells)
+- [x] Hook socket in the per-user temporary folder reported by the system (`confstr`), data folder ignoring `XDG_DATA_HOME`: app and hooks agree however each was started
+- [x] `/usr/bin/git` without Apple's Command Line Tools is not run (it only opens an install dialog); another Git is used if present, Diagnostics says what to install
+- [x] Native notifications (User Notifications framework) with click-to-open, permission asked once, refusal shown in Diagnostics; only `Agent Office.app` (a bare development binary is logged)
+- [x] `npm run build` → universal `Agent Office.app` (Apple silicon + Intel, macOS 11+) in `dist-installer/AgentOffice.dmg`, ad hoc signed
+- [x] Hooks are refused while the app runs from the disk image or from a translocated copy; Diagnostics warns
+- [x] Disk-image test in CI: identifier, version, minimum macOS, both processors, signature, refusal from the image, copy to Applications, installed self-check, hooks installed / run as Claude runs them / removed with the user's settings kept, opened like Finder does
+- [ ] Signed with a Developer ID and notarized (needs an Apple Developer account)
+- [ ] On a real Mac by hand (below)
+
+### Manual check on a Mac
+
+1. Open `AgentOffice.dmg`, drag Agent Office to Applications, open it from
+   there; *System Settings → Privacy & Security → Open Anyway* the first time.
+2. Allow notifications when asked; **Diagnostics → Send a test notification**
+   shows "Agent Office"; with the app in the background, a permission request
+   from an agent shows one, and clicking it opens that agent.
+3. Diagnostics finds `claude`, `codex` and `agent` installed with Homebrew,
+   npm or nvm although the app was opened from the Dock; Git is found (or the
+   Command Line Tools message is shown, without Apple's install dialog popping
+   up).
+4. Install the Claude and Codex integrations; a `claude` / `codex` session in
+   Terminal appears in the office. With `CLAUDE_CONFIG_DIR` set in `~/.zshrc`,
+   the hooks go to that folder.
+5. Launch Claude and Codex agents from the app; Restart, Open terminal (opens
+   Terminal), Show (selects in Finder).
+6. Opening the app directly from the disk image: installing an integration is
+   refused with instructions.
+7. Uninstall the integrations, quit, drag the app to the Trash: Claude and
+   Codex keep working without errors.
+
+### Phase 11 findings
+
+* The first macOS CI run passed everything but one test, and that was the test
+  itself: on a Mac the `SessionEnd` hook can arrive before the process exit
+  that removes the per-session settings file. The test now waits for it.
+* An app opened by launchd and a hook run from Terminal used to compute the
+  socket folder (`$TMPDIR`, `$XDG_RUNTIME_DIR`) and the data folder
+  (`$XDG_DATA_HOME`) from their own environments, which can differ (SSH,
+  tmux, variables set only in the shell). Both now depend only on the user.
+* macOS shows notifications only for an app bundle with an identifier; the
+  framework raises an exception otherwise, so development builds log them.
+* Ad hoc signing (`signingIdentity: "-"`) keeps the bundle's signature valid
+  (an unsigned universal app would be reported as damaged), but Gatekeeper
+  still asks the user to confirm the first start. Whether macOS lets an ad
+  hoc signed app send notifications is to be checked on a real Mac; a refusal
+  is reported, not hidden.
+* Translocation (an app started where it was downloaded runs from a random
+  read-only path) cannot be reproduced in CI; it is recognised by its path and
+  unit-tested.

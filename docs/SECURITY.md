@@ -10,18 +10,19 @@ to add as little attack surface as possible.
 2. **No network listeners.** The app opens no TCP/UDP port. UI ↔ core uses Tauri's
    in-process IPC. Hooks reach the app through a local **named pipe**
    (`\\.\pipe\agent-office-v1-<hash>`) created as the first instance of that name (so
-   no other process can squat on it) and rejecting remote clients. Development builds
-   on Linux/macOS use a Unix socket with mode 0600.
+   no other process can squat on it) and rejecting remote clients. On macOS (and
+   Linux) it is a Unix socket with mode 0600, on macOS in the per-user temporary
+   folder the system reports (`/var/folders/…`, private to the user).
 3. **Authenticated hook relay.** The relay presents a per-user random token (256 bits)
    stored in `%LOCALAPPDATA%\AgentOffice\ipc.token` (protected by the user profile ACL;
-   0600 on Unix). The app compares it in constant time and drops frames without it.
+   on macOS `~/Library/Application Support/AgentOffice/ipc.token`, mode 0600). The app compares it in constant time and drops frames without it.
 4. **Least privilege in the UI.** The webview can only call the Tauri commands
    explicitly allowed in `src-tauri/capabilities/`. No shell/fs plugins are exposed to
    the renderer. A strict Content-Security-Policy blocks remote scripts.
 5. **Never kill what we didn't start.** Only processes created by Agent Office (and
    tracked in their own Job Object) can be stopped or killed. They start suspended
    and only run once they are inside that job, so everything they start is in it
-   too. Diagnostics lists them (*Processes started by Agent Office*). An agent that
+   too. On macOS each one gets a process group of its own from the start instead. Diagnostics lists them (*Processes started by Agent Office*). An agent that
    goes quiet is only flagged, never stopped automatically.
 6. **Safe config edits.** Provider config files (e.g. `%USERPROFILE%\.claude\settings.json`)
    are parsed first (invalid JSON → refuse), backed up with a timestamp (last 5 kept),
@@ -43,22 +44,34 @@ to add as little attack surface as possible.
    passes only checked commit ids as revisions, and leaves Git's
    `safe.directory` check on. Other repository settings still apply, as they do
    when the agent itself runs `git` in that folder. Changed files are shown
-   selected in Explorer, never opened with their default program.
-9. **Notifications stay on this computer.** They are Windows notifications
-   (no service, no network). Their details (command, message) can be switched
+   selected in Explorer or Finder, never opened with their default program.
+9. **Notifications stay on this computer.** They are Windows or macOS
+   notifications (no service, no network). Their details (command, message) can be switched
    off because notifications may appear on the lock screen; when on, they are
    clipped to one line and come from events whose secrets were already redacted.
    Simulated demo sessions never notify.
 10. **Diagnostics exports are explicit.** A report is only written when the user
     picks a `.json` file in a save dialog; paths inside the user's folder are
-    replaced by `%USERPROFILE%`, and the file says nothing else is removed. The
+    replaced by `%USERPROFILE%` (`~` on macOS), and the file says nothing else is removed. The
     log viewer reads only Agent Office's own log folder.
 11. **Installation without administrator rights.** The installer writes only to
     the current user's folders and registry (`%LOCALAPPDATA%`, the Start Menu,
     HKCU). The uninstaller removes Agent Office's hook entries (only its own,
     with backups) before deleting the program. There is no auto-updater and no
     network call; builds are signed only when a certificate is configured.
-12. **Fail open for the agent.** If the app is closed or the relay fails, the hook exits
+    On macOS the app is copied to Applications by the user; it writes nothing
+    outside the user's folders. It is signed ad hoc (no Apple certificate), so
+    Gatekeeper asks before the first start.
+12. **The login shell is asked, not changed (macOS).** An app opened from the
+    Dock gets only the system's minimal environment, so at startup Agent Office
+    runs the user's own login shell once (`$SHELL -l -i -c` printing
+    `/usr/bin/env`) and adopts the variables it is missing (PATH is merged).
+    This runs the user's shell start-up files, as opening Terminal does; it is
+    limited to 5 seconds (a shell that does not answer is stopped with what it
+    started) and only happens when launched by the system, not from a
+    terminal. The values stay in the app's memory and in the agents it starts;
+    they are never stored, logged or sent anywhere.
+13. **Fail open for the agent.** If the app is closed or the relay fails, the hook exits
    0 with no output, so the agent behaves as if Agent Office did not exist. Agent Office
    never auto-approves anything; approvals only happen after an explicit user click.
    An unanswered request is denied (managed sessions) or handed back to the agent's

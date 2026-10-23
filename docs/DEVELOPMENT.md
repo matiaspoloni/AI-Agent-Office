@@ -13,8 +13,13 @@ Everything here is for **developers**. End users only need `AgentOfficeSetup.exe
 No WSL, Bash, Make or Python is needed. All commands below work in PowerShell and
 Windows Terminal.
 
-Linux/macOS work for development too (see the Tauri prerequisites for your OS;
-on Ubuntu: `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev libxdo-dev`).
+**macOS** (11 or later): Node.js 20+, Rust via rustup and Apple's Command Line
+Tools (`xcode-select --install`). A development build (`npm run dev`) is a bare
+binary, not `Agent Office.app`: macOS shows notifications only for the app
+bundle, so there they are written to the log (`npm run build` makes the app).
+
+Linux works for development too (see the Tauri prerequisites; on Ubuntu:
+`libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev libxdo-dev`).
 
 ## Commands
 
@@ -254,6 +259,12 @@ mapping together, and note the finding in PROVIDER_CAPABILITIES.md.
    `AGENT_OFFICE_SIGN_TIMESTAMP_URL`) before `npm run build`; Tauri signs the
    app and the installer with `signtool`.
 4. Users update by running the new installer; see the README.
+5. macOS: `npm run build` on a Mac (or the *AgentOffice-macOS* artifact from CI,
+   where the disk-image test has already checked it) gives
+   `dist-installer/AgentOffice.dmg` with a universal, ad hoc signed app. To sign
+   with a Developer ID and notarize, set Tauri's `APPLE_CERTIFICATE`,
+   `APPLE_CERTIFICATE_PASSWORD` and `APPLE_SIGNING_IDENTITY` (plus `APPLE_ID`,
+   `APPLE_PASSWORD`, `APPLE_TEAM_ID` for notarization) before building.
 
 What the installer adds to Tauri's NSIS template is in
 `src-tauri/windows/installer-hooks.nsh`: before uninstalling it runs
