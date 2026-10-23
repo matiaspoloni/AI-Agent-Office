@@ -39,6 +39,8 @@ export interface Backend {
   stopSession(provider: string, sessionId: string, force: boolean): Promise<void>;
   /** Continue a managed session's conversation in a new process (stops it first if running). */
   restartSession(provider: string, sessionId: string): Promise<SessionHandle>;
+  /** Continue an ended session from the user's terminal as a session of Agent Office. */
+  continueSession(provider: string, sessionId: string): Promise<SessionHandle>;
   /** Open the user's terminal in the session's folder (never managed by Agent Office). */
   openTerminal(provider: string, sessionId: string): Promise<void>;
   /** Agent processes Agent Office started and still tracks. */

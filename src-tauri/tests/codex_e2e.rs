@@ -484,3 +484,63 @@ async fn resuming_right_after_stop_waits_for_the_old_run() {
         "the old run's end closed the new run"
     );
 }
+
+/// A Codex session from the terminal continues in Agent Office once it has
+/// ended there (`thread/resume` with its thread id) and then takes prompts.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_terminal_session_continues_in_agent_office() {
+    let tmp = TempDir::new("codex-continue");
+    let (data, home, project) = (tmp.sub("data"), tmp.sub("codex-home"), tmp.sub("project"));
+    let host: Arc<Host> = Host::start(AppPaths::at(data.clone()), options(&data, &home));
+    wait_listening(&host).await;
+    host.integration_action(codex(), IntegrationAction::Install)
+        .await
+        .unwrap();
+    // The user trusted the hooks in Codex (/hooks).
+    std::fs::write(home.join("fake-trust-all"), "").unwrap();
+    let sid = "ext-cx-continue";
+
+    let run = run_external(&home, &project, sid);
+    tokio::task::spawn_blocking(move || run.join().unwrap())
+        .await
+        .unwrap();
+    wait_for("ended in the terminal", &host, |s| {
+        s.sessions
+            .iter()
+            .find(|x| x.session_id.0 == sid && x.status == SessionStatus::Ended)
+            .map(|_| ())
+    })
+    .await;
+
+    let handle = host
+        .continue_external(codex(), SessionId::new(sid))
+        .await
+        .expect("continue");
+    assert_eq!(
+        handle.session_id.0, sid,
+        "thread/resume keeps the thread id"
+    );
+    let continued = wait_for("continued", &host, |s| {
+        s.sessions
+            .iter()
+            .find(|x| x.session_id.0 == sid && x.status == SessionStatus::Active)
+            .cloned()
+    })
+    .await;
+    assert_eq!(continued.mode, SessionMode::Managed);
+    assert_eq!(continued.restarts, 1);
+    let prompts = continued.stats.prompts;
+    host.send_prompt(codex(), SessionId::new(sid), "hello from the office".into())
+        .await
+        .expect("prompt after continuing");
+    wait_for("answer", &host, |s| {
+        s.sessions
+            .iter()
+            .find(|x| x.session_id.0 == sid && x.stats.prompts > prompts)
+            .map(|_| ())
+    })
+    .await;
+    host.stop(codex(), SessionId::new(sid), StopMode::Graceful)
+        .await
+        .expect("stop");
+}

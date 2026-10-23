@@ -163,6 +163,7 @@ pub fn run() {
             commands::start_demo_office,
             commands::stop_session,
             commands::restart_session,
+            commands::continue_session,
             commands::open_terminal,
             commands::list_processes,
             commands::list_repositories,

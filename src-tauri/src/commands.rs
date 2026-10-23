@@ -137,6 +137,16 @@ pub async fn restart_session(
 }
 
 #[tauri::command]
+pub async fn continue_session(
+    host: HostState<'_>,
+    provider: String,
+    session_id: String,
+) -> Result<SessionHandle, String> {
+    host.continue_external(ProviderId::new(provider), SessionId::new(session_id))
+        .await
+}
+
+#[tauri::command]
 pub fn open_terminal(
     host: HostState<'_>,
     provider: String,

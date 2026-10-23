@@ -38,6 +38,7 @@ export function createTauriBackend(): Backend {
     startDemoOffice: () => invoke<SessionHandle[]>("start_demo_office"),
     stopSession: (provider, sessionId, force) => invoke<void>("stop_session", { provider, sessionId, force }),
     restartSession: (provider, sessionId) => invoke<SessionHandle>("restart_session", { provider, sessionId }),
+    continueSession: (provider, sessionId) => invoke<SessionHandle>("continue_session", { provider, sessionId }),
     openTerminal: (provider, sessionId) => invoke<void>("open_terminal", { provider, sessionId }),
     listProcesses: () => invoke<ManagedProcessInfo[]>("list_processes"),
     listRepositories: (refresh) => invoke<RepositoriesReport>("list_repositories", { refresh }),

@@ -119,6 +119,9 @@ export async function createPreviewBackend(): Promise<Backend> {
     restartSession: async () => {
       throw new Error(PREVIEW_ONLY);
     },
+    continueSession: async () => {
+      throw new Error(PREVIEW_ONLY);
+    },
     openTerminal: async () => {
       throw new Error(PREVIEW_ONLY);
     },

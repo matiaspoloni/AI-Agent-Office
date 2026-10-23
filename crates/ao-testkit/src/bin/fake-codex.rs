@@ -12,7 +12,8 @@
 //!   (standing in for the user trusting them with `/hooks`).
 //!
 //! `fake-codex --simulate-external <session-id>` runs a scripted external
-//! session through the hooks and prints `{"fakeDecision": …}`.
+//! session through the hooks and prints `{"fakeDecision": …}`; its thread is
+//! saved, so `thread/resume` can continue it (as with an interactive Codex).
 
 use serde_json::{json, Value};
 use std::io::{BufRead, Read, Write};
@@ -532,6 +533,11 @@ fn app_server() {
 
 fn simulate_external(session: &str) {
     let cwd = std::env::current_dir().unwrap().display().to_string();
+    // Like an interactive Codex session, its thread is saved (a rollout), so
+    // `thread/resume` can continue it.
+    let threads = codex_home().join("fake-threads");
+    let _ = std::fs::create_dir_all(&threads);
+    let _ = std::fs::write(threads.join(session), "");
     let pause = || std::thread::sleep(Duration::from_millis(50));
     let p = |event: &str, extra: Value| hook_payload(session, event, &cwd, extra);
     fire(

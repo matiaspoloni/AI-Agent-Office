@@ -46,3 +46,61 @@ export function actionAvailability(
   }
   return { enabled: true, reason: support === "supported" ? "" : `Support level: ${support}`, support };
 }
+
+export interface Availability {
+  enabled: boolean;
+  reason: string;
+}
+
+/**
+ * Whether the app can send this session a prompt, and if not, what the user
+ * can do about it. Sessions from the user's terminal never take prompts from
+ * the app (no provider offers that); once ended there, they can be continued
+ * in Agent Office.
+ */
+export function promptAvailability(provider: ProviderInfo | undefined, session: SessionState): Availability {
+  if (session.mode === "external") {
+    return session.status === "ended"
+      ? {
+          enabled: false,
+          reason: "This session ended in your terminal. Continue it in Agent Office to send it prompts.",
+        }
+      : {
+          enabled: false,
+          reason:
+            "Started in your terminal: Agent Office cannot type into it. Close it there, then continue it in Agent Office.",
+        };
+  }
+  if (session.status === "ended") {
+    return { enabled: false, reason: "This session has ended. Restart it to continue the conversation." };
+  }
+  const send = actionAvailability(provider, session.mode, "sendPrompt");
+  return { enabled: send.enabled, reason: send.reason };
+}
+
+/**
+ * "Continue in Agent Office" for a session from the user's terminal: possible
+ * once it has ended there, when the provider can resume a conversation in a
+ * session Agent Office starts (Claude `--resume`, Codex `thread/resume`).
+ */
+export function continueAvailability(provider: ProviderInfo | undefined, session: SessionState): Availability {
+  if (session.mode !== "external") {
+    return { enabled: false, reason: "Started from Agent Office: use Restart" };
+  }
+  const resume = actionAvailability(provider, "managed", "resume");
+  if (!resume.enabled) {
+    const name = provider?.descriptor.displayName ?? "This provider";
+    return { enabled: false, reason: `${name} sessions from the terminal cannot be continued in Agent Office` };
+  }
+  if (session.status !== "ended") {
+    return {
+      enabled: false,
+      reason: "Still open in your terminal. Close it there (for example with /exit), then continue it here.",
+    };
+  }
+  if (!session.cwd) return { enabled: false, reason: "This session did not report its folder" };
+  return {
+    enabled: true,
+    reason: "Continues this conversation in Agent Office, in the same folder, where you can send it prompts",
+  };
+}

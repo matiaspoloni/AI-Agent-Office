@@ -12,7 +12,8 @@
 //! Extra mode for tests of the global integration:
 //!   fake-claude --simulate-external <session-id>
 //! runs a scripted external session using only the user settings hooks and
-//! prints the PermissionRequest decision it received.
+//! prints the PermissionRequest decision it received. Like an interactive
+//! Claude Code session, it is saved, so `--resume <id>` can continue it.
 
 use serde_json::{json, Value};
 use std::io::{BufRead, Read, Write};
@@ -267,6 +268,10 @@ fn headless(args: &[String]) {
 
 fn simulate_external(id: &str) {
     let cwd = std::env::current_dir().unwrap().display().to_string();
+    if let Some(marker) = session_marker(id) {
+        let _ = std::fs::create_dir_all(marker.parent().unwrap());
+        let _ = std::fs::write(marker, "");
+    }
     let session = Session {
         id: id.to_owned(),
         hooks: merged_hooks(&[user_settings()]),

@@ -587,3 +587,104 @@ async fn a_late_start_hook_of_an_ended_run_does_not_reopen_it() {
         (SessionStatus::Ended, 0)
     );
 }
+
+/// A session started in the terminal continues in Agent Office once it has
+/// ended there (same conversation, through `--resume`), and then takes
+/// prompts from the app.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_terminal_session_continues_in_agent_office() {
+    let tmp = TempDir::new("continue");
+    let (data, config, project) = (
+        tmp.sub("data"),
+        tmp.sub("claude-config"),
+        tmp.sub("project"),
+    );
+    let host: Arc<Host> = Host::start(AppPaths::at(data.clone()), options(&data, &config));
+    wait_listening(&host).await;
+    host.set_preferences(Preferences {
+        answer_permissions_from_app: true,
+        permission_timeout_secs: 60,
+        ..Preferences::default()
+    })
+    .await
+    .unwrap();
+    host.integration_action(claude(), IntegrationAction::Install)
+        .await
+        .unwrap();
+    // Claude Code session ids are UUIDs.
+    let sid = "7b1d3c52-9a4e-4f0b-8c61-2d5e9f3a1b07";
+
+    // While it is still open in the terminal (here: waiting for a
+    // permission), it is not taken over.
+    let run = run_external(&config, &project, sid);
+    let request = wait_for("external permission request", &host, |s| {
+        main_agent(s, sid).and_then(|a| a.pending_permission.clone())
+    })
+    .await;
+    let err = host
+        .continue_external(claude(), SessionId::new(sid))
+        .await
+        .unwrap_err();
+    assert!(err.contains("still be open in your terminal"), "{err}");
+    host.resolve_permission(
+        claude(),
+        SessionId::new(sid),
+        request.request_id,
+        PermissionDecision::Approve { for_session: false },
+    )
+    .await
+    .unwrap();
+    tokio::task::spawn_blocking(move || run.join().unwrap())
+        .await
+        .unwrap();
+    wait_status(&host, sid, SessionStatus::Ended, 0).await;
+
+    // Ended in the terminal: it continues here, as the same session.
+    let handle = host
+        .continue_external(claude(), SessionId::new(sid))
+        .await
+        .expect("continue");
+    assert_eq!(handle.session_id.0, sid);
+    wait_status(&host, sid, SessionStatus::Active, 1).await;
+    let session = |host: &Host| {
+        host.snapshot()
+            .sessions
+            .into_iter()
+            .find(|s| s.session_id.0 == sid)
+            .unwrap()
+    };
+    let continued = session(&host);
+    assert_eq!(continued.mode, SessionMode::Managed);
+    assert_eq!(
+        continued.model.as_deref(),
+        Some("claude-fake-1"),
+        "the terminal's model"
+    );
+    assert_eq!(continued.cwd.as_deref(), Some(project.to_str().unwrap()));
+    let prompts = continued.stats.prompts;
+    host.send_prompt(
+        claude(),
+        SessionId::new(sid),
+        "hello from the office".into(),
+    )
+    .await
+    .expect("prompt after continuing");
+    wait_for("answer", &host, |s| {
+        s.sessions
+            .iter()
+            .find(|x| x.session_id.0 == sid && x.stats.prompts > prompts)
+            .map(|_| ())
+    })
+    .await;
+
+    // Now it belongs to Agent Office: Restart is the way back.
+    host.stop(claude(), SessionId::new(sid), StopMode::Graceful)
+        .await
+        .expect("stop");
+    wait_status(&host, sid, SessionStatus::Ended, 1).await;
+    let err = host
+        .continue_external(claude(), SessionId::new(sid))
+        .await
+        .unwrap_err();
+    assert!(err.contains("use Restart"), "{err}");
+}

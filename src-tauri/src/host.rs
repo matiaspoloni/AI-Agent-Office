@@ -854,6 +854,65 @@ impl Host {
             .map_err(|e| e.to_string())
     }
 
+    /// "Continue in Agent Office": a session from the user's terminal that
+    /// has ended goes on as a session of Agent Office, through the
+    /// provider's own resume (Claude `--resume`, Codex `thread/resume`) in
+    /// the same folder, so it can then receive prompts from the app. Refused
+    /// while it may still be open in the terminal: two programs on one
+    /// conversation would get in each other's way. The permission mode is the
+    /// user's default (what the terminal reported is not always a value the
+    /// provider accepts back).
+    pub async fn continue_external(
+        &self,
+        provider: ProviderId,
+        session: SessionId,
+    ) -> Result<SessionHandle, String> {
+        let adapter = self.ensure_capability(&provider, None, "resume", |c| c.resume)?;
+        let key = ao_core::ids::session_key(&provider, &session);
+        let state = self
+            .inner
+            .lock()
+            .expect("host lock")
+            .world
+            .session(&key)
+            .cloned()
+            .ok_or_else(|| format!("Session {session} is not known"))?;
+        if state.mode != SessionMode::External {
+            return Err("This session was started from Agent Office: use Restart.".into());
+        }
+        if state.status != SessionStatus::Ended {
+            return Err(
+                "This session may still be open in your terminal. Close it there first \
+                 (for example with /exit), then continue it here."
+                    .into(),
+            );
+        }
+        let cwd = state
+            .cwd
+            .clone()
+            .filter(|c| !c.trim().is_empty())
+            .ok_or_else(|| "This session has no project folder to continue in.".to_string())?;
+        if !std::path::Path::new(&cwd).is_dir() {
+            return Err(format!(
+                "The session's folder ({cwd}) does not exist on this computer."
+            ));
+        }
+        let request = LaunchRequest {
+            project_id: state.project_id.clone(),
+            cwd,
+            model: state.model.clone(),
+            prompt: None,
+            name: None,
+            permission_mode: None,
+            resume_session_id: Some(session.0.clone()),
+        };
+        tracing::info!(%key, "continuing a terminal session in Agent Office");
+        adapter
+            .launch_session(request, self.adapter_context())
+            .await
+            .map_err(|e| e.to_string())
+    }
+
     /// Repositories agents work in and project folders, with the changed
     /// files each session's tools are known to have written. `refresh`
     /// re-reads trees older than a few seconds first.

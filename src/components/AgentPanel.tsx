@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { AgentEvent } from "../bindings/AgentEvent";
 import { errorMessage } from "../ipc/backend";
 import { useBackend } from "../ipc/BackendContext";
-import { actionAvailability, modeCapabilities } from "../state/capabilities";
+import { actionAvailability, continueAvailability, modeCapabilities, promptAvailability } from "../state/capabilities";
 import { describeEvent, eventTone } from "../state/describe";
 import {
   ACTIVITY_COLOR,
@@ -102,7 +102,8 @@ export function AgentPanel() {
   const preview = backend.kind === "preview";
   const previewOnly = { enabled: false, reason: "Actions need the desktop app (browser preview is a recording)" };
   const stop = preview ? previewOnly : actionAvailability(provider, session.mode, "stop");
-  const send = preview ? previewOnly : actionAvailability(provider, session.mode, "sendPrompt");
+  const send = preview ? previewOnly : promptAvailability(provider, session);
+  const continueHere = preview ? previewOnly : continueAvailability(provider, session);
   const perms = preview ? previewOnly : actionAvailability(provider, session.mode, "permissions");
   const resume = preview ? previewOnly : actionAvailability(provider, session.mode, "resume");
   const restart =
@@ -326,21 +327,38 @@ export function AgentPanel() {
           >
             Stop
           </button>
-          <button
-            className={`btn${confirmRestart ? " bad" : ""}`}
-            disabled={!restart.enabled || busy}
-            title={restart.reason}
-            onClick={() => {
-              if (session.status === "active" && !confirmRestart) {
-                setConfirmRestart(true);
-                return;
+          {session.mode === "managed" && (
+            <button
+              className={`btn${confirmRestart ? " bad" : ""}`}
+              disabled={!restart.enabled || busy}
+              title={restart.reason}
+              onClick={() => {
+                if (session.status === "active" && !confirmRestart) {
+                  setConfirmRestart(true);
+                  return;
+                }
+                setConfirmRestart(false);
+                void run("Restart", () => backend.restartSession(agent.provider, agent.sessionId));
+              }}
+            >
+              {confirmRestart ? "Stop and restart?" : "Restart"}
+            </button>
+          )}
+          {session.mode === "external" && (
+            <button
+              className="btn"
+              disabled={!continueHere.enabled || busy}
+              title={continueHere.reason}
+              onClick={() =>
+                run("Continue in Agent Office", async () => {
+                  await backend.continueSession(agent.provider, agent.sessionId);
+                  pushToast("info", `${agent.name} continues in Agent Office: you can send it prompts now.`);
+                })
               }
-              setConfirmRestart(false);
-              void run("Restart", () => backend.restartSession(agent.provider, agent.sessionId));
-            }}
-          >
-            {confirmRestart ? "Stop and restart?" : "Restart"}
-          </button>
+            >
+              Continue in Agent Office
+            </button>
+          )}
           <button
             className="btn"
             disabled={!terminal.enabled || busy}
