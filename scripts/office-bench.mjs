@@ -7,6 +7,7 @@
 // Needs Playwright with a Chromium build (not a project dependency):
 // `npm i -g playwright && npx playwright install chromium`, or point
 // PLAYWRIGHT_MODULE at an existing install (e.g. .../node_modules/playwright/index.mjs).
+// Set PLAYWRIGHT_CHANNEL=chrome to run it in the installed Google Chrome.
 // A frame fits a 60 fps display when it takes well under 16.7 ms.
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -60,7 +61,8 @@ try {
       await new Promise((r) => setTimeout(r, 200));
     }
   }
-  browser = await chromium.launch();
+  // PLAYWRIGHT_CHANNEL=chrome uses the installed Google Chrome instead of a downloaded build.
+  browser = await chromium.launch(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {});
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: dpr });
   await page.addInitScript(() => {
     window.__officeBench = { frames: [] };
