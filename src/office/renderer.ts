@@ -11,6 +11,7 @@ import type { SessionState } from "../bindings/SessionState";
 import type { Appearance } from "../state/appearance";
 import { silentSince } from "../state/silence";
 import { ART, type Furniture, type Grid, type OfficeLayout, TILE } from "./layout";
+import { OfficePet, PET_FRAMES, PET_PALETTE } from "./pet";
 import { EXIT_FADE_MS, type Entity, type OfficeScene } from "./scene";
 import {
   type CharacterFrame,
@@ -306,6 +307,32 @@ interface WorldTheme {
   blinds?: boolean;
   /** Darkened edges over the office, like an old film frame. */
   vignette?: boolean;
+  /** Follows the local time of day (otherwise it is always night). */
+  daylight?: boolean;
+}
+
+export type DayPhase = "dawn" | "day" | "dusk" | "night";
+
+/** The phase of the day for a local hour. */
+export function dayPhase(hour: number): DayPhase {
+  if (hour >= 7 && hour < 17) return "day";
+  if (hour >= 17 && hour < 20) return "dusk";
+  if (hour >= 6 && hour < 7) return "dawn";
+  return "night";
+}
+
+/** A daylight theme repainted for a phase: less dimming, a sky to match, city lights off by day. */
+function atPhase(theme: WorldTheme, phase: DayPhase): WorldTheme {
+  if (!theme.daylight || phase === "night") return theme;
+  const day = phase === "day";
+  return {
+    ...theme,
+    nightAlpha: theme.nightAlpha * (day ? 0.12 : 0.6),
+    lampAlpha: theme.lampAlpha * (day ? 0.3 : 1),
+    sky: day
+      ? { ...theme.sky, top: "#6fa8dc", low: "#a9cbe8", star: "#ffffff", tower: "#7d8fa6", lights: ["#c9d6e6"] }
+      : { ...theme.sky, top: "#3a2a5a", low: "#d9825a", star: "#ffd8a8", tower: "#2a2238", lights: ["#f2c94c", "#ffd8a8"] },
+  };
 }
 
 export type OfficeTheme = "modern" | "cyberpunk" | "noire";
@@ -980,6 +1007,7 @@ const MODERN: WorldTheme = {
   plate: { shadow: "#3d2a1c", body: "#8a5a33", bar: "#f2c94c", text: "#fff6e6" },
   mat: "#6b4a3a",
   weather: false,
+  daylight: true,
 };
 
 const CYBERPUNK: WorldTheme = {
@@ -1474,6 +1502,10 @@ function drawFurniture(ctx: CanvasRenderingContext2D, f: Furniture, now: number,
 }
 
 /** The pose for what the character is doing (sprites.ts has the frames). */
+/** After this long idle an agent dozes; after this long waiting for you it gets impatient. */
+const DOZE_MS = 3 * 60_000;
+const IMPATIENT_MS = 2 * 60_000;
+
 export function frameFor(entity: Entity, now: number): CharacterFrame {
   if (entity.path.length) return Math.floor(entity.walkPhase / 140) % 2 ? "walkA" : "walkB";
   if (entity.celebrating) return "celebrate";
@@ -1490,12 +1522,16 @@ export function frameFor(entity: Entity, now: number): CharacterFrame {
     case "THINKING":
       return sit ? "think" : "thinkStand";
     case "WAITING_PERMISSION":
-    case "WAITING_INPUT":
-      // Waves now and then to be noticed.
-      return Math.floor(now / 600 + offset) % 4 === 3 ? (sit ? "sit" : "stand") : sit ? "raise" : "raiseStand";
+    case "WAITING_INPUT": {
+      // Waves now and then to be noticed; twice as fast once it has waited a while.
+      const period = now - entity.activitySince > IMPATIENT_MS ? 300 : 600;
+      return Math.floor(now / period + offset) % 4 === 3 ? (sit ? "sit" : "stand") : sit ? "raise" : "raiseStand";
+    }
     case "ERROR":
       return sit ? "worried" : "worriedStand";
     case "IDLE":
+      // A long idle puts the coffee down: dozing.
+      if (now - entity.activitySince > DOZE_MS) return sit ? "sit" : "stand";
       return sit ? "coffee" : "coffeeStand";
     case "DONE":
       return "celebrate";
@@ -1552,7 +1588,8 @@ function drawBubble(ctx: CanvasRenderingContext2D, entity: Entity, lift: number,
     drawThoughtCloud(ctx, bx, Math.round(entity.y - 32 - lift), now);
     return true;
   }
-  const name = silent ? "hourglass" : BUBBLE_ICON[activity];
+  const dozing = activity === "IDLE" && now - entity.activitySince > DOZE_MS;
+  const name = silent ? "hourglass" : dozing ? "zzz" : BUBBLE_ICON[activity];
   if (!name || (activity === "IDLE" && entity.zone !== "lounge")) return false;
   const waiting = activity === "WAITING_PERMISSION" || activity === "WAITING_INPUT";
   const bob = waiting ? Math.round(Math.abs(Math.sin(now / 160)) * -3) : 0;
@@ -1612,7 +1649,28 @@ function drawPoof(ctx: CanvasRenderingContext2D, x: number, y: number, progress:
   ctx.globalAlpha = 1;
 }
 
-type Drawable = { y: number; furniture?: Furniture; entity?: Entity };
+type Drawable = { y: number; furniture?: Furniture; entity?: Entity; pet?: OfficePet };
+
+/** The cat, in HD like the characters, mirrored when it walks left. */
+function drawPet(ctx: CanvasRenderingContext2D, pet: OfficePet, now: number) {
+  const frame = pet.frame(now);
+  const rows = PET_FRAMES[frame];
+  const sprite = spriteCanvas(scale2x(rows), PET_PALETTE, `pet:${frame}`, "#14161e", true);
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.fillRect(Math.round(pet.x) - 4, Math.round(pet.y), 8, 1.5);
+  if (!sprite) return;
+  const w = sprite.width / ART;
+  const h = sprite.height / ART;
+  const x = Math.round((pet.x - w / 2) * ART) / ART;
+  const y = Math.round((pet.y - h + 1) * ART) / ART;
+  if (pet.facing < 0) {
+    ctx.save();
+    ctx.translate(x + w, y);
+    ctx.scale(-1, 1);
+    ctx.drawImage(sprite, 0, 0, w, h);
+    ctx.restore();
+  } else ctx.drawImage(sprite, x, y, w, h);
+}
 
 /** How far in the user can zoom, relative to the whole-office view. */
 export const MAX_ZOOM = 4;
@@ -1621,6 +1679,10 @@ export class OfficeRenderer {
   private staticLayer: HTMLCanvasElement | null = null;
   private art: CanvasRenderingContext2D | null | undefined;
   private theme: OfficeTheme = "modern";
+  private phase: DayPhase = "night";
+  private palette: WorldTheme | null = null;
+  private pet: OfficePet | null = null;
+  private lastNow = 0;
   /** Outer glazing tiles, for the rain. */
   private windows: [number, number][] = [];
   private readonly looks = new Map<string, CharacterLook>();
@@ -1762,11 +1824,14 @@ export class OfficeRenderer {
     const { scene, agents, providers, now } = input;
     this.fit(width, height);
     const theme = input.theme ?? "modern";
-    if (theme !== this.theme) {
+    const phase = dayPhase(new Date(now).getHours());
+    if (theme !== this.theme || phase !== this.phase) {
       this.theme = theme;
+      this.phase = phase;
       this.staticLayer = null;
+      this.palette = null;
     }
-    T = THEMES[theme];
+    T = this.palette ?? (this.palette = atPhase(THEMES[theme], phase));
     if (!this.staticLayer) {
       this.staticLayer = drawStatic(this.layout, scene);
       const { grid } = scene;
@@ -1858,8 +1923,16 @@ export class OfficeRenderer {
     drawables.length = 0;
     for (const f of this.layout.furniture) drawables.push({ y: (f.y + f.h) * TILE, furniture: f });
     for (const e of entities) drawables.push({ y: e.y, entity: e });
+    if (!this.pet) this.pet = new OfficePet(scene.grid, this.layout.entrance);
+    this.pet.step(this.lastNow ? now - this.lastNow : 0, now, scene.entities.values());
+    this.lastNow = now;
+    drawables.push({ y: this.pet.y, pet: this.pet });
     drawables.sort((a, b) => a.y - b.y);
     for (const d of drawables) {
+      if (d.pet) {
+        drawPet(ctx, d.pet, now);
+        continue;
+      }
       if (d.furniture) {
         const f = d.furniture;
         const occupant = f.seatId ? scene.occupant(f.seatId) : undefined;
@@ -1883,6 +1956,19 @@ export class OfficeRenderer {
       ctx.globalAlpha = 1;
       if (fading) drawPoof(ctx, e.x, e.y, Math.min(1, e.fadeMs / EXIT_FADE_MS));
       if (e.celebrating && agent?.endedAt !== undefined) drawConfetti(ctx, e.x, e.y, now - agent.endedAt, hashString(e.key));
+      // A subagent that finishes next to its lead gets a high five: a spark between them.
+      const lead = e.celebrating && e.parentKey ? scene.entities.get(e.parentKey) : undefined;
+      if (lead && Math.hypot(lead.x - e.x, lead.y - e.y) < 40 && Math.floor(now / 250) % 2) {
+        const sx = Math.round((lead.x + e.x) / 2);
+        const sy = Math.round(Math.min(lead.y, e.y) - 16);
+        ctx.fillStyle = "#fff6c8";
+        ctx.fillRect(sx - 0.5, sy - 3, 1, 6);
+        ctx.fillRect(sx - 3, sy - 0.5, 6, 1);
+        ctx.fillRect(sx - 2, sy - 2, 0.5, 0.5);
+        ctx.fillRect(sx + 1.5, sy - 2, 0.5, 0.5);
+        ctx.fillRect(sx - 2, sy + 1.5, 0.5, 0.5);
+        ctx.fillRect(sx + 1.5, sy + 1.5, 0.5, 0.5);
+      }
       if (!fading) {
         hitboxes.push({
           key: e.key,

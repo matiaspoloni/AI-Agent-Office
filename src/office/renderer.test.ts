@@ -4,7 +4,7 @@ import type { Activity } from "../bindings/Activity";
 import type { AgentState } from "../bindings/AgentState";
 import type { ProviderInfo } from "../bindings/ProviderInfo";
 import { DEFAULT_LAYOUT } from "./layout";
-import { frameFor, OfficeRenderer } from "./renderer";
+import { dayPhase, frameFor, OfficeRenderer } from "./renderer";
 import { type Entity, OfficeScene, type TeamResolver } from "./scene";
 
 /** A 2D context that only counts calls and remembers fill colors: enough to run the renderer without a browser. */
@@ -136,6 +136,14 @@ describe("OfficeRenderer", () => {
     renderer.resetView();
     frame();
     expect(renderer.scale).toBe(fitted);
+  });
+});
+
+describe("day phases", () => {
+  it("follow the local hour", () => {
+    expect([0, 5, 6, 7, 12, 16, 17, 19, 20, 23].map(dayPhase)).toEqual([
+      "night", "night", "dawn", "day", "day", "day", "dusk", "dusk", "night", "night",
+    ]);
   });
 });
 
