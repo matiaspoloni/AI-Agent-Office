@@ -11,8 +11,18 @@
 // Claude Code, Codex CLI and Agent Office data are redirected to a temporary
 // folder for everything but the last step (CI only: an app opened by Finder
 // gets the system's environment, so it uses the default data folder).
-import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -31,7 +41,6 @@ if (!existsSync(dmg)) {
 }
 
 const home = mkdtempSync(join(tmpdir(), "ao-dmg-"));
-const mount = join(home, "mnt");
 const apps = join(home, "Applications");
 const env = {
   ...process.env,
@@ -67,9 +76,15 @@ async function until(condition, what, seconds) {
   return false;
 }
 
-// 1. The disk image and the app in it.
-const attached = run("hdiutil", ["attach", "-nobrowse", "-readonly", "-noautoopen", "-mountpoint", mount, dmg]);
+// 1. The disk image and the app in it, mounted where macOS mounts it for the
+//    user (/Volumes/…).
+const attached = run("hdiutil", ["attach", "-nobrowse", "-readonly", "-noautoopen", "-plist", dmg]);
 check(attached.status === 0, "disk image mounts");
+const entities = JSON.parse(
+  run("plutil", ["-convert", "json", "-o", "-", "-"], { input: attached.stdout }).stdout || "{}",
+)["system-entities"];
+const mount = (entities ?? []).map((e) => e["mount-point"]).find(Boolean) ?? "";
+check(mount.startsWith("/Volumes/"), `mounted at ${mount}`);
 const mountedApp = join(mount, "Agent Office.app");
 check(existsSync(mountedApp), "Agent Office.app in the disk image");
 check(existsSync(join(mount, "Applications")) && lstatSync(join(mount, "Applications")).isSymbolicLink(), "Applications shortcut next to it");
@@ -108,7 +123,10 @@ check(
 
 // 5. Hooks: installed with the copy, run as Claude runs them, removed again.
 check(run(exe(app), ["integrations", "install", "claude"]).status === 0, "Claude hooks installed");
-check(JSON.stringify(settings()).includes(exe(app)), "hooks point to the installed app");
+check(
+  [exe(app), realpathSync(exe(app))].some((path) => JSON.stringify(settings()).includes(path)),
+  "hooks point to the installed app",
+);
 const ours = settings()
   .hooks.Stop.flatMap((group) => group.hooks)
   .find((h) => String(h.command).includes("agent-office"));
