@@ -79,3 +79,12 @@ jobs:
       - run: npx vitest run
       - name: macOS smoke test (headless)
         run: node scripts/smoke.mjs
+      - name: Build the app and disk image (universal, ad hoc signed)
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AgentOffice-macOS
+          path: dist-installer/AgentOffice.dmg
+          if-no-files-found: error
+      - name: Disk image smoke test (mount, check, install, run, hooks, open)
+        run: node scripts/dmg-smoke.mjs
