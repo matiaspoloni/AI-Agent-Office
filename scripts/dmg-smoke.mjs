@@ -182,25 +182,32 @@ if (process.env.CI) {
   direct.kill("SIGTERM");
   await until(() => direct.exitCode !== null || direct.signalCode !== null, "directly started app quit", 30);
 
-  const logDir = join(homedir(), "Library", "Application Support", "AgentOffice", "logs");
-  check(run("open", ["-n", app]).status === 0, "opened like Finder does");
+  // `open` passes its own environment on to the app, so it is given only
+  // what launchd gives an app opened from Finder (and its own data folder).
+  const finderData = join(home, "data-finder");
+  const finderEnv = {
+    HOME: process.env.HOME,
+    USER: process.env.USER,
+    LOGNAME: process.env.LOGNAME ?? process.env.USER,
+    PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
+    TMPDIR: process.env.TMPDIR,
+    AGENT_OFFICE_DATA_DIR: finderData,
+  };
+  // Where its log is, whether or not this macOS passes the environment on.
+  const logDirs = [join(finderData, "logs"), join(homedir(), "Library", "Application Support", "AgentOffice", "logs")];
+  const finderLogs = () => logDirs.map(readLogs).join("\n");
+  check(run("open", ["-n", app], { env: finderEnv }).status === 0, "opened like Finder does");
   const adopted = await until(
-    () => readLogs(logDir).includes("adopted the login shell's environment"),
+    () => /adopted the login shell's environment.*variables=[1-9]/.test(finderLogs()),
     "login shell environment adopted",
     60,
   );
-  check(readLogs(logDir).includes("starting Agent Office"), "app started");
+  check(finderLogs().includes("starting Agent Office"), "app started");
   if (!adopted) {
     console.log(`running: ${JSON.stringify(running())}`);
-    console.log(`log folder: ${existsSync(logDir) ? readdirSync(logDir).join(", ") : "missing"}`);
-    console.log(tail(readLogs(logDir)));
+    for (const dir of logDirs) console.log(`log folder ${dir}: ${existsSync(dir) ? readdirSync(dir).join(", ") : "missing"}`);
+    console.log(tail(finderLogs()));
     console.log(crashReports());
-    console.log(
-      tail(
-        run("log", ["show", "--last", "3m", "--style", "compact", "--predicate", 'process == "agent-office"']).stdout ?? "",
-        60,
-      ),
-    );
   }
   // Stop only the app opened here.
   for (const pid of running()) process.kill(pid, "SIGTERM");
