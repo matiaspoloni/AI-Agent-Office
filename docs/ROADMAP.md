@@ -437,3 +437,7 @@ installed and `agent login` was done once in a terminal. Note the Cursor version
 * Translocation (an app started where it was downloaded runs from a random
   read-only path) cannot be reproduced in CI; it is recognised by its path and
   unit-tested.
+* `open` passes the caller's environment on to the app it opens, so the CI
+  test gives it only what launchd gives an app opened from Finder. Both ways
+  of starting it (directly and through LaunchServices) were seen running with
+  the window and page loaded on the CI Mac.
