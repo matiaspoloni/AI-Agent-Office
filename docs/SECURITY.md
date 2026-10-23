@@ -30,9 +30,13 @@ to add as little attack surface as possible.
    Agent Office executable for that provider are ever changed or removed. Uninstall
    restores the file to the user's own content. Every change needs an explicit click
    and confirmation in Diagnostics.
-7. **Restart and Open terminal add nothing new.** *Restart* stops our own process
+7. **Restart, Continue and Open terminal add nothing new.** *Restart* stops our own process
    (gracefully) and continues the conversation through the provider's official
    resume (`claude --resume`, Codex `thread/resume`); no prompt is replayed.
+   *Continue in Agent Office* does the same for a session from the user's terminal,
+   only after it has ended there (never two programs on one conversation), with
+   the user's default permission settings. Agent Office never types into a
+   terminal session.
    *Open terminal* starts the user's own terminal program in the session's folder
    and lets go: the folder must exist and is passed as a single argument (never
    through a shell), no command is typed into the terminal, and Agent Office never

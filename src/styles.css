@@ -883,3 +883,45 @@ label.check input {
   width: 3.5em;
   color: #8a93a6;
 }
+
+.office-quickprompt {
+  position: absolute;
+  /* Placed above its character by the frame loop; hidden until then. */
+  left: -10000px;
+  top: 0;
+  z-index: 7;
+  width: min(320px, calc(100% - 16px));
+  background: rgba(23, 26, 35, 0.98);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  display: grid;
+  gap: 6px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+}
+
+.office-quickprompt-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.office-quickprompt-close {
+  margin-left: auto;
+}
+
+.office-quickprompt textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.office-quickprompt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.office-quickprompt p {
+  margin: 0;
+}

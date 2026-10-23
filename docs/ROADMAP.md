@@ -441,3 +441,11 @@ installed and `agent login` was done once in a terminal. Note the Cursor version
   test gives it only what launchd gives an app opened from Finder. Both ways
   of starting it (directly and through LaunchServices) were seen running with
   the window and page loaded on the CI Mac.
+
+## 15. Instructions from the office
+
+- [x] Instruction bubble on a character: double-click it, or select it with the arrow keys and press **I**; Enter sends, Shift+Enter is a new line, Esc closes; a subagent's bubble talks to its lead (prompts go to the session); the reason is shown when the session cannot take prompts
+- [x] **Continue in Agent Office** (bubble and panel) for Claude Code and Codex sessions from the terminal, once ended there: the same conversation continues as a session of Agent Office (`--resume`, `thread/resume`), then takes prompts; refused while still open in the terminal, for sessions started from Agent Office (Restart) and without a folder
+- [x] End-to-end tests with the fake CLIs (which now save interactive sessions like the real ones), UI tests for the rules and the bubble
+- [ ] With real Claude Code and Codex: continue a session closed with `/exit`, then send it a prompt from the office
+

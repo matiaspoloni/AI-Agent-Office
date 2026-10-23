@@ -56,7 +56,7 @@ Two integration modes exist for every provider:
 | Cost | Partial⁴ (estimate) | No | No | No | Runtime | No |
 | Model reported | Yes | Partial (`SessionStart.model`, not always) | Yes | Yes (hooks carry `model`) | Runtime | No |
 | Context compaction | Yes (`PreCompact`/`PostCompact`) | Yes | Yes (`thread/compacted`) | Yes | Runtime (`compaction_update`) | Experimental |
-| Resume / restart | Yes (`--resume <id>`) | n/a | Yes (`thread/resume`) | n/a | No (ACP `session/load` exists; not used yet) | n/a |
+| Resume / restart | Yes (`--resume <id>`) | Continue in Agent Office⁵ (`--resume <id>` once ended) | Yes (`thread/resume`) | Continue in Agent Office⁵ (`thread/resume` once ended) | No (ACP `session/load` exists; not used yet) | n/a |
 
 Notes:
 
@@ -77,6 +77,16 @@ Notes:
    Not implemented.
 4. **Claude cost** — `total_cost_usd` is documented by Anthropic as a *client-side
    estimate*. The UI labels it "estimate reported by Claude Code", never as a bill.
+5. **Continue in Agent Office.** A session from the user's terminal never receives
+   prompts from the app (neither CLI offers a way to type into another window's
+   session). Once it has ended there (`SessionEnd` hook), Agent Office can continue
+   the *same conversation* as a session it manages, with the provider's documented
+   resume: `claude -p --resume <session_id>` (the hook's `session_id`, a UUID) or
+   Codex `thread/resume` (the hook's `session_id` is the root thread id), in the
+   session's folder and with the user's default permission settings. A session that
+   is still open in the terminal is refused, so two programs never work on one
+   conversation. Tested end to end with the fake CLIs, which save interactive
+   sessions like the real ones; not yet tried with real accounts.
 
 ---
 

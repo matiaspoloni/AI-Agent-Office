@@ -6,6 +6,7 @@ import { silentSince } from "../state/silence";
 import { useOfficeStore } from "../state/store";
 import { DEFAULT_LAYOUT } from "./layout";
 import { type Hitbox, OfficeRenderer } from "./renderer";
+import { QuickPrompt } from "./QuickPrompt";
 import { OfficeScene, type TeamResolver } from "./scene";
 import { ICON_PALETTE, ICONS, spriteCanvas } from "./sprites";
 import { teamResolver } from "./teams";
@@ -41,10 +42,13 @@ function readingOrder(scene: OfficeScene): string[] {
 export function OfficeView() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const quickRef = useRef<HTMLDivElement>(null);
+  const quickKeyRef = useRef<string | null>(null);
   const hoverRef = useRef<string | null>(null);
   const hitboxesRef = useRef<Hitbox[]>([]);
   const sceneRef = useRef<OfficeScene | null>(null);
   const [hoverKey, setHoverKey] = useState<string | null>(null);
+  const [quickKey, setQuickKey] = useState<string | null>(null);
   const [keyboardKey, setKeyboardKey] = useState<string | null>(null);
   const [legend, setLegend] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -121,6 +125,20 @@ export function OfficeView() {
         card.style.left = `${Math.min(x, cssWidth - card.offsetWidth - 8)}px`;
         card.style.top = `${Math.max(8, Math.min(y, cssHeight - card.offsetHeight - 8))}px`;
       }
+      // The instruction bubble sits above its character.
+      const bubble = quickRef.current;
+      const target = quickKeyRef.current ? boxes.find((b) => b.key === quickKeyRef.current) : undefined;
+      if (bubble) {
+        if (target) {
+          const x = (target.x + target.w / 2) / dpr - bubble.offsetWidth / 2;
+          const above = target.y / dpr - bubble.offsetHeight - 10;
+          const y = above >= 8 ? above : (target.y + target.h) / dpr + 10;
+          bubble.style.left = `${Math.max(8, Math.min(x, cssWidth - bubble.offsetWidth - 8))}px`;
+          bubble.style.top = `${Math.max(8, Math.min(y, cssHeight - bubble.offsetHeight - 8))}px`;
+        } else {
+          bubble.style.left = "-10000px";
+        }
+      }
     };
     frame = requestAnimationFrame(loop);
 
@@ -134,6 +152,12 @@ export function OfficeView() {
   const setHover = (key: string | null) => {
     hoverRef.current = key;
     setHoverKey(key);
+  };
+
+  const openQuick = (key: string | null) => {
+    quickKeyRef.current = key;
+    setQuickKey(key);
+    if (!key) canvasRef.current?.focus();
   };
 
   const hitAt = (event: React.MouseEvent<HTMLCanvasElement>): Hitbox | undefined => {
@@ -164,6 +188,14 @@ export function OfficeView() {
       event.preventDefault();
       return;
     }
+    if (event.key === "i" || event.key === "I") {
+      const key = keyboardKey ?? store.selectedAgentKey;
+      if (key) {
+        event.preventDefault();
+        openQuick(key);
+      }
+      return;
+    }
     const step = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0;
     if (!step) return;
     event.preventDefault();
@@ -177,7 +209,9 @@ export function OfficeView() {
     const agent = store.agents[next];
     if (agent) {
       const provider = store.providers[agent.provider]?.descriptor.displayName ?? agent.provider;
-      setAnnouncement(`${agent.name}, ${provider}, ${ACTIVITY_LABEL[agent.activity]}. Press Enter for details.`);
+      setAnnouncement(
+        `${agent.name}, ${provider}, ${ACTIVITY_LABEL[agent.activity]}. Press Enter for details, I to give it an instruction.`,
+      );
     }
   };
 
@@ -188,7 +222,7 @@ export function OfficeView() {
         className="office-canvas"
         style={{ cursor }}
         tabIndex={0}
-        aria-label="Office view: each character is an agent session. Use the arrow keys to move between agents and Enter to open one."
+        aria-label="Office view: each character is an agent session. Use the arrow keys to move between agents, Enter to open one and I to give it an instruction."
         onKeyDown={onKeyDown}
         onBlur={() => {
           setKeyboardKey(null);
@@ -210,8 +244,13 @@ export function OfficeView() {
           if (hit?.kind === "inbox") store.setView("command");
           else store.select(hit?.kind === "agent" ? hit.key : null);
         }}
+        onDoubleClick={(e) => {
+          const hit = hitAt(e);
+          if (hit?.kind === "agent") openQuick(hit.key);
+        }}
       />
-      {hoverKey && <HoverCard ref={cardRef} agentKey={hoverKey} />}
+      {hoverKey && hoverKey !== quickKey && <HoverCard ref={cardRef} agentKey={hoverKey} />}
+      {quickKey && <QuickPrompt key={quickKey} ref={quickRef} agentKey={quickKey} onClose={() => openQuick(null)} />}
       <div className="sr-only" aria-live="polite">
         {announcement}
       </div>
@@ -267,7 +306,7 @@ function HoverCard({ agentKey, ref }: { agentKey: string; ref: React.Ref<HTMLDiv
       {quietSince !== null && (
         <div className="small office-hovercard-silent">No news for {formatDuration(now - quietSince)}</div>
       )}
-      <div className="muted small">Click for details</div>
+      <div className="muted small">Click for details · double-click to give an instruction</div>
     </div>
   );
 }
@@ -297,7 +336,8 @@ function Legend() {
     <div className="office-legend" role="dialog" aria-label="Office legend">
       <p className="small">
         Each person is an agent session; the shirt color and badge show the provider. Each project gets its own row
-        of desks, and subagents sit next to their lead (a dotted line links them).
+        of desks, and subagents sit next to their lead (a dotted line links them). Double-click a character (or
+        press I) to give it an instruction.
       </p>
       <ul>
         {LEGEND.map(({ icon, text }) => (

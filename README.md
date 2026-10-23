@@ -138,6 +138,22 @@ answer them from the app (Claude shows its own prompt if you don't answer in tim
 
 ## Controlling agents
 
+**Giving instructions.** Start an agent with **+ New agent** (provider, folder,
+optional model and a *first prompt*), then give it more instructions while it
+works: **double-click its character** in the office (or select it with the
+arrow keys and press **I**) and type in the bubble — Enter sends — or use the
+prompt box in its panel. A subagent's bubble talks to its lead, since prompts
+go to the session.
+
+Sessions you started in your own terminal cannot take instructions from Agent
+Office: no provider offers a way to type into a session running in another
+window, and Agent Office never types into a program it did not start. Once you
+close one there (for example with `/exit`), **Continue in Agent Office** (in the
+bubble or the panel) picks up the *same conversation* through the provider's
+own resume (`claude --resume`, Codex `thread/resume`), in the same folder and
+with your default permission settings; from then on it takes instructions like
+any agent started from the app. Claude Code and Codex only.
+
 Click a character to open its panel. What you can do depends on the provider
 and on who started the session (buttons that do not apply are greyed out, with
 the reason in their tooltip):
