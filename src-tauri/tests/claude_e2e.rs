@@ -660,7 +660,11 @@ async fn a_terminal_session_continues_in_agent_office() {
         Some("claude-fake-1"),
         "the terminal's model"
     );
-    assert_eq!(continued.cwd.as_deref(), Some(project.to_str().unwrap()));
+    // The same folder (on macOS /var is a link to /private/var).
+    assert_eq!(
+        std::fs::canonicalize(continued.cwd.as_deref().unwrap()).unwrap(),
+        std::fs::canonicalize(&project).unwrap()
+    );
     let prompts = continued.stats.prompts;
     host.send_prompt(
         claude(),
