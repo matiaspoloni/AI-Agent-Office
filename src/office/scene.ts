@@ -129,6 +129,13 @@ export class OfficeScene {
     return entity && entity.seatId === seatId && entity.path.length === 0 ? entity : undefined;
   }
 
+  /** The teams with someone in the office (for filters), by name. */
+  teams(): { key: string; name: string }[] {
+    const keys = new Set<string>();
+    for (const e of this.entities.values()) if (e.team && e.fadeMs === 0) keys.add(e.team);
+    return [...keys].map((key) => ({ key, name: this.teamNames.get(key) ?? key })).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   /** Name plates: the teams sitting in each pod. */
   podLabels(): { pod: DeskPod; names: string[] }[] {
     const out: { pod: DeskPod; names: string[] }[] = [];

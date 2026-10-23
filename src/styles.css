@@ -1255,3 +1255,97 @@ label.check input {
 [data-theme="noire"] #root {
   filter: grayscale(1);
 }
+
+/* Office overlays: approve/reject chips, filter, timeline. */
+.office-chip {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  gap: 2px;
+}
+
+.office-chip .btn {
+  padding: 2px 4px;
+  line-height: 0;
+}
+
+.pixel-icon {
+  image-rendering: pixelated;
+}
+
+.office-filter {
+  margin: 0 0 0 8px;
+}
+
+.office-filter select {
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+.office-timeline {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(520px, calc(100% - 20px));
+  padding: 6px 10px;
+  background: rgba(23, 26, 35, 0.92);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.office-timeline-track {
+  position: relative;
+  flex: 1;
+  height: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Height carries the kind as well as color, so it reads in black and white. */
+.office-mark {
+  position: absolute;
+  bottom: 0;
+  width: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: 1px;
+  transform: translateX(-1px);
+  cursor: pointer;
+}
+
+.office-mark.permission {
+  height: 14px;
+  background: var(--bad);
+}
+
+.office-mark.error {
+  height: 11px;
+  background: var(--bad);
+  opacity: 0.75;
+}
+
+.office-mark.waiting {
+  height: 8px;
+  background: var(--warn);
+}
+
+.office-mark.finished {
+  height: 4px;
+  background: var(--good);
+}
+
+.office-mark:hover,
+.office-mark:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+[data-theme="cyberpunk"] .office-timeline,
+[data-theme="noire"] .office-timeline {
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}

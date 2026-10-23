@@ -28,7 +28,7 @@ import {
 
 export interface Hitbox {
   key: string;
-  kind: "agent" | "inbox";
+  kind: "agent" | "inbox" | "offscreen";
   x: number;
   y: number;
   w: number;
@@ -49,7 +49,11 @@ export interface RenderInput {
   appearance?: Record<string, Appearance>;
   /** Which office to paint (modern when omitted). */
   theme?: OfficeTheme;
+  /** Who stays fully visible; everyone else is dimmed (all when omitted). */
+  filter?: OfficeFilter;
 }
+
+export type OfficeFilter = { kind: "attention" } | { kind: "team"; team: string };
 
 const ATTENTION: ReadonlySet<Activity> = new Set(["WAITING_PERMISSION", "WAITING_INPUT", "ERROR"]);
 
@@ -1809,6 +1813,8 @@ export class OfficeRenderer {
     const focusAgent = focusKey ? agents[focusKey] : undefined;
     // The focused agent's team: its lead and every subagent of that lead.
     const familyRoot = focusAgent ? (focusAgent.parentKey ?? focusAgent.key) : null;
+    const filter = input.filter;
+    const shown = (e: Entity) => !filter || (filter.kind === "attention" ? ATTENTION.has(e.activity) : e.team === filter.team);
 
     // Lead → subagent links: always in a small office; in a busy one only
     // for the focused team (subagents already sit next to their lead).
@@ -1869,6 +1875,7 @@ export class OfficeRenderer {
       const bob = typing ? Math.floor(now / 180) % 2 : 0;
       const fading = e.fadeMs > 0;
       if (fading) ctx.globalAlpha = Math.max(0, 1 - e.fadeMs / EXIT_FADE_MS);
+      if (!shown(e)) ctx.globalAlpha *= 0.22;
       // HD frames are ART× the grid plus a 1 art-pixel outline; placed on the art-pixel grid.
       const px = Math.round((e.x - SPRITE_W / 2) * ART) / ART - 1 / ART;
       const py = Math.round((e.y - (SPRITE_H - 1) - bob - jump) * ART) / ART - 1 / ART;
@@ -1897,7 +1904,7 @@ export class OfficeRenderer {
       const silent = !e.celebrating && !!input.sessions && silentSince(agent, input.sessions[agent?.sessionKey ?? ""]) !== null;
       const important = e.isMain || e.celebrating || silent || ATTENTION.has(e.activity);
       const focused = e.key === focusKey || (familyRoot !== null && (e.key === familyRoot || e.parentKey === familyRoot));
-      if (!important && !focused) continue;
+      if ((!important && !focused) || !shown(e)) continue;
       const lift = e.celebrating ? Math.round(Math.abs(Math.sin(now / 130)) * 4) : 0;
       if (drawBubble(ctx, e, lift, now, silent)) withBubble.add(e.key);
     }
@@ -2002,7 +2009,7 @@ export class OfficeRenderer {
       .filter((e) => {
         const agent = agents[e.key];
         const focused = e.key === input.selectedKey || e.key === input.hoverKey;
-        return agent && e.fadeMs === 0 && (agent.isMain || labelAll || focused);
+        return agent && e.fadeMs === 0 && (agent.isMain || labelAll || focused) && (focused || shown(e));
       })
       .sort((a, b) => b.y - a.y);
     for (const e of labelled) {
@@ -2040,6 +2047,33 @@ export class OfficeRenderer {
       ctx.fillText(name, left + badgeW + 4, cy);
       ctx.globalAlpha = 1;
     }
+
+    // Agents that need you but are outside the zoomed view: a marker on the
+    // edge pointing at them (click it to go there).
+    ctx.font = `700 ${tagFont}px "Segoe UI", system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    const r = half + 3;
+    for (const e of entities) {
+      if (e.fadeMs > 0 || !ATTENTION.has(e.activity) || !shown(e)) continue;
+      const p = this.toScreen(e.x, e.y - 8);
+      if (p.x >= 0 && p.y >= 0 && p.x <= width && p.y <= height) continue;
+      const cx = Math.min(Math.max(p.x, r + 6), width - r - 6);
+      const cy = Math.min(Math.max(p.y, r + 6), height - r - 6);
+      const angle = Math.atan2(p.y - cy, p.x - cx);
+      ctx.fillStyle = e.activity === "WAITING_INPUT" ? "#f2994a" : "#ff4d4d";
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(angle) * (r + 6), cy + Math.sin(angle) * (r + 6));
+      ctx.lineTo(cx + Math.cos(angle + 0.6) * r, cy + Math.sin(angle + 0.6) * r);
+      ctx.lineTo(cx + Math.cos(angle - 0.6) * r, cy + Math.sin(angle - 0.6) * r);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(e.activity === "WAITING_INPUT" ? "?" : "!", cx, cy + 0.5);
+      hitboxes.push({ key: e.key, kind: "offscreen", x: cx - r, y: cy - r, w: r * 2, h: r * 2 });
+    }
+    ctx.textAlign = "left";
     return hitboxes;
   }
 }

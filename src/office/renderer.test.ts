@@ -94,6 +94,25 @@ describe("OfficeRenderer", () => {
     expect(noir.has("#ff2bd6")).toBe(false);
   });
 
+  it("points at agents that need you from the edge when they are out of view", () => {
+    const scene = new OfficeScene(DEFAULT_LAYOUT);
+    const waiting = agent("lead-1-1", 6); // WAITING_PERMISSION
+    scene.sync([waiting], 0, byTeam);
+    for (let i = 0; i < 400; i++) scene.step(50); // walk to a desk
+    const renderer = new OfficeRenderer(DEFAULT_LAYOUT);
+    const frame = () =>
+      renderer.draw(fakeContext({ n: 0 }), 1600, 1000, { scene, agents: { [waiting.key]: waiting }, providers, selectedKey: null, hoverKey: null, pendingApprovals: 1, now: 0 });
+    expect(frame().some((b) => b.kind === "offscreen")).toBe(false);
+    const e = scene.entities.get(waiting.key)!;
+    // Zoom into the corner farthest from the agent.
+    const far = renderer.toScreen(e.x < 384 ? 760 : 8, e.y < 224 ? 440 : 8);
+    renderer.zoomAt(4, far.x, far.y);
+    const marker = frame().find((b) => b.kind === "offscreen");
+    expect(marker?.key).toBe(waiting.key);
+    expect(marker!.x).toBeGreaterThanOrEqual(0);
+    expect(marker!.x + marker!.w).toBeLessThanOrEqual(1600);
+  });
+
   it("zooms in whole or half steps around the pointer, stays inside the office and fits again", () => {
     const scene = new OfficeScene(DEFAULT_LAYOUT);
     const renderer = new OfficeRenderer(DEFAULT_LAYOUT);

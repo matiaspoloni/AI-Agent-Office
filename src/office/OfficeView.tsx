@@ -7,7 +7,8 @@ import { ACTIVITY_COLOR, ACTIVITY_LABEL, formatDuration } from "../state/format"
 import { silentSince } from "../state/silence";
 import { useOfficeStore } from "../state/store";
 import { DEFAULT_LAYOUT } from "./layout";
-import { type Hitbox, MAX_ZOOM, type OfficeTheme, OfficeRenderer } from "./renderer";
+import { FilterControl, OfficeTimeline, PermissionChips } from "./OfficeOverlays";
+import { type Hitbox, MAX_ZOOM, type OfficeFilter, type OfficeTheme, OfficeRenderer } from "./renderer";
 import { QuickPrompt } from "./QuickPrompt";
 import { OfficeScene, type TeamResolver } from "./scene";
 import { ICON_PALETTE, ICONS, spriteCanvas } from "./sprites";
@@ -55,6 +56,13 @@ export function OfficeView() {
   // Mouse drag that pans the view; `moved` keeps the release from counting as a click.
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const [zoom, setZoom] = useState(1);
+  const chipRefs = useRef(new Map<string, HTMLDivElement>());
+  const [filter, setFilterState] = useState<OfficeFilter | null>(null);
+  const filterRef = useRef<OfficeFilter | null>(null);
+  const setFilter = (f: OfficeFilter | null) => {
+    filterRef.current = f;
+    setFilterState(f);
+  };
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
   const [hoverKey, setHoverKey] = useState<string | null>(null);
@@ -139,6 +147,7 @@ export function OfficeView() {
         sessions: state.sessions,
         appearance: useAppearanceStore.getState().byTeam,
         theme: useThemeStore.getState().theme,
+        filter: filterRef.current ?? undefined,
       });
       hitboxesRef.current = boxes.map((b) => ({ ...b, x: b.x / dpr, y: b.y / dpr, w: b.w / dpr, h: b.h / dpr }));
       probe?.frames.push(performance.now() - started);
@@ -150,6 +159,16 @@ export function OfficeView() {
         const y = hovered.y / dpr - 4;
         card.style.left = `${Math.min(x, cssWidth - card.offsetWidth - 8)}px`;
         card.style.top = `${Math.max(8, Math.min(y, cssHeight - card.offsetHeight - 8))}px`;
+      }
+      // Approve / Reject chips sit at the right of their character's head.
+      for (const [key, chip] of chipRefs.current) {
+        const b = boxes.find((h) => h.key === key && h.kind === "agent");
+        if (!b) {
+          chip.style.left = "-10000px";
+          continue;
+        }
+        chip.style.left = `${Math.min((b.x + b.w) / dpr + 2, cssWidth - chip.offsetWidth - 4)}px`;
+        chip.style.top = `${Math.max(4, b.y / dpr - 6)}px`;
       }
       // The instruction bubble sits above its character.
       const bubble = quickRef.current;
@@ -309,7 +328,12 @@ export function OfficeView() {
           if (dragRef.current?.moved) return;
           const hit = hitAt(e);
           const store = useOfficeStore.getState();
-          if (hit?.kind === "inbox") store.setView("command");
+          if (hit?.kind === "offscreen") {
+            // Go to the agent the edge marker points at.
+            const entity = sceneRef.current?.entities.get(hit.key);
+            if (entity) rendererRef.current?.reveal(entity.x, entity.y - 8);
+            store.select(hit.key);
+          } else if (hit?.kind === "inbox") store.setView("command");
           else store.select(hit?.kind === "agent" ? hit.key : null);
         }}
         onDoubleClick={(e) => {
@@ -317,6 +341,8 @@ export function OfficeView() {
           if (hit?.kind === "agent") openQuick(hit.key);
         }}
       />
+      <PermissionChips refs={chipRefs} />
+      <OfficeTimeline />
       {hoverKey && hoverKey !== quickKey && <HoverCard ref={cardRef} agentKey={hoverKey} />}
       {quickKey && <QuickPrompt key={quickKey} ref={quickRef} agentKey={quickKey} onClose={() => openQuick(null)} />}
       <div className="sr-only" aria-live="polite">
@@ -332,6 +358,7 @@ export function OfficeView() {
         <button className="btn small" onClick={() => zoomBy(0)} disabled={zoom <= 1} title="Show the whole office (0)">
           Fit
         </button>
+        <FilterControl value={filter} onChange={setFilter} />
         <div className="segmented office-theme" role="group" aria-label="Office theme">
           {(["modern", "cyberpunk", "noire"] as const).map((t) => (
             <button key={t} className="btn small" aria-pressed={theme === t} onClick={() => setTheme(t)}>
