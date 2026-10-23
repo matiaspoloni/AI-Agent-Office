@@ -23,3 +23,9 @@ coverage/
 test-results/
 playwright-report/
 dist-installer/
+
+# Impeccable / Playwright local state
+.impeccable/hook.cache.json
+.impeccable/live/roots.json
+.impeccable/live/sessions/
+.playwright-mcp/

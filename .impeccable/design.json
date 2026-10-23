@@ -1,0 +1,1511 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-23T15:28:46.877193+00:00",
+  "title": "Design System: Agent Office",
+  "extensions": {
+    "colorMeta": {
+      "desk-lamp-amber": {
+        "role": "primary",
+        "displayName": "Desk Lamp Amber",
+        "canonical": "#f2c94c",
+        "tonalRamp": [
+          "#1d0200",
+          "#3f1a00",
+          "#5f3a00",
+          "#815a00",
+          "#a47c00",
+          "#c8a007",
+          "#edc447",
+          "#ffec8d"
+        ]
+      },
+      "night-window": {
+        "role": "neutral",
+        "displayName": "Night Window",
+        "canonical": "#0f1117",
+        "tonalRamp": [
+          "#090b11",
+          "#23252b",
+          "#3f4249",
+          "#5e6169",
+          "#7f828a",
+          "#a2a5ad",
+          "#c6c9d2",
+          "#ebeef7"
+        ]
+      },
+      "after-hours-panel": {
+        "role": "neutral",
+        "displayName": "After Hours Panel",
+        "canonical": "#171a23",
+        "tonalRamp": [
+          "#080b13",
+          "#22252e",
+          "#3e424c",
+          "#5d616c",
+          "#7e828e",
+          "#a0a5b1",
+          "#c4c9d5",
+          "#eaeefb"
+        ]
+      },
+      "raised-panel": {
+        "role": "neutral",
+        "displayName": "Raised Panel",
+        "canonical": "#1e222d",
+        "tonalRamp": [
+          "#080b14",
+          "#212530",
+          "#3d424e",
+          "#5c616e",
+          "#7d8290",
+          "#9fa5b3",
+          "#c3c9d8",
+          "#e8eefe"
+        ]
+      },
+      "window-mullion": {
+        "role": "neutral",
+        "displayName": "Window Mullion",
+        "canonical": "#2a2f3d",
+        "tonalRamp": [
+          "#070a16",
+          "#202532",
+          "#3c4250",
+          "#5b6171",
+          "#7c8293",
+          "#9ea5b6",
+          "#c2c9db",
+          "#e7eeff"
+        ]
+      },
+      "mullion-hover": {
+        "role": "neutral",
+        "displayName": "Mullion Hover",
+        "canonical": "#4a5268",
+        "tonalRamp": [
+          "#060a1b",
+          "#1e2438",
+          "#3a4156",
+          "#586177",
+          "#79829a",
+          "#9ba5be",
+          "#bfc9e3",
+          "#e4eeff"
+        ]
+      },
+      "deep-well": {
+        "role": "neutral",
+        "displayName": "Deep Well",
+        "canonical": "#0c0e13",
+        "tonalRamp": [
+          "#090b10",
+          "#23252b",
+          "#3f4248",
+          "#5e6168",
+          "#7f8289",
+          "#a2a5ac",
+          "#c6c9d1",
+          "#ebeef6"
+        ]
+      },
+      "fluorescent-white": {
+        "role": "neutral",
+        "displayName": "Fluorescent White",
+        "canonical": "#e7e9ef",
+        "tonalRamp": [
+          "#0a0b0f",
+          "#232529",
+          "#404247",
+          "#5f6166",
+          "#808287",
+          "#a3a5aa",
+          "#c7c9cf",
+          "#eceef4"
+        ]
+      },
+      "dusk-grey": {
+        "role": "neutral",
+        "displayName": "Dusk Grey",
+        "canonical": "#8a93a6",
+        "tonalRamp": [
+          "#060b18",
+          "#1e2534",
+          "#3a4252",
+          "#596173",
+          "#7a8295",
+          "#9ca5b9",
+          "#c0c9dd",
+          "#e5efff"
+        ]
+      },
+      "ink-on-amber": {
+        "role": "neutral",
+        "displayName": "Ink on Amber",
+        "canonical": "#1a1a1a",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "build-green": {
+        "role": "state",
+        "displayName": "Build Green",
+        "canonical": "#3fbf5f",
+        "tonalRamp": [
+          "#001500",
+          "#003700",
+          "#005700",
+          "#007a18",
+          "#009d3e",
+          "#42c262",
+          "#6ce885",
+          "#b6ffc1"
+        ]
+      },
+      "alarm-red": {
+        "role": "state",
+        "displayName": "Alarm Red",
+        "canonical": "#ff5c5c",
+        "tonalRamp": [
+          "#2d0000",
+          "#670000",
+          "#8f0000",
+          "#b70121",
+          "#e13e43",
+          "#ff6665",
+          "#ff8d88",
+          "#ffcfc7"
+        ]
+      },
+      "ember-orange": {
+        "role": "state",
+        "displayName": "Ember Orange",
+        "canonical": "#f2994a",
+        "tonalRamp": [
+          "#290000",
+          "#510000",
+          "#742500",
+          "#994700",
+          "#be6a05",
+          "#e58d3d",
+          "#ffb163",
+          "#ffdb9b"
+        ]
+      },
+      "link-blue": {
+        "role": "state",
+        "displayName": "Link Blue",
+        "canonical": "#8ab4ff",
+        "tonalRamp": [
+          "#00003b",
+          "#001e5d",
+          "#1c3e7f",
+          "#3a5fa3",
+          "#5a81c8",
+          "#7ca5ef",
+          "#9ec9ff",
+          "#c3efff"
+        ]
+      },
+      "lab-violet": {
+        "role": "state",
+        "displayName": "Lab Violet",
+        "canonical": "#b58cff",
+        "tonalRamp": [
+          "#150035",
+          "#340068",
+          "#501f8b",
+          "#7044b0",
+          "#9167d6",
+          "#b48bfd",
+          "#d8afff",
+          "#f9ddff"
+        ]
+      },
+      "log-green": {
+        "role": "state",
+        "displayName": "Log Green",
+        "canonical": "#7bdc8b",
+        "tonalRamp": [
+          "#001500",
+          "#003500",
+          "#005502",
+          "#00762a",
+          "#35994c",
+          "#5cbe6e",
+          "#82e392",
+          "#b6ffc1"
+        ]
+      },
+      "log-red": {
+        "role": "state",
+        "displayName": "Log Red",
+        "canonical": "#ff8a8a",
+        "tonalRamp": [
+          "#2d0000",
+          "#570001",
+          "#7c0d1e",
+          "#a2373d",
+          "#c95a5c",
+          "#f17d7e",
+          "#ffa2a1",
+          "#ffcecc"
+        ]
+      },
+      "timestamp-slate": {
+        "role": "neutral",
+        "displayName": "Timestamp Slate",
+        "canonical": "#5d667a",
+        "tonalRamp": [
+          "#050a19",
+          "#1d2536",
+          "#3a4254",
+          "#586175",
+          "#798297",
+          "#9ba5bb",
+          "#bfc9e0",
+          "#e4efff"
+        ]
+      },
+      "unsupported-slate": {
+        "role": "neutral",
+        "displayName": "Unsupported Slate",
+        "canonical": "#6b7285",
+        "tonalRamp": [
+          "#060a18",
+          "#1f2434",
+          "#3b4253",
+          "#5a6173",
+          "#7b8295",
+          "#9da5b9",
+          "#c1c9de",
+          "#e6eeff"
+        ]
+      },
+      "amber-notice-surface": {
+        "role": "tinted-surface",
+        "displayName": "Amber Notice Surface",
+        "canonical": "#2a2412",
+        "tonalRamp": [
+          "#100a00",
+          "#2b2513",
+          "#48422f",
+          "#68614d",
+          "#89826d",
+          "#aca58f",
+          "#d0c9b2",
+          "#f6eed7"
+        ]
+      },
+      "amber-notice-edge": {
+        "role": "tinted-surface",
+        "displayName": "Amber Notice Edge",
+        "canonical": "#4a3f1c",
+        "tonalRamp": [
+          "#130900",
+          "#2e2400",
+          "#4c411e",
+          "#6c613d",
+          "#8e825d",
+          "#b1a57f",
+          "#d5c9a2",
+          "#fbeec6"
+        ]
+      },
+      "amber-notice-text": {
+        "role": "tinted-surface",
+        "displayName": "Amber Notice Text",
+        "canonical": "#f2d98a",
+        "tonalRamp": [
+          "#1a0500",
+          "#372100",
+          "#553f00",
+          "#765f00",
+          "#988030",
+          "#bca355",
+          "#e0c879",
+          "#ffed9e"
+        ]
+      },
+      "alarm-surface": {
+        "role": "tinted-surface",
+        "displayName": "Alarm Surface",
+        "canonical": "#2a1517",
+        "tonalRamp": [
+          "#170507",
+          "#341e20",
+          "#533b3c",
+          "#74595b",
+          "#967a7c",
+          "#ba9d9e",
+          "#dfc1c2",
+          "#ffe6e7"
+        ]
+      },
+      "alarm-edge": {
+        "role": "tinted-surface",
+        "displayName": "Alarm Edge",
+        "canonical": "#7a3036",
+        "tonalRamp": [
+          "#290000",
+          "#4b0211",
+          "#6f262d",
+          "#93464b",
+          "#b8676b",
+          "#de8a8d",
+          "#ffaeb0",
+          "#ffd3d4"
+        ]
+      },
+      "alarm-button-surface": {
+        "role": "tinted-surface",
+        "displayName": "Alarm Button Surface",
+        "canonical": "#472023",
+        "tonalRamp": [
+          "#1e0004",
+          "#3d171b",
+          "#5e3437",
+          "#805355",
+          "#a37476",
+          "#c89698",
+          "#eebabc",
+          "#ffdfe0"
+        ]
+      },
+      "green-button-surface": {
+        "role": "tinted-surface",
+        "displayName": "Green Button Surface",
+        "canonical": "#1f3d28",
+        "tonalRamp": [
+          "#001102",
+          "#0e2c18",
+          "#2c4a34",
+          "#4b6a53",
+          "#6b8c73",
+          "#8daf95",
+          "#b1d3b9",
+          "#d6f9de"
+        ]
+      },
+      "green-button-edge": {
+        "role": "tinted-surface",
+        "displayName": "Green Button Edge",
+        "canonical": "#2f6b41",
+        "tonalRamp": [
+          "#001400",
+          "#003009",
+          "#0e4f27",
+          "#347046",
+          "#569266",
+          "#79b688",
+          "#9cdbab",
+          "#c1ffcf"
+        ]
+      },
+      "silence-surface": {
+        "role": "tinted-surface",
+        "displayName": "Silence Surface",
+        "canonical": "#2a2112",
+        "tonalRamp": [
+          "#120901",
+          "#2d2414",
+          "#4a4030",
+          "#6a604f",
+          "#8c816f",
+          "#afa391",
+          "#d3c7b4",
+          "#f9edd9"
+        ]
+      },
+      "silence-edge": {
+        "role": "tinted-surface",
+        "displayName": "Silence Edge",
+        "canonical": "#7a5a2a",
+        "tonalRamp": [
+          "#1c0300",
+          "#3a1e00",
+          "#593b04",
+          "#7b5b2b",
+          "#9d7c4c",
+          "#c29f6e",
+          "#e7c391",
+          "#ffe8b5"
+        ]
+      },
+      "info-surface": {
+        "role": "tinted-surface",
+        "displayName": "Info Surface",
+        "canonical": "#182031",
+        "tonalRamp": [
+          "#050a1a",
+          "#1d2536",
+          "#394255",
+          "#576176",
+          "#788298",
+          "#9aa5bc",
+          "#bec9e1",
+          "#e3efff"
+        ]
+      },
+      "info-edge": {
+        "role": "tinted-surface",
+        "displayName": "Info Edge",
+        "canonical": "#2a3857",
+        "tonalRamp": [
+          "#020823",
+          "#172441",
+          "#334161",
+          "#516183",
+          "#7182a6",
+          "#93a5ca",
+          "#b7c9f0",
+          "#dcefff"
+        ]
+      },
+      "info-text": {
+        "role": "tinted-surface",
+        "displayName": "Info Text",
+        "canonical": "#a9c1f5",
+        "tonalRamp": [
+          "#01052b",
+          "#12224b",
+          "#2e406c",
+          "#4c608e",
+          "#6c82b2",
+          "#8da5d7",
+          "#b1c9fd",
+          "#d5eeff"
+        ]
+      },
+      "cyber-night-window": {
+        "role": "neutral",
+        "displayName": "Cyber Night Window",
+        "canonical": "#07060f",
+        "tonalRamp": [
+          "#0b0a14",
+          "#25232f",
+          "#41404d",
+          "#615f6d",
+          "#82808f",
+          "#a4a3b2",
+          "#c8c7d6",
+          "#eeecfc"
+        ]
+      },
+      "cyber-panel": {
+        "role": "neutral",
+        "displayName": "Cyber Panel",
+        "canonical": "#0f0d1c",
+        "tonalRamp": [
+          "#0b0917",
+          "#242333",
+          "#414052",
+          "#605f72",
+          "#818094",
+          "#a4a2b8",
+          "#c8c6dd",
+          "#edecff"
+        ]
+      },
+      "cyber-raised-panel": {
+        "role": "neutral",
+        "displayName": "Cyber Raised Panel",
+        "canonical": "#17142a",
+        "tonalRamp": [
+          "#0b071c",
+          "#242139",
+          "#413e58",
+          "#605e79",
+          "#817f9b",
+          "#a3a1bf",
+          "#c7c5e4",
+          "#edebff"
+        ]
+      },
+      "cyber-mullion": {
+        "role": "neutral",
+        "displayName": "Cyber Mullion",
+        "canonical": "#2a2350",
+        "tonalRamp": [
+          "#0c012a",
+          "#241c49",
+          "#403a6a",
+          "#5f5a8c",
+          "#7f7bb0",
+          "#a29ed5",
+          "#c5c2fb",
+          "#ebe7ff"
+        ]
+      },
+      "cyber-text": {
+        "role": "neutral",
+        "displayName": "Cyber Text",
+        "canonical": "#ece9ff",
+        "tonalRamp": [
+          "#0b0917",
+          "#252232",
+          "#423f51",
+          "#615e71",
+          "#827f93",
+          "#a5a2b7",
+          "#c9c6db",
+          "#eeebff"
+        ]
+      },
+      "cyber-dusk": {
+        "role": "neutral",
+        "displayName": "Cyber Dusk",
+        "canonical": "#9a93c8",
+        "tonalRamp": [
+          "#0d0228",
+          "#261c47",
+          "#423a68",
+          "#61598a",
+          "#827aae",
+          "#a49dd3",
+          "#c8c1f9",
+          "#ede6ff"
+        ]
+      },
+      "cyber-timestamp": {
+        "role": "neutral",
+        "displayName": "Cyber Timestamp",
+        "canonical": "#6d64a8",
+        "tonalRamp": [
+          "#0f0033",
+          "#261753",
+          "#413675",
+          "#5f5699",
+          "#8077bd",
+          "#a29ae3",
+          "#c6beff",
+          "#ebe4ff"
+        ]
+      },
+      "neon-magenta": {
+        "role": "neutral",
+        "displayName": "Neon Magenta",
+        "canonical": "#ff2bd6",
+        "tonalRamp": [
+          "#25001b",
+          "#660050",
+          "#8e0073",
+          "#b70096",
+          "#e000ba",
+          "#ff3be0",
+          "#ff6aff",
+          "#ffcfff"
+        ]
+      },
+      "neon-cyan": {
+        "role": "neutral",
+        "displayName": "Neon Cyan",
+        "canonical": "#00e5ff",
+        "tonalRamp": [
+          "#001226",
+          "#00324a",
+          "#00536b",
+          "#00758d",
+          "#0098b1",
+          "#00bcd6",
+          "#00e2fc",
+          "#80ffff"
+        ]
+      },
+      "ink-on-magenta": {
+        "role": "neutral",
+        "displayName": "Ink On Magenta",
+        "canonical": "#12001a",
+        "tonalRamp": [
+          "#15011d",
+          "#31193b",
+          "#50375a",
+          "#70567b",
+          "#92769e",
+          "#b599c2",
+          "#dabde7",
+          "#ffe2ff"
+        ]
+      },
+      "cyber-good": {
+        "role": "neutral",
+        "displayName": "Cyber Good",
+        "canonical": "#00ff9f",
+        "tonalRamp": [
+          "#001600",
+          "#003b00",
+          "#005d00",
+          "#008029",
+          "#00a44b",
+          "#00c96e",
+          "#00f091",
+          "#a7ffcf"
+        ]
+      },
+      "cyber-bad": {
+        "role": "neutral",
+        "displayName": "Cyber Bad",
+        "canonical": "#ff3b5c",
+        "tonalRamp": [
+          "#2d0000",
+          "#6e0000",
+          "#970009",
+          "#c1002c",
+          "#eb214d",
+          "#ff536e",
+          "#ff7d91",
+          "#ffcdd1"
+        ]
+      },
+      "cyber-warn": {
+        "role": "neutral",
+        "displayName": "Cyber Warn",
+        "canonical": "#ffb800",
+        "tonalRamp": [
+          "#220000",
+          "#4c0800",
+          "#6e2e00",
+          "#915000",
+          "#b67200",
+          "#db9600",
+          "#ffbb0e",
+          "#ffe68e"
+        ]
+      },
+      "cyber-good-surface": {
+        "role": "tinted-surface",
+        "displayName": "Cyber Good Surface",
+        "canonical": "#00301f",
+        "tonalRamp": [
+          "#001205",
+          "#002e1d",
+          "#204c39",
+          "#406c58",
+          "#618e78",
+          "#83b19b",
+          "#a7d6bf",
+          "#ccfce4"
+        ]
+      },
+      "cyber-bad-surface": {
+        "role": "tinted-surface",
+        "displayName": "Cyber Bad Surface",
+        "canonical": "#33061a",
+        "tonalRamp": [
+          "#20000b",
+          "#401225",
+          "#613042",
+          "#834f61",
+          "#a77082",
+          "#cc92a5",
+          "#f2b5c9",
+          "#ffdaee"
+        ]
+      },
+      "cyber-notice-surface": {
+        "role": "tinted-surface",
+        "displayName": "Cyber Notice Surface",
+        "canonical": "#1f0a24",
+        "tonalRamp": [
+          "#15031a",
+          "#311b36",
+          "#4f3855",
+          "#705776",
+          "#927898",
+          "#b59abc",
+          "#dabee1",
+          "#ffe3ff"
+        ]
+      },
+      "cyber-notice-edge": {
+        "role": "tinted-surface",
+        "displayName": "Cyber Notice Edge",
+        "canonical": "#5a1650",
+        "tonalRamp": [
+          "#23001e",
+          "#44003c",
+          "#66225c",
+          "#89437d",
+          "#ae65a0",
+          "#d387c4",
+          "#faabe9",
+          "#ffd0ff"
+        ]
+      },
+      "cyber-notice-text": {
+        "role": "tinted-surface",
+        "displayName": "Cyber Notice Text",
+        "canonical": "#ff9be8",
+        "tonalRamp": [
+          "#24001d",
+          "#4b0040",
+          "#6f1160",
+          "#933881",
+          "#b85aa5",
+          "#df7dc9",
+          "#ffa1ef",
+          "#ffd0ff"
+        ]
+      },
+      "cyber-info-surface": {
+        "role": "tinted-surface",
+        "displayName": "Cyber Info Surface",
+        "canonical": "#071d26",
+        "tonalRamp": [
+          "#000e16",
+          "#122832",
+          "#2f4650",
+          "#4e6570",
+          "#6e8792",
+          "#90aab5",
+          "#b4ceda",
+          "#d9f3ff"
+        ]
+      },
+      "cyber-info-edge": {
+        "role": "tinted-surface",
+        "displayName": "Cyber Info Edge",
+        "canonical": "#0e4a5c",
+        "tonalRamp": [
+          "#000f1f",
+          "#002b3c",
+          "#0d495b",
+          "#33697c",
+          "#558b9f",
+          "#77afc3",
+          "#9bd3e8",
+          "#bff9ff"
+        ]
+      },
+      "cyber-info-text": {
+        "role": "tinted-surface",
+        "displayName": "Cyber Info Text",
+        "canonical": "#7df3ff",
+        "tonalRamp": [
+          "#001320",
+          "#00313d",
+          "#00515c",
+          "#00727d",
+          "#0094a0",
+          "#3bb8c4",
+          "#66deea",
+          "#8effff"
+        ]
+      },
+      "cyber-alarm-surface": {
+        "role": "tinted-surface",
+        "displayName": "Cyber Alarm Surface",
+        "canonical": "#2a0614",
+        "tonalRamp": [
+          "#1e000a",
+          "#3c1624",
+          "#5d3340",
+          "#7f525f",
+          "#a27380",
+          "#c795a3",
+          "#edb9c7",
+          "#ffdeec"
+        ]
+      },
+      "cyber-silence-surface": {
+        "role": "tinted-surface",
+        "displayName": "Cyber Silence Surface",
+        "canonical": "#241a04",
+        "tonalRamp": [
+          "#130900",
+          "#2e230d",
+          "#4c4129",
+          "#6c6048",
+          "#8d8168",
+          "#b0a489",
+          "#d5c8ad",
+          "#fbedd1"
+        ]
+      },
+      "cyber-silence-edge": {
+        "role": "tinted-surface",
+        "displayName": "Cyber Silence Edge",
+        "canonical": "#8a6400",
+        "tonalRamp": [
+          "#1f0000",
+          "#3e1b00",
+          "#5e3a00",
+          "#7f5a00",
+          "#a27b28",
+          "#c79e4f",
+          "#ecc373",
+          "#ffe898"
+        ]
+      },
+      "noir-night-window": {
+        "role": "neutral",
+        "displayName": "Noir Night Window",
+        "canonical": "#0d0c0b",
+        "tonalRamp": [
+          "#0c0b0a",
+          "#262524",
+          "#434240",
+          "#626160",
+          "#838281",
+          "#a6a5a3",
+          "#cac9c7",
+          "#f0eeec"
+        ]
+      },
+      "noir-panel": {
+        "role": "neutral",
+        "displayName": "Noir Panel",
+        "canonical": "#171512",
+        "tonalRamp": [
+          "#0d0b08",
+          "#272521",
+          "#44423e",
+          "#63615d",
+          "#84827e",
+          "#a7a5a0",
+          "#cbc9c4",
+          "#f1eeea"
+        ]
+      },
+      "noir-raised-panel": {
+        "role": "neutral",
+        "displayName": "Noir Raised Panel",
+        "canonical": "#211e1a",
+        "tonalRamp": [
+          "#0d0b07",
+          "#282520",
+          "#45413d",
+          "#64615c",
+          "#85827d",
+          "#a8a49f",
+          "#ccc8c3",
+          "#f2eee8"
+        ]
+      },
+      "noir-mullion": {
+        "role": "neutral",
+        "displayName": "Noir Mullion",
+        "canonical": "#3a342c",
+        "tonalRamp": [
+          "#0f0a05",
+          "#2a241c",
+          "#474139",
+          "#676057",
+          "#888178",
+          "#aba49a",
+          "#cfc8be",
+          "#f5ede3"
+        ]
+      },
+      "noir-paper": {
+        "role": "neutral",
+        "displayName": "Noir Paper",
+        "canonical": "#ece4d4",
+        "tonalRamp": [
+          "#100a02",
+          "#2a2418",
+          "#484134",
+          "#676053",
+          "#898273",
+          "#aca495",
+          "#d0c8b9",
+          "#f6eede"
+        ]
+      },
+      "noir-dusk": {
+        "role": "neutral",
+        "displayName": "Noir Dusk",
+        "canonical": "#a39782",
+        "tonalRamp": [
+          "#120900",
+          "#2d2312",
+          "#4b402e",
+          "#6b604c",
+          "#8c816c",
+          "#b0a38e",
+          "#d4c8b2",
+          "#faedd6"
+        ]
+      },
+      "noir-brass": {
+        "role": "neutral",
+        "displayName": "Noir Brass",
+        "canonical": "#c9a24a",
+        "tonalRamp": [
+          "#1f0100",
+          "#3d1c00",
+          "#5d3a00",
+          "#7f5a00",
+          "#a27c1c",
+          "#c69f47",
+          "#ebc36c",
+          "#ffe991"
+        ]
+      },
+      "noir-ink": {
+        "role": "neutral",
+        "displayName": "Noir Ink",
+        "canonical": "#1a140c",
+        "tonalRamp": [
+          "#100a04",
+          "#2a241b",
+          "#484138",
+          "#676056",
+          "#898177",
+          "#aca499",
+          "#d0c8bd",
+          "#f6ede2"
+        ]
+      },
+      "noir-good": {
+        "role": "neutral",
+        "displayName": "Noir Good",
+        "canonical": "#7fa86a",
+        "tonalRamp": [
+          "#001200",
+          "#0a2e00",
+          "#284d10",
+          "#476d32",
+          "#689053",
+          "#8ab375",
+          "#add898",
+          "#d2febc"
+        ]
+      },
+      "noir-bad": {
+        "role": "neutral",
+        "displayName": "Noir Bad",
+        "canonical": "#d0524a",
+        "tonalRamp": [
+          "#2d0000",
+          "#5d0000",
+          "#830005",
+          "#aa2e2a",
+          "#d1534b",
+          "#fa786d",
+          "#ff9c90",
+          "#ffcfc3"
+        ]
+      },
+      "noir-warn": {
+        "role": "neutral",
+        "displayName": "Noir Warn",
+        "canonical": "#d89a3a",
+        "tonalRamp": [
+          "#240000",
+          "#471100",
+          "#693200",
+          "#8c5200",
+          "#b07400",
+          "#d59737",
+          "#fcbc5f",
+          "#ffe390"
+        ]
+      },
+      "noir-notice-surface": {
+        "role": "tinted-surface",
+        "displayName": "Noir Notice Surface",
+        "canonical": "#221a10",
+        "tonalRamp": [
+          "#110a03",
+          "#2c2319",
+          "#494035",
+          "#695f54",
+          "#8b8174",
+          "#aea396",
+          "#d2c7ba",
+          "#f8eddf"
+        ]
+      },
+      "noir-notice-edge": {
+        "role": "tinted-surface",
+        "displayName": "Noir Notice Edge",
+        "canonical": "#4a3a20",
+        "tonalRamp": [
+          "#150800",
+          "#312207",
+          "#4f3f25",
+          "#705e43",
+          "#927f63",
+          "#b5a285",
+          "#dac6a8",
+          "#ffeccd"
+        ]
+      },
+      "noir-notice-text": {
+        "role": "tinted-surface",
+        "displayName": "Noir Notice Text",
+        "canonical": "#e0c890",
+        "tonalRamp": [
+          "#180600",
+          "#352100",
+          "#533f00",
+          "#745e28",
+          "#96804a",
+          "#baa26c",
+          "#dfc78f",
+          "#ffecb3"
+        ]
+      },
+      "noir-alarm-surface": {
+        "role": "tinted-surface",
+        "displayName": "Noir Alarm Surface",
+        "canonical": "#2a1210",
+        "tonalRamp": [
+          "#190404",
+          "#361d1b",
+          "#563a37",
+          "#775955",
+          "#997976",
+          "#bd9c98",
+          "#e2c0bc",
+          "#ffe5e1"
+        ]
+      },
+      "noir-alarm-edge": {
+        "role": "tinted-surface",
+        "displayName": "Noir Alarm Edge",
+        "canonical": "#6a2a22",
+        "tonalRamp": [
+          "#270000",
+          "#490a06",
+          "#6b2b23",
+          "#8f4b41",
+          "#b46c61",
+          "#d98f83",
+          "#ffb2a6",
+          "#ffd7ca"
+        ]
+      },
+      "noir-brass-edge": {
+        "role": "tinted-surface",
+        "displayName": "Noir Brass Edge",
+        "canonical": "#6b5530",
+        "tonalRamp": [
+          "#180600",
+          "#342100",
+          "#533e19",
+          "#745d38",
+          "#967f58",
+          "#baa17a",
+          "#dec59d",
+          "#ffebc1"
+        ]
+      },
+      "noir-brass-hover": {
+        "role": "neutral",
+        "displayName": "Noir Brass Hover",
+        "canonical": "#8a7040",
+        "tonalRamp": [
+          "#1a0500",
+          "#362000",
+          "#553d08",
+          "#765d2d",
+          "#997e4e",
+          "#bca170",
+          "#e1c593",
+          "#ffeab7"
+        ]
+      },
+      "noir-link": {
+        "role": "neutral",
+        "displayName": "Noir Link",
+        "canonical": "#d8b86a",
+        "tonalRamp": [
+          "#1c0300",
+          "#3a1e00",
+          "#593d00",
+          "#7a5c00",
+          "#9d7e2e",
+          "#c1a153",
+          "#e6c577",
+          "#ffeb9c"
+        ]
+      },
+      "noir-timestamp": {
+        "role": "neutral",
+        "displayName": "Noir Timestamp",
+        "canonical": "#6e6456",
+        "tonalRamp": [
+          "#110a02",
+          "#2c2417",
+          "#4a4033",
+          "#6a6052",
+          "#8b8172",
+          "#aea394",
+          "#d3c7b8",
+          "#f8eddc"
+        ]
+      },
+      "noir-good-surface": {
+        "role": "tinted-surface",
+        "displayName": "Noir Good Surface",
+        "canonical": "#1e2a18",
+        "tonalRamp": [
+          "#050e02",
+          "#1d2917",
+          "#3a4733",
+          "#586652",
+          "#798872",
+          "#9bab94",
+          "#bfcfb8",
+          "#e4f4dd"
+        ]
+      },
+      "noir-good-edge": {
+        "role": "tinted-surface",
+        "displayName": "Noir Good Edge",
+        "canonical": "#4a6a3a",
+        "tonalRamp": [
+          "#001100",
+          "#102d00",
+          "#2d4b1c",
+          "#4c6c3c",
+          "#6c8e5c",
+          "#8eb17e",
+          "#b2d6a1",
+          "#d6fcc5"
+        ]
+      },
+      "noir-bad-surface": {
+        "role": "tinted-surface",
+        "displayName": "Noir Bad Surface",
+        "canonical": "#2e1210",
+        "tonalRamp": [
+          "#1b0303",
+          "#391b19",
+          "#583835",
+          "#7a5754",
+          "#9d7874",
+          "#c19a96",
+          "#e6beba",
+          "#ffe3df"
+        ]
+      },
+      "noir-bad-edge": {
+        "role": "tinted-surface",
+        "displayName": "Noir Bad Edge",
+        "canonical": "#7a2e26",
+        "tonalRamp": [
+          "#2b0000",
+          "#4d0001",
+          "#70251e",
+          "#95463d",
+          "#ba685c",
+          "#e18a7e",
+          "#ffaea1",
+          "#ffd3c5"
+        ]
+      },
+      "noir-info-surface": {
+        "role": "tinted-surface",
+        "displayName": "Noir Info Surface",
+        "canonical": "#161a1c",
+        "tonalRamp": [
+          "#080c0e",
+          "#222628",
+          "#3e4345",
+          "#5d6264",
+          "#7e8386",
+          "#a1a6a9",
+          "#c5cacd",
+          "#eaeff2"
+        ]
+      },
+      "noir-info-edge": {
+        "role": "tinted-surface",
+        "displayName": "Noir Info Edge",
+        "canonical": "#2e3a40",
+        "tonalRamp": [
+          "#040d12",
+          "#1b272d",
+          "#38444a",
+          "#57646a",
+          "#77858c",
+          "#99a8af",
+          "#bdccd3",
+          "#e2f1f9"
+        ]
+      },
+      "noir-info-text": {
+        "role": "tinted-surface",
+        "displayName": "Noir Info Text",
+        "canonical": "#b8c8cc",
+        "tonalRamp": [
+          "#030d10",
+          "#1b272b",
+          "#374548",
+          "#566468",
+          "#768589",
+          "#99a8ac",
+          "#bcccd1",
+          "#e1f2f6"
+        ]
+      },
+      "noir-silence-surface": {
+        "role": "tinted-surface",
+        "displayName": "Noir Silence Surface",
+        "canonical": "#24190c",
+        "tonalRamp": [
+          "#130901",
+          "#2e2315",
+          "#4c4031",
+          "#6c5f50",
+          "#8e8070",
+          "#b1a292",
+          "#d6c6b6",
+          "#fbecda"
+        ]
+      },
+      "noir-silence-edge": {
+        "role": "tinted-surface",
+        "displayName": "Noir Silence Edge",
+        "canonical": "#6a4a1e",
+        "tonalRamp": [
+          "#1c0300",
+          "#3a1d00",
+          "#5a3b0c",
+          "#7b5a2f",
+          "#9e7b50",
+          "#c29e71",
+          "#e7c294",
+          "#ffe7b9"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "KPI counts in the Command Center only."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card and modal headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default text across the app."
+      },
+      "body-dense": {
+        "displayName": "Body Dense",
+        "purpose": "Tables, key-value rows, form labels, status pills."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase agent-panel section headings in Dusk Grey."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Header stats, small buttons, chips, notices."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Log lines, paths, commands: text a machine wrote."
+      }
+    },
+    "shadows": [
+      {
+        "name": "hover-lift",
+        "value": "0 6px 18px rgba(0, 0, 0, 0.35)",
+        "purpose": "Character hover card over the office."
+      },
+      {
+        "name": "bubble-lift",
+        "value": "0 8px 22px rgba(0, 0, 0, 0.45)",
+        "purpose": "Instruction bubble over the office."
+      },
+      {
+        "name": "modal-scrim",
+        "value": "rgba(0, 0, 0, 0.55)",
+        "purpose": "Backdrop behind dialogs."
+      }
+    ],
+    "motion": [
+      {
+        "name": "blink-fast",
+        "value": "200ms step",
+        "purpose": "Error screen blink on the office canvas."
+      },
+      {
+        "name": "blink-slow",
+        "value": "500ms step",
+        "purpose": "Test-bench light blink in the QA lab."
+      }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Default Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Everyday action; border brightens on hover.",
+      "html": "<button class=\"ds-btn\">Open terminal</button>",
+      "css": ".ds-btn { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; font: 14px 'Segoe UI', system-ui, sans-serif; cursor: pointer; } .ds-btn:hover { border-color: #4a5268; } .ds-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; } .ds-btn:disabled { opacity: 0.45; cursor: not-allowed; }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one desk-lamp action in a view.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">+ New agent</button>",
+      "css": ".ds-btn { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; font: 14px 'Segoe UI', system-ui, sans-serif; cursor: pointer; } .ds-btn:hover { border-color: #4a5268; } .ds-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; } .ds-btn:disabled { opacity: 0.45; cursor: not-allowed; } .ds-btn-primary { background: var(--accent); border-color: var(--accent); color: #1a1a1a; font-weight: 600; } .ds-btn-primary:hover { border-color: #f2d98a; }"
+    },
+    {
+      "name": "Approve / Reject",
+      "kind": "button",
+      "refersTo": "button-good",
+      "description": "Tinted state buttons for permission requests.",
+      "html": "<span class=\"ds-row\"><button class=\"ds-btn ds-btn-good\">Approve</button><button class=\"ds-btn ds-btn-bad\">Reject</button></span>",
+      "css": ".ds-btn { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; font: 14px 'Segoe UI', system-ui, sans-serif; cursor: pointer; } .ds-btn:hover { border-color: #4a5268; } .ds-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; } .ds-btn:disabled { opacity: 0.45; cursor: not-allowed; } .ds-row { display: flex; gap: 8px; } .ds-btn-good { background: #1f3d28; border-color: #2f6b41; } .ds-btn-good:hover { border-color: #3fbf5f; } .ds-btn-bad { background: #472023; border-color: #7a3036; } .ds-btn-bad:hover { border-color: #ff5c5c; }"
+    },
+    {
+      "name": "Top-bar Tabs",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "View switcher; the active tab is a lit window.",
+      "html": "<nav class=\"ds-tabs\"><button class=\"ds-tab ds-tab-active\">Office</button><button class=\"ds-tab\">Command Center</button><button class=\"ds-tab\">Projects</button><button class=\"ds-tab\">Diagnostics</button></nav>",
+      "css": ".ds-tabs { display: flex; gap: 4px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border); } .ds-tab { background: transparent; border: 1px solid transparent; border-radius: var(--radius); padding: 6px 12px; color: var(--muted); font: 14px 'Segoe UI', system-ui, sans-serif; cursor: pointer; } .ds-tab:hover { color: var(--text); } .ds-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; } .ds-tab-active { color: var(--text); background: var(--panel-2); border-color: var(--border); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Sunken Deep Well field with a Dusk Grey label above.",
+      "html": "<label class=\"ds-label\">Folder<input class=\"ds-input\" value=\"~/code/agent-office\"></label>",
+      "css": ".ds-label { display: flex; flex-direction: column; gap: 4px; font: 13px 'Segoe UI', system-ui, sans-serif; color: var(--muted); } .ds-input { background: #0c0e13; border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 8px; color: var(--text); font: 14px 'Segoe UI', system-ui, sans-serif; } .ds-input:hover { border-color: #4a5268; } .ds-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }"
+    },
+    {
+      "name": "Chip and Status Pill",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Branch chip and state-colored status pill.",
+      "html": "<span class=\"ds-chip\">main</span> <span class=\"ds-pill\">Needs permission</span>",
+      "css": ".ds-chip { display: inline-block; padding: 1px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--panel-2); color: var(--text); font: 12px 'Segoe UI', system-ui, sans-serif; } .ds-pill { display: inline-block; border: 1px solid #ff5c5c; color: #ff5c5c; border-radius: 999px; padding: 4px 10px; font: 13px 'Segoe UI', system-ui, sans-serif; }"
+    },
+    {
+      "name": "KPI Tile",
+      "kind": "card",
+      "refersTo": "kpi",
+      "description": "Command Center count the user acts on.",
+      "html": "<div class=\"ds-kpi\"><span class=\"ds-kpi-value\">2</span><span class=\"ds-kpi-label\">Waiting approvals</span></div>",
+      "css": ".ds-kpi { display: flex; flex-direction: column; width: 160px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-family: 'Segoe UI', system-ui, sans-serif; } .ds-kpi-value { font-size: 22px; font-weight: 700; color: var(--warn); } .ds-kpi-label { font-size: 12px; color: var(--muted); }"
+    },
+    {
+      "name": "Permission Box",
+      "kind": "custom",
+      "refersTo": "permission-box",
+      "description": "Tinted alarm box holding a permission request.",
+      "html": "<div class=\"ds-perm\"><strong>Claude Code wants to run</strong><code>npm test</code></div>",
+      "css": ".ds-perm { display: grid; gap: 6px; border: 1px solid #7a3036; background: #2a1517; border-radius: var(--radius); padding: 10px; color: var(--text); font: 14px 'Segoe UI', system-ui, sans-serif; } .ds-perm code { font: 12px 'Cascadia Code', Consolas, monospace; }"
+    },
+    {
+      "name": "Notice",
+      "kind": "custom",
+      "refersTo": "notice",
+      "description": "Amber notice banner and its subtle info variant.",
+      "html": "<p class=\"ds-notice\">Codex needs you to trust its hooks: run /hooks.</p><p class=\"ds-notice ds-notice-subtle\">Simulated demo: no real agents.</p>",
+      "css": ".ds-notice { background: #2a2412; border: 1px solid #4a3f1c; color: #f2d98a; border-radius: var(--radius); padding: 6px 10px; font: 12px 'Segoe UI', system-ui, sans-serif; margin: 0 0 8px; } .ds-notice-subtle { background: #182031; border-color: #2a3857; color: #a9c1f5; }"
+    },
+    {
+      "name": "Instruction Bubble",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "Amber-bordered floating bubble over a character for typing an instruction.",
+      "html": "<div class=\"ds-bubble\"><strong>Tell Ada</strong><textarea class=\"ds-bubble-input\" rows=\"2\">Run the tests again</textarea></div>",
+      "css": ".ds-bubble { display: grid; gap: 6px; width: 300px; background: rgba(23, 26, 35, 0.98); border: 1px solid var(--accent); border-radius: var(--radius); padding: 8px 10px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45); color: var(--text); font: 14px 'Segoe UI', system-ui, sans-serif; } .ds-bubble-input { background: #0c0e13; border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 8px; color: var(--text); font: inherit; resize: vertical; } .ds-bubble-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Night Office",
+    "overview": "You are standing outside an office building at night, looking in through the window. Inside, under desk lamps, the employees are working: typing, reading, raising a hand, slumping after an error. That lit pixel-art room is the only warm, colorful, animated thing on screen. Everything around it (the top bar, the agent panel, the Command Center, Diagnostics) is the dark glass and window frame: low-contrast navy-charcoal surfaces, thin borders, quiet grey type, there to frame the room and hand you the controls, never to compete with it.\n\nThe interface is dense and calm, built for someone who glances at it between other work. Color is spent almost entirely on meaning: the amber desk-lamp accent marks the one action that matters and the focused element; green, red, orange and violet mark state. Surfaces are flat and separated by one-pixel borders and tonal steps, not shadows. The pixel world lends the chrome a few deliberate echoes (hard pixel corners on legend glyphs, pixelated icons, a crisp border on the floating instruction bubble), placed sparingly so the frame still reads as frame.\n\nThis is not a SaaS metrics dashboard: no gradients, no glass blur, no decorative charts, no hero numbers for their own sake. A number earns large type only when it is a count the user acts on.",
+    "keyCharacteristics": [
+      "One dark, flat, tonal chrome; one warm, lit pixel world inside it.",
+      "Amber is the single accent; every other hue is a state.",
+      "Dense 12–14px system type; monospace only for logs, paths and code.",
+      "Depth from tonal steps and 1px borders; shadows only for things that float over the office.",
+      "Pixel echoes in the chrome are punctual, never a theme applied everywhere."
+    ],
+    "rules": [
+      {
+        "name": "The Lamplight Rule",
+        "body": "Light in the office comes from where people work. A lamp lights its own room only, light is stepped (never a smooth gradient), and characters are never dimmed: the night falls on the floor, not on the people.",
+        "section": "colors"
+      },
+      {
+        "name": "The Desk-Lamp Rule",
+        "body": "Amber marks the one primary action in view and the focused element. If two amber buttons appear in the same panel, one of them is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Meaning Rule",
+        "body": "A state color means one thing everywhere: green is healthy or done, red is error or needs-permission, orange is warning or silence, violet is experimental. Never use them for decoration or category coding.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tinted Box Rule",
+        "body": "State boxes use the dark tinted surface plus its edge color, never a saturated fill with white text.",
+        "section": "colors"
+      },
+      {
+        "name": "The Neon Pair Rule",
+        "body": "In the cyberpunk theme, magenta is the action and cyan is the guide: magenta for the one primary action, selection and borders that frame; cyan for focus, links and labels. A third neon only appears inside the office canvas.",
+        "section": "colors"
+      },
+      {
+        "name": "The Shadow Rule",
+        "body": "In L.A. Noire, depth and mood come from darkness, slats of light and the vignette; never from glow or gradients on chrome. Everything is black and white, so nothing in this theme may rely on hue: a state needs its shape, icon or words.",
+        "section": "colors"
+      },
+      {
+        "name": "The Machine Voice Rule",
+        "body": "Monospace is for text a machine produced or will consume (log lines, paths, commands, git codes). Human-facing copy is never monospace.",
+        "section": "typography"
+      },
+      {
+        "name": "The Small Scale Rule",
+        "body": "The chrome lives between 11.5px and 14px. Only KPI counts go larger. Spanish strings run 20–30% longer than English, so labels wrap or truncate with an ellipsis rather than relying on fixed widths.",
+        "section": "typography"
+      },
+      {
+        "name": "The Whole Pixel Rule",
+        "body": "The office is only ever scaled in integer or half-integer steps with `image-rendering: pixelated`, and everything in it sits on the art-pixel grid (multiples of half a layout pixel). Never let the browser smooth it.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Chrome Rule",
+        "body": "Cards, panels, tables and buttons never get shadows. A shadow means \"this floats over the live office\". The one exception is the cyberpunk theme's neon glow (a zero-offset blur in magenta or cyan) on the top bar, the agent panel's edge, the active tab, the primary button and hovered or pressed controls: it is light, not depth, and never appears in the modern theme.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Pixel Echo Rule",
+        "body": "Pixel-art treatment (hard 2px corners, `image-rendering: pixelated`, stepped shapes) is reserved for glyphs, icons and elements that belong to or point at the office: the brand mark, legend symbols, the instruction bubble. Do not pixelate ordinary buttons, cards or tables.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "**Do** keep the chrome on the Night Window / After-Hours Panel / Raised Panel / Deep Well steps with 1px Window Mullion borders.",
+      "**Do** use Desk-Lamp Amber for exactly one primary action per view and for focus on the office canvas.",
+      "**Do** give every state box a dark tinted surface and a mid-tone edge (the Tinted Box Rule).",
+      "**Do** carry state through shape, icon or text as well as color, in the chrome as the office already does.",
+      "**Do** keep pixel echoes punctual: glyphs, icons, the brand mark and things that float over the office.",
+      "**Do** scale the office only in whole or half steps with pixelated rendering.",
+      "**Do** size labels and buttons for Spanish as well as English."
+    ],
+    "donts": [
+      "**Don't** make it look like a generic SaaS dashboard: no gradients, no glassmorphism or backdrop blur, no decorative charts, no oversized hero metrics, no gradient-filled cards.",
+      "**Don't** add shadows to cards, panels, tables or buttons; shadows are only for overlays on the office.",
+      "**Don't** use a state color for decoration or category coding.",
+      "**Don't** put white text on amber, or saturated fills behind long text.",
+      "**Don't** use monospace for human-facing copy.",
+      "**Don't** pixelate ordinary buttons, cards or tables, or bring chrome tokens into the canvas."
+    ]
+  }
+}
