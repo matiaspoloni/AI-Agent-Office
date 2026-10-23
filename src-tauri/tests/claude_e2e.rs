@@ -192,11 +192,16 @@ async fn managed_session_runs_prompts_permissions_and_stops() {
             .map(|_| ())
     })
     .await;
-    // The per-session settings file is cleaned up.
-    assert!(std::fs::read_dir(data.join("sessions"))
-        .unwrap()
-        .next()
-        .is_none());
+    // The per-session settings file is cleaned up when the process exits,
+    // which can come a moment after the SessionEnd hook (seen on macOS).
+    let sessions = data.join("sessions");
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while std::fs::read_dir(&sessions).unwrap().next().is_some()
+        && std::time::Instant::now() < deadline
+    {
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    assert!(std::fs::read_dir(&sessions).unwrap().next().is_none());
     // The user's Claude configuration was never written.
     assert!(!config.join("settings.json").exists());
 }

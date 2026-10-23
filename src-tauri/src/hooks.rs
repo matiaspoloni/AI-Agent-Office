@@ -35,6 +35,11 @@ pub struct HookBridgeStatus {
     #[ts(optional)]
     pub relay_command: Option<String>,
     pub relay_exists: bool,
+    /// Why hooks installed now would break later (macOS: app run from its
+    /// disk image or from a temporary copy).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub relay_warning: Option<String>,
     /// Hook events actually received, per provider — the empirical evidence
     /// of what each CLI fires on this machine.
     pub events: Vec<HookEventCount>,
@@ -84,6 +89,7 @@ impl HookBridge {
                 parts.join(" ")
             }),
             relay_exists: relay.is_some_and(|r| r.program.is_file()),
+            relay_warning: relay.and_then(|r| crate::platform::relay_location_problem(&r.program)),
             events: self
                 .stats
                 .lock()

@@ -214,6 +214,25 @@ pub struct GitService {
     pass: tokio::sync::Mutex<()>,
 }
 
+/// The `git` to run: the first on `PATH`, else in its usual folders —
+/// skipping macOS's `/usr/bin/git` stub when it would only open Apple's
+/// "install the Command Line Tools" dialog.
+pub fn locate_git() -> Result<PathBuf, String> {
+    let names = ["git".to_string()];
+    let Some(found) = ao_detect::find_executable(&names, crate::diagnostics::GIT_DIRS) else {
+        return Err("Git was not found on PATH or in its usual folders.".to_string());
+    };
+    let Some(problem) = crate::platform::git_problem(&found) else {
+        return Ok(found);
+    };
+    crate::diagnostics::GIT_DIRS
+        .iter()
+        .filter_map(|dir| ao_detect::expand_path(dir))
+        .map(|dir| dir.join("git"))
+        .find(|git| git.is_file() && *git != found && crate::platform::git_problem(git).is_none())
+        .ok_or(problem)
+}
+
 impl GitService {
     /// `executable`: the `git` to use; `None` finds it like Diagnostics does.
     pub fn start(sink: EventSink, executable: Option<PathBuf>) -> Arc<Self> {
@@ -226,16 +245,10 @@ impl GitService {
                     path.display()
                 )),
             ),
-            None => {
-                match ao_detect::find_executable(&["git".to_string()], crate::diagnostics::GIT_DIRS)
-                {
-                    Some(path) => (Some(path), None),
-                    None => (
-                        None,
-                        Some("Git was not found on PATH or in its usual folders.".to_string()),
-                    ),
-                }
-            }
+            None => match locate_git() {
+                Ok(path) => (Some(path), None),
+                Err(problem) => (None, Some(problem)),
+            },
         };
         let service = Arc::new(Self {
             unavailable,

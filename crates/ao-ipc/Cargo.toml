@@ -18,5 +18,8 @@ uuid.workspace = true
 tokio = { workspace = true, optional = true, features = ["net", "io-util", "rt", "time", "sync", "macros"] }
 tracing.workspace = true
 
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "net"] }

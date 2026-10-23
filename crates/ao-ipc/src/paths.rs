@@ -12,13 +12,18 @@ pub fn home_dir() -> Option<PathBuf> {
 /// Platform default: `%LOCALAPPDATA%\AgentOffice` on Windows,
 /// `~/Library/Application Support/AgentOffice` on macOS,
 /// `$XDG_DATA_HOME/AgentOffice` or `~/.local/share/AgentOffice` elsewhere.
+///
+/// On macOS `XDG_DATA_HOME` is ignored: it is often set only in the shell, so
+/// the app opened from the Dock and a hook run from a terminal would look in
+/// different folders.
 pub fn default_data_dir() -> PathBuf {
     let base = if cfg!(windows) {
         std::env::var_os("LOCALAPPDATA").map(PathBuf::from)
-    } else {
+    } else if cfg!(target_os = "macos") {
         None
+    } else {
+        std::env::var_os("XDG_DATA_HOME").map(PathBuf::from)
     }
-    .or_else(|| std::env::var_os("XDG_DATA_HOME").map(PathBuf::from))
     .or_else(|| {
         home_dir().map(|h| {
             if cfg!(target_os = "macos") {

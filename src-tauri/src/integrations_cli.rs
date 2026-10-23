@@ -81,6 +81,18 @@ pub async fn run(args: &[String], paths: &AppPaths, options: HostOptions) -> Out
     let registry = registry(&options, paths);
     let command = args.first().map(String::as_str).unwrap_or("status");
     let remember = args.iter().any(|a| a == "--remember");
+    if matches!(command, "install" | "restore") {
+        if let Some(problem) = options
+            .relay
+            .as_ref()
+            .and_then(|r| crate::platform::relay_location_problem(&r.program))
+        {
+            return Outcome {
+                code: 1,
+                output: json!({ "command": command, "error": problem }),
+            };
+        }
+    }
     let mut failed = false;
     let mut results = serde_json::Map::new();
 

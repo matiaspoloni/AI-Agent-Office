@@ -10,6 +10,7 @@ pub mod logging;
 pub mod logs;
 pub mod notify;
 pub mod paths;
+pub mod platform;
 pub mod prefs;
 pub mod providers;
 pub mod reveal;
@@ -127,9 +128,15 @@ fn open_agent(app: &tauri::AppHandle, agent: Option<String>) {
 }
 
 pub fn run() {
+    // First, while this is the only thread: on macOS an app opened from the
+    // Dock lacks the user's PATH and settings (Homebrew, npm, CLAUDE_CONFIG_DIR…).
+    let adopted = platform::adopt_login_shell_env();
     let paths = AppPaths::resolve();
     let _log_guards = logging::init(&paths.log_dir);
     tracing::info!(version = env!("CARGO_PKG_VERSION"), "starting Agent Office");
+    if let Some(variables) = adopted {
+        tracing::info!(variables, "adopted the login shell's environment");
+    }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())

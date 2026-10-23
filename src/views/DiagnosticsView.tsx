@@ -237,6 +237,7 @@ export function DiagnosticsView() {
               Relay command <span className="mono">{report.hooks.relayCommand ?? "unavailable"}</span>{" "}
               {report.hooks.relayCommand && !report.hooks.relayExists && <span className="bad-text">(file missing)</span>}
             </p>
+            {report.hooks.relayWarning && <p className="small bad-text">{report.hooks.relayWarning}</p>}
             {report.hooks.events.length === 0 ? (
               <p className="muted small">No hook events received since Agent Office started.</p>
             ) : (

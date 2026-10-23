@@ -6,6 +6,9 @@
 //! * `.cmd` / `.bat` shims (npm global installs on Windows) are supported;
 //!   the standard library runs them through `cmd.exe` with safe escaping.
 
+#[cfg(unix)]
+pub mod login_env;
+
 use ao_core::provider::InstallationInfo;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -176,7 +179,12 @@ pub async fn detect(
             ..Default::default()
         };
     };
-    match run_capture(&path, version_args, DEFAULT_TIMEOUT).await {
+    detect_at(&path, version_args).await
+}
+
+/// Detection of an executable already located: reads its version.
+pub async fn detect_at(path: &Path, version_args: &[&str]) -> InstallationInfo {
+    match run_capture(path, version_args, DEFAULT_TIMEOUT).await {
         Ok(output) => InstallationInfo {
             installed: true,
             executable_path: Some(path.display().to_string()),

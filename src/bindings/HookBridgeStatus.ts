@@ -11,6 +11,11 @@ endpoint: string, listening: boolean, error?: string,
  */
 relayCommand?: string, relayExists: boolean, 
 /**
+ * Why hooks installed now would break later (macOS: app run from its
+ * disk image or from a temporary copy).
+ */
+relayWarning?: string, 
+/**
  * Hook events actually received, per provider — the empirical evidence
  * of what each CLI fires on this machine.
  */

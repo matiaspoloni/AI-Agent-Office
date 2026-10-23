@@ -343,6 +343,18 @@ impl Host {
     ) -> Result<IntegrationStatus, String> {
         let adapter = self.adapter(&provider)?;
         let ctx = self.adapter_context();
+        if matches!(
+            action,
+            IntegrationAction::Install | IntegrationAction::Repair
+        ) {
+            if let Some(problem) = ctx
+                .relay
+                .as_ref()
+                .and_then(|r| crate::platform::relay_location_problem(&r.program))
+            {
+                return Err(problem);
+            }
+        }
         let result = match action {
             IntegrationAction::Status => Ok(adapter.integration_status(&ctx).await),
             IntegrationAction::Install => adapter.install_integration(&ctx).await,

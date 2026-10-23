@@ -24,6 +24,7 @@ dependencies = [
  "ao-provider-demo",
  "ao-store",
  "ao-testkit",
+ "libc",
  "regex",
  "serde",
  "serde_json",
@@ -105,6 +106,7 @@ name = "ao-detect"
 version = "0.1.0"
 dependencies = [
  "ao-core",
+ "libc",
  "once_cell",
  "regex",
  "tokio",
@@ -135,6 +137,7 @@ dependencies = [
 name = "ao-ipc"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "serde",
  "serde_json",
  "tokio",

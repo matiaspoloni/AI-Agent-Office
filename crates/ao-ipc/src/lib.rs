@@ -90,12 +90,8 @@ impl Endpoint {
         }
         #[cfg(unix)]
         {
-            let base = std::env::var_os("XDG_RUNTIME_DIR")
-                .map(std::path::PathBuf::from)
-                .filter(|p| p.is_dir())
-                .unwrap_or_else(std::env::temp_dir);
             Self {
-                socket_path: base
+                socket_path: socket_dir()
                     .join(format!("agent-office-v{PROTOCOL_VERSION}-{hash:016x}.sock")),
             }
         }
@@ -111,6 +107,50 @@ impl Endpoint {
             self.socket_path.display().to_string()
         }
     }
+}
+
+/// Folder of the socket. App and relay compute it independently, so it must
+/// not depend on how each was started. On macOS that is the per-user
+/// temporary folder the system reports (`confstr`), not `$TMPDIR`: an app
+/// opened from the Dock and an agent run over SSH or with a cleaned
+/// environment still agree. Elsewhere `$XDG_RUNTIME_DIR`, else the temp dir.
+#[cfg(unix)]
+fn socket_dir() -> std::path::PathBuf {
+    #[cfg(target_os = "macos")]
+    if let Some(dir) = darwin_user_temp_dir() {
+        return dir;
+    }
+    #[cfg(not(target_os = "macos"))]
+    if let Some(dir) = std::env::var_os("XDG_RUNTIME_DIR")
+        .map(std::path::PathBuf::from)
+        .filter(|p| p.is_dir())
+    {
+        return dir;
+    }
+    std::env::temp_dir()
+}
+
+/// `/var/folders/…/T/`: private to the user (mode 0700), short enough for a
+/// socket path (macOS allows 104 bytes).
+#[cfg(target_os = "macos")]
+fn darwin_user_temp_dir() -> Option<std::path::PathBuf> {
+    use std::os::unix::ffi::OsStrExt;
+    let mut buf = vec![0u8; 1024];
+    // SAFETY: `buf` is valid for `buf.len()` bytes; confstr writes at most
+    // that many (NUL included) and returns the size it needs, 0 on error.
+    let needed = unsafe {
+        libc::confstr(
+            libc::_CS_DARWIN_USER_TEMP_DIR,
+            buf.as_mut_ptr().cast(),
+            buf.len(),
+        )
+    };
+    if needed == 0 || needed > buf.len() {
+        return None;
+    }
+    buf.truncate(needed - 1);
+    let dir = std::path::PathBuf::from(std::ffi::OsStr::from_bytes(&buf));
+    dir.is_dir().then_some(dir)
 }
 
 fn fnv1a64(bytes: &[u8]) -> u64 {

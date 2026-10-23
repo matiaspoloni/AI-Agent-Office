@@ -264,7 +264,14 @@ pub async fn run(host: Arc<Host>) -> DiagnosticsReport {
             )
         });
     }
-    let git = ao_detect::detect(&["git".to_string()], GIT_DIRS, &["--version"]).await;
+    let git = match crate::git::locate_git() {
+        Ok(path) => ao_detect::detect_at(&path, &["--version"]).await,
+        Err(problem) => InstallationInfo {
+            installed: false,
+            error: Some(problem),
+            ..Default::default()
+        },
+    };
 
     let mut providers = Vec::new();
     while let Some(result) = probes.join_next().await {
