@@ -5,10 +5,16 @@
  */
 export type NotificationSupport = { 
 /**
- * Windows only.
+ * This build shows notifications on this system (Windows; macOS when
+ * running as `Agent Office.app`).
  */
 supported: boolean, 
 /**
- * Run from a build folder: toasts appear as "Windows PowerShell".
+ * Run from a build folder (Windows: toasts appear as "Windows
+ * PowerShell"; macOS: none are shown).
  */
-developmentBuild: boolean, };
+developmentBuild: boolean, 
+/**
+ * What the user should know (development build, permission refused…).
+ */
+note?: string, };

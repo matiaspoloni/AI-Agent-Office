@@ -1,17 +1,22 @@
-//! Windows notifications (WinRT toasts). Clicking one while it is on screen
-//! brings Agent Office to the front and opens the agent it is about.
+//! Desktop notifications. Clicking one brings Agent Office to the front and
+//! opens the agent it is about.
 //!
-//! Windows shows a toast only for a known application id (AppUserModelID).
-//! The installed app has one: the installer's Start Menu shortcut carries the
-//! bundle identifier. A development build (run from `target\debug` or
-//! `target\release`) has none, so it borrows PowerShell's, like Tauri's own
-//! notification plugin does; those toasts say "Windows PowerShell".
+//! **Windows** (WinRT toasts): a toast is shown only for a known application
+//! id (AppUserModelID). The installed app has one: the installer's Start
+//! Menu shortcut carries the bundle identifier. A development build (run
+//! from `target\debug` or `target\release`) has none, so it borrows
+//! PowerShell's, like Tauri's own notification plugin does; those toasts say
+//! "Windows PowerShell".
 //!
-//! Other systems (development only) do not show notifications; the notice is
-//! written to the log.
+//! **macOS**: see [`macos`] (only `Agent Office.app` can show them).
+//!
+//! Elsewhere the notice is written to the log.
 
 use crate::notify::Notice;
 use std::path::Path;
+
+#[cfg(target_os = "macos")]
+mod macos;
 
 /// The bundle identifier (`identifier` in `tauri.conf.json`).
 pub const IDENTIFIER: &str = "com.agentoffice.desktop";
@@ -30,6 +35,49 @@ pub fn app_id_for(exe_dir: &Path, identifier: &str) -> String {
     } else {
         identifier.to_owned()
     }
+}
+
+/// What this build can do on this system: (shown, development build, note).
+pub fn support() -> (bool, bool, Option<String>) {
+    #[cfg(target_os = "macos")]
+    {
+        let bundled = macos::in_app_bundle();
+        let note = if bundled {
+            macos::permission_note()
+        } else {
+            Some(
+                "This is a development build: macOS shows notifications only for the installed \
+                 app (Agent Office.app). Here they are written to the application log."
+                    .to_string(),
+            )
+        };
+        (bundled, !bundled, note)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let development_build = std::env::current_exe()
+            .ok()
+            .and_then(|exe| {
+                exe.parent()
+                    .map(|dir| app_id_for(dir, IDENTIFIER) == DEV_APP_ID)
+            })
+            .unwrap_or(false);
+        let note = (cfg!(windows) && development_build).then(|| {
+            "This is a development build: its notifications appear as “Windows PowerShell”. \
+             The installed app shows its own name."
+                .to_string()
+        });
+        (cfg!(windows), development_build, note)
+    }
+}
+
+/// Startup work (macOS: click handler, and the permission prompt when
+/// notifications are on). Main thread.
+pub fn init(notifications_enabled: bool) {
+    #[cfg(target_os = "macos")]
+    macos::init(notifications_enabled);
+    #[cfg(not(target_os = "macos"))]
+    let _ = notifications_enabled;
 }
 
 /// Shows `notice`; `on_click` runs when the user clicks it.
@@ -53,13 +101,22 @@ pub fn show(
         .map_err(|e| e.to_string())
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
+pub fn show(
+    _app_id: &str,
+    notice: &Notice,
+    on_click: impl FnMut() + Send + 'static,
+) -> Result<(), String> {
+    macos::show(notice, on_click)
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
 pub fn show(
     _app_id: &str,
     notice: &Notice,
     _on_click: impl FnMut() + Send + 'static,
 ) -> Result<(), String> {
-    tracing::info!(title = %notice.title, body = %notice.body, "notification (shown only on Windows)");
+    tracing::info!(title = %notice.title, body = %notice.body, "notification (shown only on Windows and macOS)");
     Ok(())
 }
 

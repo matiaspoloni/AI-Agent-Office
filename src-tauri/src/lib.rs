@@ -84,7 +84,7 @@ pub fn integrations_command(args: &[String]) -> i32 {
     outcome.code
 }
 
-/// Shows notices as Windows notifications; a click opens the agent.
+/// Shows notices as desktop notifications; a click opens the agent.
 fn notice_sink(app: tauri::AppHandle) -> notify::NoticeSink {
     let identifier = app.config().identifier.clone();
     let app_id = std::env::current_exe()
@@ -145,6 +145,7 @@ pub fn run() {
             let options = HostOptions::for_app(&paths);
             let host: Arc<Host> =
                 tauri::async_runtime::block_on(async { Host::start(paths.clone(), options) });
+            toast::init(host.preferences().notifications.enabled);
             host.set_notice_sink(Some(notice_sink(app.handle().clone())));
             app.manage(host);
             Ok(())

@@ -110,20 +110,14 @@ export function DiagnosticsView() {
           </div>
           {report.notifications.supported ? (
             <p className="small">
-              Windows notifications for agents that need you, errors and finished work; clicking one opens the agent.
+              Desktop notifications for agents that need you, errors and finished work; clicking one opens the agent.
               Choose which ones in Settings above.
-              {report.notifications.developmentBuild && (
-                <span className="muted">
-                  {" "}
-                  This is a development build: its notifications appear as “Windows PowerShell”. The installed app shows
-                  its own name.
-                </span>
-              )}
+              {report.notifications.note && <span className="muted"> {report.notifications.note}</span>}
             </p>
           ) : (
             <p className="small muted">
-              Desktop notifications are shown on Windows. On this system they are only written to the application
-              log.
+              {report.notifications.note ??
+                "Desktop notifications are shown on Windows and macOS. On this system they are only written to the application log."}
             </p>
           )}
         </section>

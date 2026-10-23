@@ -142,7 +142,7 @@ export function PreferencesCard({ onSaved }: { onSaved?: () => void }) {
           <label className="check">
             <input type="checkbox" checked={n.enabled} onChange={(e) => setN("enabled", e.target.checked)} />
             <span>
-              Show Windows notifications
+              Show desktop notifications
               <small className="muted"> — clicking one opens the agent. Simulated demo agents never notify.</small>
             </span>
           </label>

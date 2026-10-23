@@ -88,26 +88,25 @@ pub struct DiagnosticsReport {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct NotificationSupport {
-    /// Windows only.
+    /// This build shows notifications on this system (Windows; macOS when
+    /// running as `Agent Office.app`).
     pub supported: bool,
-    /// Run from a build folder: toasts appear as "Windows PowerShell".
+    /// Run from a build folder (Windows: toasts appear as "Windows
+    /// PowerShell"; macOS: none are shown).
     pub development_build: bool,
+    /// What the user should know (development build, permission refused…).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub note: Option<String>,
 }
 
 impl NotificationSupport {
     pub fn current() -> Self {
-        let development_build = std::env::current_exe()
-            .ok()
-            .and_then(|exe| {
-                exe.parent().map(|dir| {
-                    crate::toast::app_id_for(dir, crate::toast::IDENTIFIER)
-                        == crate::toast::DEV_APP_ID
-                })
-            })
-            .unwrap_or(false);
+        let (supported, development_build, note) = crate::toast::support();
         Self {
-            supported: cfg!(windows),
+            supported,
             development_build,
+            note,
         }
     }
 }
