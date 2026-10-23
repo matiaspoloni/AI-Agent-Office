@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "../bindings/Project";
 import type { SessionState } from "../bindings/SessionState";
+import { useAppearanceStore } from "../state/appearance";
+import { useThemeStore } from "../state/theme";
 import { ACTIVITY_COLOR, ACTIVITY_LABEL, formatDuration } from "../state/format";
 import { silentSince } from "../state/silence";
 import { useOfficeStore } from "../state/store";
 import { DEFAULT_LAYOUT } from "./layout";
-import { type Hitbox, OfficeRenderer } from "./renderer";
+import { type Hitbox, MAX_ZOOM, type OfficeTheme, OfficeRenderer } from "./renderer";
 import { QuickPrompt } from "./QuickPrompt";
 import { OfficeScene, type TeamResolver } from "./scene";
 import { ICON_PALETTE, ICONS, spriteCanvas } from "./sprites";
 import { teamResolver } from "./teams";
+
+const THEME_LABEL: Record<OfficeTheme, string> = { modern: "Modern", cyberpunk: "Cyberpunk", noire: "L.A. Noire" };
 
 /** Frame pacing: full rate while someone walks, half rate when the office is calm. */
 const BUSY_FRAME_MS = 1000 / 60;
@@ -47,6 +51,12 @@ export function OfficeView() {
   const hoverRef = useRef<string | null>(null);
   const hitboxesRef = useRef<Hitbox[]>([]);
   const sceneRef = useRef<OfficeScene | null>(null);
+  const rendererRef = useRef<OfficeRenderer | null>(null);
+  // Mouse drag that pans the view; `moved` keeps the release from counting as a click.
+  const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const theme = useThemeStore((s) => s.theme);
+  const setTheme = useThemeStore((s) => s.setTheme);
   const [hoverKey, setHoverKey] = useState<string | null>(null);
   const [quickKey, setQuickKey] = useState<string | null>(null);
   const [keyboardKey, setKeyboardKey] = useState<string | null>(null);
@@ -63,6 +73,7 @@ export function OfficeView() {
     const scene = new OfficeScene(DEFAULT_LAYOUT);
     sceneRef.current = scene;
     const renderer = new OfficeRenderer(DEFAULT_LAYOUT);
+    rendererRef.current = renderer;
     let frame = 0;
     let last = performance.now();
     let lastDraw = 0;
@@ -83,6 +94,19 @@ export function OfficeView() {
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
     resize();
+
+    // Wheel or trackpad pinch (ctrl+wheel) zooms toward the pointer. Native
+    // listener: React's wheel handler is passive and cannot stop page zoom.
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const factor = Math.exp(-event.deltaY * (event.ctrlKey ? 0.01 : 0.002));
+      renderer.zoomAt(factor, (event.clientX - rect.left) * dpr, (event.clientY - rect.top) * dpr);
+      setZoom(renderer.zoom);
+      lastDraw = 0;
+    };
+    canvas.addEventListener("wheel", onWheel, { passive: false });
 
     const probe = bench();
     const loop = (t: number) => {
@@ -113,6 +137,8 @@ export function OfficeView() {
         pendingApprovals,
         now,
         sessions: state.sessions,
+        appearance: useAppearanceStore.getState().byTeam,
+        theme: useThemeStore.getState().theme,
       });
       hitboxesRef.current = boxes.map((b) => ({ ...b, x: b.x / dpr, y: b.y / dpr, w: b.w / dpr, h: b.h / dpr }));
       probe?.frames.push(performance.now() - started);
@@ -145,9 +171,21 @@ export function OfficeView() {
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      canvas.removeEventListener("wheel", onWheel);
       sceneRef.current = null;
+      rendererRef.current = null;
     };
   }, []);
+
+  /** Zooms around the middle of the view (buttons and keyboard); factor 0 goes back to the whole office. */
+  const zoomBy = (factor: number) => {
+    const renderer = rendererRef.current;
+    const canvas = canvasRef.current;
+    if (!renderer || !canvas) return;
+    if (factor === 0) renderer.resetView();
+    else renderer.zoomAt(factor, canvas.width / 2, canvas.height / 2);
+    setZoom(renderer.zoom);
+  };
 
   const setHover = (key: string | null) => {
     hoverRef.current = key;
@@ -188,6 +226,11 @@ export function OfficeView() {
       event.preventDefault();
       return;
     }
+    if (event.key === "+" || event.key === "=" || event.key === "-" || event.key === "0") {
+      event.preventDefault();
+      zoomBy(event.key === "0" ? 0 : event.key === "-" ? 1 / 1.5 : 1.5);
+      return;
+    }
     if (event.key === "i" || event.key === "I") {
       const key = keyboardKey ?? store.selectedAgentKey;
       if (key) {
@@ -206,6 +249,9 @@ export function OfficeView() {
     const next = order[(index + step + order.length) % order.length] ?? order[0];
     setKeyboardKey(next);
     setHover(next);
+    // When zoomed in, follow the keyboard to agents outside the view.
+    const entity = scene.entities.get(next);
+    if (entity) rendererRef.current?.reveal(entity.x, entity.y - 8);
     const agent = store.agents[next];
     if (agent) {
       const provider = store.providers[agent.provider]?.descriptor.displayName ?? agent.provider;
@@ -222,23 +268,45 @@ export function OfficeView() {
         className="office-canvas"
         style={{ cursor }}
         tabIndex={0}
-        aria-label="Office view: each character is an agent session. Use the arrow keys to move between agents, Enter to open one and I to give it an instruction."
+        aria-label="Office view: each character is an agent session. Use the arrow keys to move between agents, Enter to open one and I to give it an instruction. Plus and minus zoom, 0 shows the whole office."
         onKeyDown={onKeyDown}
         onBlur={() => {
           setKeyboardKey(null);
           if (keyboardKey) setHover(null);
         }}
+        onMouseDown={(e) => {
+          if (e.button === 0 && zoom > 1) dragRef.current = { x: e.clientX, y: e.clientY, moved: false };
+        }}
+        onMouseUp={() => {
+          if (dragRef.current?.moved) setCursor("grab");
+          // Cleared after the click event of this release has been ignored.
+          setTimeout(() => (dragRef.current = null));
+        }}
         onMouseMove={(e) => {
+          const drag = dragRef.current;
+          if (drag && e.buttons & 1) {
+            const dx = e.clientX - drag.x;
+            const dy = e.clientY - drag.y;
+            if (drag.moved || Math.hypot(dx, dy) > 4) {
+              const dpr = window.devicePixelRatio || 1;
+              rendererRef.current?.panBy(dx * dpr, dy * dpr);
+              dragRef.current = { x: e.clientX, y: e.clientY, moved: true };
+              setCursor("grabbing");
+              return;
+            }
+          }
           const hit = hitAt(e);
           const key = hit?.kind === "agent" ? hit.key : null;
           if (key !== hoverRef.current) setHover(key);
-          setCursor(hit ? "pointer" : "default");
+          setCursor(hit ? "pointer" : zoom > 1 ? "grab" : "default");
         }}
         onMouseLeave={() => {
+          dragRef.current = null;
           setHover(null);
           setCursor("default");
         }}
         onClick={(e) => {
+          if (dragRef.current?.moved) return;
           const hit = hitAt(e);
           const store = useOfficeStore.getState();
           if (hit?.kind === "inbox") store.setView("command");
@@ -253,6 +321,24 @@ export function OfficeView() {
       {quickKey && <QuickPrompt key={quickKey} ref={quickRef} agentKey={quickKey} onClose={() => openQuick(null)} />}
       <div className="sr-only" aria-live="polite">
         {announcement}
+      </div>
+      <div className="office-zoom" role="group" aria-label="Zoom">
+        <button className="btn small" onClick={() => zoomBy(1 / 1.5)} disabled={zoom <= 1} aria-label="Zoom out" title="Zoom out (−)">
+          −
+        </button>
+        <button className="btn small" onClick={() => zoomBy(1.5)} disabled={zoom >= MAX_ZOOM} aria-label="Zoom in" title="Zoom in (+, or scroll)">
+          +
+        </button>
+        <button className="btn small" onClick={() => zoomBy(0)} disabled={zoom <= 1} title="Show the whole office (0)">
+          Fit
+        </button>
+        <div className="segmented office-theme" role="group" aria-label="Office theme">
+          {(["modern", "cyberpunk", "noire"] as const).map((t) => (
+            <button key={t} className="btn small" aria-pressed={theme === t} onClick={() => setTheme(t)}>
+              {THEME_LABEL[t]}
+            </button>
+          ))}
+        </div>
       </div>
       <button
         className="btn small office-legend-toggle"
@@ -279,9 +365,10 @@ function HoverCard({ agentKey, ref }: { agentKey: string; ref: React.Ref<HTMLDiv
     return () => window.clearInterval(id);
   }, []);
   const team = useMemo(
-    () => (agent && session ? teamResolver({ [session.key]: session }, projects)(agent).name : undefined),
+    () => (agent && session ? teamResolver({ [session.key]: session }, projects)(agent) : undefined),
     [agent, session, projects],
   );
+  const nickname = useAppearanceStore((s) => (team && agent?.isMain ? s.byTeam[team.key]?.nickname : undefined));
   if (!agent) return null;
   const quietSince = silentSince(agent, session);
   return (
@@ -290,14 +377,15 @@ function HoverCard({ agentKey, ref }: { agentKey: string; ref: React.Ref<HTMLDiv
         <span className="badge" style={{ background: provider?.accentColor }}>
           {provider?.badge ?? "?"}
         </span>
-        <strong>{agent.name}</strong>
+        <strong>{nickname ?? agent.name}</strong>
       </div>
       <div className="muted small">
+        {nickname ? `${agent.name} · ` : ""}
         {provider?.displayName ?? agent.provider}
         {parent ? ` · subagent of ${parent.name}` : agent.isMain ? "" : " · subagent"}
         {agent.agentType ? ` · ${agent.agentType}` : ""}
       </div>
-      {team && <div className="small">Project: {team}</div>}
+      {team && <div className="small">Project: {team.name}</div>}
       <div className="small">
         <span className="dot" style={{ background: ACTIVITY_COLOR[agent.activity] }} /> {ACTIVITY_LABEL[agent.activity]}
         <span className="muted"> · {formatDuration(now - agent.activitySince)}</span>

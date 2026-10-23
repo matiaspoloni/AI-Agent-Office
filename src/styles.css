@@ -191,6 +191,19 @@ code,
   z-index: 6;
 }
 
+.office-zoom {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 6;
+  display: flex;
+  gap: 4px;
+}
+
+.office-zoom .btn {
+  min-width: 28px;
+}
+
 .office-legend {
   position: absolute;
   top: 44px;
@@ -462,6 +475,67 @@ code,
   border: none;
   padding: 3px 0;
   cursor: pointer;
+}
+
+/* Appearance editor (agent panel) */
+.appearance {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.appearance-preview {
+  display: grid;
+  place-items: center;
+  height: 96px;
+  background: #0c0e13;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.appearance-preview img {
+  image-rendering: pixelated;
+}
+
+.appearance-group {
+  border: 0;
+  padding: 0;
+  margin: 0 0 8px;
+  min-width: 0;
+}
+
+.appearance-group legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.swatches,
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.swatch[aria-pressed="true"],
+.swatch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.segmented .btn[aria-pressed="true"] {
+  border-color: var(--accent);
 }
 
 .file-list {
@@ -924,4 +998,260 @@ label.check input {
 
 .office-quickprompt p {
   margin: 0;
+}
+
+/* Office segmented theme switch sits with the zoom controls. */
+.office-theme {
+  margin-left: 8px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cyberpunk theme: the same interface in neon. Tokens first, then the */
+/* surfaces that carry literal colors, then glow on what you act on.  */
+/* ------------------------------------------------------------------ */
+[data-theme="cyberpunk"] {
+  --bg: #07060f;
+  --panel: #0f0d1c;
+  --panel-2: #17142a;
+  --border: #2a2350;
+  --text: #ece9ff;
+  --muted: #9a93c8;
+  --accent: #ff2bd6;
+  --good: #00ff9f;
+  --bad: #ff3b5c;
+  --warn: #ffb800;
+}
+
+[data-theme="cyberpunk"] ::selection {
+  background: #ff2bd6;
+  color: #07060f;
+}
+
+[data-theme="cyberpunk"] .topbar {
+  border-bottom-color: #ff2bd6;
+  box-shadow: 0 1px 14px rgba(255, 43, 214, 0.28);
+}
+
+[data-theme="cyberpunk"] .brand {
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+}
+
+[data-theme="cyberpunk"] .tab.active {
+  border-color: #ff2bd6;
+  box-shadow: 0 0 10px rgba(255, 43, 214, 0.35);
+}
+
+[data-theme="cyberpunk"] .btn:hover:not(:disabled) {
+  border-color: #00e5ff;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+}
+
+[data-theme="cyberpunk"] .btn.primary {
+  color: #12001a;
+  box-shadow: 0 0 14px rgba(255, 43, 214, 0.5);
+}
+
+[data-theme="cyberpunk"] .btn.good {
+  background: #00301f;
+  border-color: #00ff9f;
+}
+
+[data-theme="cyberpunk"] .btn.bad {
+  background: #33061a;
+  border-color: #ff3b5c;
+}
+
+[data-theme="cyberpunk"] .segmented .btn[aria-pressed="true"] {
+  border-color: #00e5ff;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.35);
+}
+
+[data-theme="cyberpunk"] .link {
+  color: #00e5ff;
+}
+
+[data-theme="cyberpunk"] input,
+[data-theme="cyberpunk"] select,
+[data-theme="cyberpunk"] textarea,
+[data-theme="cyberpunk"] .log,
+[data-theme="cyberpunk"] .appearance-preview {
+  background: #07060f;
+}
+
+[data-theme="cyberpunk"] input:focus-visible,
+[data-theme="cyberpunk"] textarea:focus-visible,
+[data-theme="cyberpunk"] select:focus-visible {
+  outline: 2px solid #00e5ff;
+  outline-offset: 1px;
+}
+
+[data-theme="cyberpunk"] .banner,
+[data-theme="cyberpunk"] .notice {
+  background: #1f0a24;
+  border-color: #5a1650;
+  color: #ff9be8;
+}
+
+[data-theme="cyberpunk"] .notice.subtle {
+  background: #071d26;
+  border-color: #0e4a5c;
+  color: #7df3ff;
+}
+
+[data-theme="cyberpunk"] .permission-box,
+[data-theme="cyberpunk"] .toast.error {
+  background: #2a0614;
+  border-color: #ff3b5c;
+}
+
+[data-theme="cyberpunk"] .silence-box {
+  background: #241a04;
+  border-color: #8a6400;
+}
+
+[data-theme="cyberpunk"] .agent-panel {
+  border-left-color: #ff2bd6;
+  box-shadow: -1px 0 14px rgba(255, 43, 214, 0.18);
+}
+
+[data-theme="cyberpunk"] .panel-section h4 {
+  color: #00e5ff;
+  letter-spacing: 0.12em;
+}
+
+[data-theme="cyberpunk"] .office-hovercard,
+[data-theme="cyberpunk"] .office-legend,
+[data-theme="cyberpunk"] .office-quickprompt {
+  background: rgba(15, 13, 28, 0.96);
+}
+
+[data-theme="cyberpunk"] .office-hovercard {
+  border-color: #00e5ff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), 0 0 10px rgba(0, 229, 255, 0.25);
+}
+
+[data-theme="cyberpunk"] .modal {
+  border-color: #00e5ff;
+  box-shadow: 0 0 24px rgba(0, 229, 255, 0.2);
+}
+
+[data-theme="cyberpunk"] .log-time {
+  color: #6d64a8;
+}
+
+/* ------------------------------------------------------------------ */
+/* L.A. Noire theme: 1947 detective bureau. Aged paper on dark wood,   */
+/* brass for the action, and shadow instead of glow.                  */
+/* ------------------------------------------------------------------ */
+[data-theme="noire"] {
+  --bg: #0d0c0b;
+  --panel: #171512;
+  --panel-2: #211e1a;
+  --border: #3a342c;
+  --text: #ece4d4;
+  --muted: #a39782;
+  --accent: #c9a24a;
+  --good: #7fa86a;
+  --bad: #d0524a;
+  --warn: #d89a3a;
+}
+
+[data-theme="noire"] ::selection {
+  background: #c9a24a;
+  color: #1a140c;
+}
+
+[data-theme="noire"] .topbar {
+  border-bottom-color: #6b5530;
+}
+
+[data-theme="noire"] .brand,
+[data-theme="noire"] .panel-section h4,
+[data-theme="noire"] .card h3 {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+[data-theme="noire"] .panel-section h4 {
+  color: #c9a24a;
+  letter-spacing: 0.16em;
+}
+
+[data-theme="noire"] .tab.active {
+  border-color: #6b5530;
+}
+
+[data-theme="noire"] .btn:hover:not(:disabled) {
+  border-color: #8a7040;
+}
+
+[data-theme="noire"] .btn.primary {
+  color: #1a140c;
+}
+
+[data-theme="noire"] .btn.good {
+  background: #1e2a18;
+  border-color: #4a6a3a;
+}
+
+[data-theme="noire"] .btn.bad {
+  background: #2e1210;
+  border-color: #7a2e26;
+}
+
+[data-theme="noire"] .segmented .btn[aria-pressed="true"] {
+  border-color: #c9a24a;
+}
+
+[data-theme="noire"] .link {
+  color: #d8b86a;
+}
+
+[data-theme="noire"] input,
+[data-theme="noire"] select,
+[data-theme="noire"] textarea,
+[data-theme="noire"] .log,
+[data-theme="noire"] .appearance-preview {
+  background: #0d0c0b;
+}
+
+[data-theme="noire"] .banner,
+[data-theme="noire"] .notice {
+  background: #221a10;
+  border-color: #4a3a20;
+  color: #e0c890;
+}
+
+[data-theme="noire"] .notice.subtle {
+  background: #161a1c;
+  border-color: #2e3a40;
+  color: #b8c8cc;
+}
+
+[data-theme="noire"] .permission-box,
+[data-theme="noire"] .toast.error {
+  background: #2a1210;
+  border-color: #6a2a22;
+}
+
+[data-theme="noire"] .silence-box {
+  background: #24190c;
+  border-color: #6a4a1e;
+}
+
+[data-theme="noire"] .office-hovercard,
+[data-theme="noire"] .office-legend,
+[data-theme="noire"] .office-quickprompt {
+  background: rgba(23, 21, 18, 0.97);
+}
+
+[data-theme="noire"] .log-time {
+  color: #6e6456;
+}
+
+/* L.A. Noire is black and white, all of it: the office canvas, provider
+   badges, status dots and swatches included. States stay readable without
+   color (pose, icon and room in the office; text in the interface). */
+[data-theme="noire"] #root {
+  filter: grayscale(1);
 }

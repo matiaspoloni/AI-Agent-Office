@@ -17,6 +17,7 @@ import {
 import { folderName, formatGitStatus } from "../state/git";
 import { silentSince } from "../state/silence";
 import { useOfficeStore } from "../state/store";
+import { AppearanceEditor } from "./AppearanceEditor";
 import { VirtualList } from "./VirtualList";
 
 function useNow(intervalMs: number) {
@@ -399,6 +400,8 @@ export function AgentPanel() {
           </button>
         </div>
       </section>
+
+      <AppearanceEditor agent={agent} session={session} />
 
       <section className="panel-section grow">
         <div className="log-header">

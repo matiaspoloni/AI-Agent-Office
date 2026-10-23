@@ -11,6 +11,7 @@ import { type Entity, OfficeScene, type TeamResolver } from "./scene";
 function fakeContext(calls: { n: number }, fills?: Set<string>): CanvasRenderingContext2D {
   const target: Record<string, unknown> = {
     measureText: (text: string) => ({ width: text.length * 6 }),
+    createRadialGradient: () => ({ addColorStop() {} }),
   };
   return new Proxy(target, {
     get(obj, prop: string) {
@@ -74,6 +75,48 @@ describe("OfficeRenderer", () => {
     expect(boxes.filter((b) => b.kind === "agent").length).toBe(scene.entities.size);
     expect(boxes.some((b) => b.kind === "inbox")).toBe(true);
     expect(calls.n).toBeGreaterThan(500); // furniture, screens, bubbles, tags…
+  });
+
+  it("paints each theme with its own materials", () => {
+    const scene = new OfficeScene(DEFAULT_LAYOUT);
+    scene.sync([agent("lead-0-0", 3)], 0, byTeam);
+    const renderer = new OfficeRenderer(DEFAULT_LAYOUT);
+    const paint = (theme: "modern" | "cyberpunk" | "noire") => {
+      const fills = new Set<string>();
+      renderer.draw(fakeContext({ n: 0 }, fills), 1600, 1000, { scene, agents: {}, providers, selectedKey: null, hoverKey: null, pendingApprovals: 0, now: 0, theme });
+      return fills;
+    };
+    expect(paint("cyberpunk").has("#ff2bd6")).toBe(true);
+    expect(paint("modern").has("#ff2bd6")).toBe(false);
+    // L.A. Noire: the evidence board's cork and the filing cabinets' brass.
+    const noir = paint("noire");
+    expect(noir.has("#8a6a42")).toBe(true);
+    expect(noir.has("#ff2bd6")).toBe(false);
+  });
+
+  it("zooms in whole or half steps around the pointer, stays inside the office and fits again", () => {
+    const scene = new OfficeScene(DEFAULT_LAYOUT);
+    const renderer = new OfficeRenderer(DEFAULT_LAYOUT);
+    const frame = () =>
+      renderer.draw(fakeContext({ n: 0 }), 1600, 1000, { scene, agents: {}, providers, selectedKey: null, hoverKey: null, pendingApprovals: 0, now: 0 });
+    frame();
+    const fitted = renderer.scale;
+    const under = renderer.toLayout(500, 400);
+    renderer.zoomAt(2, 500, 400);
+    frame();
+    expect(renderer.scale).toBe(fitted * 2);
+    expect(renderer.scale * 2).toBe(Math.round(renderer.scale * 2));
+    const after = renderer.toLayout(500, 400);
+    expect(Math.abs(after.x - under.x)).toBeLessThan(1);
+    expect(Math.abs(after.y - under.y)).toBeLessThan(1);
+    renderer.panBy(-100_000, -100_000); // far past the bottom-right corner
+    frame();
+    expect(renderer.toScreen(DEFAULT_LAYOUT.width * 16, DEFAULT_LAYOUT.height * 16).x).toBeCloseTo(1600, 0);
+    renderer.zoomAt(100, 0, 0);
+    expect(renderer.zoom).toBe(4);
+    renderer.resetView();
+    frame();
+    expect(renderer.scale).toBe(fitted);
   });
 });
 

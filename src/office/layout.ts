@@ -4,6 +4,8 @@
 // Perk/OfficeUpgrade types only reserve the shape.
 
 export const TILE = 16;
+/** Art pixels per layout pixel: the world is drawn at this density (HD pixel art). */
+export const ART = 2;
 export const GRID_W = 48;
 export const GRID_H = 28;
 
@@ -56,7 +58,7 @@ export interface Furniture {
 
 export interface Decoration {
   id: string;
-  kind: "rug" | "poster" | "clock";
+  kind: "rug" | "poster" | "clock" | "neon";
   x: number;
   y: number;
 }
@@ -237,6 +239,7 @@ function build(): OfficeLayout {
     decorations: [
       { id: "clock", kind: "clock", x: 20, y: 1 },
       { id: "poster", kind: "poster", x: 8, y: 10 },
+      { id: "neon", kind: "neon", x: 39, y: 19 },
     ],
     seats,
     pods,
