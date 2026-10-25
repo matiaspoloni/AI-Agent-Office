@@ -32,6 +32,16 @@ you can act on them when the provider allows it.
   tests to the QA lab, waiting for a prompt to the lounge. Hover a character (or
   use the arrow keys) for a summary, click it for the full panel; **Legend**
   explains every symbol.
+* **Acting from the office:** zoom in (wheel, **+** / **−**, **0** to fit) and drag
+  to pan; agents waiting for your permission get ✓ / ✗ chips right beside them;
+  **Everyone / Needs me / a team** filters who is shown; the strip at the bottom
+  marks the last two hours of permission requests, errors and waits (click a mark
+  to select that agent). Three looks: **Modern** (follows your local time of day,
+  from dawn to night), **Cyberpunk** and **L.A. Noire**.
+* **Small signs of life:** an agent idle for 3 minutes dozes (**zzz**), one kept
+  waiting for 2 minutes waves faster, a subagent that finishes beside its lead
+  high-fives it, and the office cat curls up next to whoever has been stuck the
+  longest.
 * A **Command Center** view: active agents, waiting approvals, errors, completed
   tasks, projects, branches, tool calls and token usage.
 * A **provider-agnostic platform**: every provider is an adapter that turns its
@@ -234,7 +244,8 @@ npm run build      # installer → dist-installer\AgentOfficeSetup.exe (Windows)
 
 `npm run dev:web` starts only the UI in a browser with a replayed demo timeline —
 useful for UI work without the desktop shell. Add `?stress` to its address for
-20 simulated sessions with 50 subagents.
+20 simulated sessions with 50 subagents (with permission requests, errors and
+timeline marks, so every overlay can be checked).
 
 More in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 

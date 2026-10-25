@@ -111,7 +111,9 @@ New furniture is a `FurnitureKind` plus a case in `drawFurniture`;
 
 **Stress test and benchmark.** `npm run dev:web`, then open `/?stress`: 20
 simulated sessions with 50 subagents that keep changing activity (demo
-provider, labelled SIM). To measure the frame cost:
+provider, labelled SIM). Agents that wait for permission carry a request (the ✓ / ✗
+chips show, disabled in the browser), and permission requests, waits for input and
+errors arrive as events, so the timeline strip has marks. To measure the frame cost:
 
 ```powershell
 npm run build:ui
@@ -120,7 +122,8 @@ npm run bench:office -- --width 1920 --height 1080 --dpr 2
 ```
 
 It needs Playwright with Chromium (`npm i -g playwright`, then
-`npx playwright install chromium`, or `PLAYWRIGHT_MODULE=<path to playwright/index.mjs>`).
+`npx playwright install chromium`, or `PLAYWRIGHT_MODULE=<path to playwright/index.mjs>`;
+`PLAYWRIGHT_CHANNEL=chrome` runs it in the installed Google Chrome instead).
 It prints the frames drawn per second and the cost per frame; a frame fits a
 60 fps display when the 95th percentile stays well under 16.7 ms.
 

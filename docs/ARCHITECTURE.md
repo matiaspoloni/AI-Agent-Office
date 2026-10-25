@@ -497,7 +497,10 @@ drawing), `sprites.ts` (pixel art), `renderer.ts` (Canvas 2D), `teams.ts`
   `getState()` (React never re-renders the canvas), draws at 60 fps while someone
   walks and 30 fps when the office is calm, caches the static floor, character
   frames, looks and text widths.
-* **Budget**: 20 sessions + 50 subagents. Measured with
+* **Budget**: 20 sessions + 50 subagents. On 2026-10-23, after the HD
+  characters, themes, cat and day cycle, the bench in installed Chrome on a Mac
+  gave 1.25 ms mean / 2.1 ms p95 at 1600 × 1000 and 1.35 / 2.2 ms at × 2.
+  Earlier, measured with
   `scripts/office-bench.mjs` on the preview's stress test (headless Chromium, 4
   vCPU, software rendering): about 1 ms per frame on average, 1.5 ms at the 95th
   percentile, 59–60 fps drawn, both at 1600 × 1000 and at 1920 × 1080 × 2

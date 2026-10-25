@@ -401,6 +401,8 @@ Deep Well surface, 1px border, Cascadia Code at 11.5px on 20px rows, one line pe
 ### The Office (signature component)
 A pixelated canvas on a 16px tile grid. Each agent is a character whose pose, screen, room and pixel icon carry its state, so status never depends on color alone. Floating over it: the **hover card** (translucent After-Hours Panel, hover-lift shadow, max 280px, pointer-transparent), the **Legend** (top right, pixel glyphs on white 2px squares), the **instruction bubble** (amber-bordered, bubble-lift shadow, opened by double-click or **I**), and the **empty-office note** (centered at the bottom). The canvas is keyboard-focusable and announces changes through a polite live region.
 
+Life in the room is a hint, never noise: an agent idle for 3 minutes drops the coffee and dozes under a **zzz** bubble; one waiting on you for 2 minutes waves twice as fast; a subagent that finishes within reach of its lead high-fives it (a small spark between them). A grey tabby cat (`src/office/pet.ts`, drawn in HD like the characters) wanders the floors between naps and, when anyone is stuck (permission, input or error), curls up asleep beside whoever has been stuck the longest: one more pointer to where to look. In the Modern theme the light follows the viewer's local hour (`dayPhase`): dawn 6–7, day 7–17 (a blue sky, the dimming almost gone, city lights off), dusk 17–20 (violet to orange), night otherwise; Cyberpunk and L.A. Noire stay at night.
+
 ## Do's and Don'ts
 
 ### Do:
