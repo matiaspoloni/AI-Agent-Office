@@ -2,7 +2,7 @@
 // reject chips next to agents waiting for permission, the "who to show"
 // filter, and the strip of recent attention events.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AgentEvent } from "../bindings/AgentEvent";
 import { errorMessage } from "../ipc/backend";
 import { useBackend } from "../ipc/BackendContext";
@@ -12,6 +12,7 @@ import { useOfficeStore } from "../state/store";
 import type { OfficeFilter } from "./renderer";
 import { ICON_PALETTE, ICONS, scale2x, spriteCanvas } from "./sprites";
 import { teamResolver } from "./teams";
+import { markLeftPercent, timelineLabel, timelineWindow } from "./timeline";
 
 /** A pixel icon from the office set, as an image URL. */
 function iconUrl(name: string): string {
@@ -122,7 +123,9 @@ export function FilterControl({ value, onChange }: { value: OfficeFilter | null;
 
 type Mark = { id: string; agentKey: string; at: number; kind: "permission" | "error" | "waiting" | "finished"; label: string };
 
-const WINDOW_MS = 2 * 60 * 60 * 1000;
+/** When this module loaded: the office's open clock for the attention strip. */
+const officeOpenedAt = Date.now();
+
 const MARK_LABEL: Record<Mark["kind"], string> = {
   permission: "asked for permission",
   error: "hit an error",
@@ -148,14 +151,19 @@ function markOf(e: AgentEvent): Mark["kind"] | null {
 }
 
 /**
- * The last two hours of moments that needed you, as marks on a strip; click
- * one to select that agent. Only events received since Agent Office opened.
+ * Moments that needed you since the office opened, as marks on a strip; click
+ * one to select that agent. The strip grows with that open time and never
+ * spans a full two hours. Only events received since Agent Office opened.
  */
 export function OfficeTimeline() {
   const eventsBySession = useOfficeStore((s) => s.eventsBySession);
   const agents = useOfficeStore((s) => s.agents);
   const select = useOfficeStore((s) => s.select);
-  const [now] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
   const marks = useMemo(() => {
     const byAgent = new Map<string, string>();
     for (const a of Object.values(agents)) byAgent.set(`${a.sessionKey}|${a.agentId}`, a.key);
@@ -170,18 +178,24 @@ export function OfficeTimeline() {
     }
     return out.sort((a, b) => a.at - b.at).slice(-120);
   }, [eventsBySession, agents]);
-  const end = Math.max(now, marks.at(-1)?.at ?? now);
-  const start = end - WINDOW_MS;
-  const visible = marks.filter((m) => m.at >= start);
+  const latest = marks.at(-1)?.at ?? now;
+  const { start, end } = timelineWindow(officeOpenedAt, now, latest);
+  const visible = marks.filter((m) => m.at >= start && m.at <= end);
+  const label = timelineLabel(officeOpenedAt, now, latest);
   return (
-    <div className="office-timeline" role="group" aria-label="Moments that needed you, last two hours">
-      <span className="office-timeline-label small muted">Last 2 h</span>
+    <div
+      className="office-timeline"
+      role="group"
+      aria-label={`Moments that needed you since the office opened, ${label}`}
+      title="Time since the office opened. The strip stays under two hours."
+    >
+      <span className="office-timeline-label small muted">{label}</span>
       <div className="office-timeline-track">
         {visible.map((m) => (
           <button
             key={m.id}
             className={`office-mark ${m.kind}`}
-            style={{ left: `${((m.at - start) / WINDOW_MS) * 100}%` }}
+            style={{ left: `${markLeftPercent(m.at, start, end)}%` }}
             title={m.label}
             aria-label={m.label}
             onClick={() => select(m.agentKey)}

@@ -35,8 +35,8 @@ you can act on them when the provider allows it.
 * **Acting from the office:** zoom in (wheel, **+** / **−**, **0** to fit) and drag
   to pan; agents waiting for your permission get ✓ / ✗ chips right beside them;
   **Everyone / Needs me / a team** filters who is shown; the strip at the bottom
-  marks the last two hours of permission requests, errors and waits (click a mark
-  to select that agent). Three looks: **Modern** (follows your local time of day,
+  marks permission requests, errors and waits since the office opened (under two
+  hours; click a mark to select that agent). Three looks: **Modern** (follows your local time of day,
   from dawn to night), **Cyberpunk** and **L.A. Noire**.
 * **Small signs of life:** an agent idle for 3 minutes dozes (**zzz**), one kept
   waiting for 2 minutes waves faster, a subagent that finishes beside its lead

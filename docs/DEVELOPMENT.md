@@ -126,6 +126,9 @@ It needs Playwright with Chromium (`npm i -g playwright`, then
 `PLAYWRIGHT_CHANNEL=chrome` runs it in the installed Google Chrome instead).
 It prints the frames drawn per second and the cost per frame; a frame fits a
 60 fps display when the 95th percentile stays well under 16.7 ms.
+Measured in Chrome on a MacBook Pro M1 Pro (16 GB), 1600×1000, 70 agents:
+p95 1.50 ms at 1× and 1.60 ms at 2× (60.1 fps). The same check on a mid-range
+Windows laptop is still the one in the roadmap.
 
 ## Data, logs, overrides
 

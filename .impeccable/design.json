@@ -1281,9 +1281,17 @@
       }
     },
     "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "KPI figures. Segoe UI Variable Display on Windows 11, SF Pro Display on macOS. Tabular numbers."
+      },
+      "masthead": {
+        "displayName": "Masthead",
+        "purpose": "The Agent Office wordmark. Same display sans; L.A. Noire uses Iowan Old Style / Palatino."
+      },
       "headline": {
         "displayName": "Headline",
-        "purpose": "KPI counts in the Command Center only."
+        "purpose": "KPI counts in the Command Center only. Uses the display face."
       },
       "title": {
         "displayName": "Title",
@@ -1396,7 +1404,7 @@
       "refersTo": "kpi",
       "description": "Command Center count the user acts on.",
       "html": "<div class=\"ds-kpi\"><span class=\"ds-kpi-value\">2</span><span class=\"ds-kpi-label\">Waiting approvals</span></div>",
-      "css": ".ds-kpi { display: flex; flex-direction: column; width: 160px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-family: 'Segoe UI', system-ui, sans-serif; } .ds-kpi-value { font-size: 22px; font-weight: 700; color: var(--warn); } .ds-kpi-label { font-size: 12px; color: var(--muted); }"
+      "css": ".ds-kpi { display: flex; flex-direction: column; width: 160px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-family: 'Segoe UI', system-ui, sans-serif; } .ds-kpi-value { font-family: 'Segoe UI Variable Display', 'SF Pro Display', 'Segoe UI', system-ui, sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--warn); } .ds-kpi-label { font-size: 12px; color: var(--muted); }"
     },
     {
       "name": "Permission Box",

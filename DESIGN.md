@@ -88,10 +88,28 @@ colors:
   noir-silence-surface: "#24190c"
   noir-silence-edge: "#6a4a1e"
 typography:
-  headline:
-    fontFamily: "Segoe UI, system-ui, -apple-system, sans-serif"
+  # Display optical size for the wordmark and KPI figures. System faces only:
+  # Segoe UI Variable Display on Windows 11, SF Pro Display on macOS.
+  # L.A. Noire swaps the wordmark (not the KPI figures) for Iowan Old Style / Palatino.
+  display:
+    fontFamily: "Segoe UI Variable Display, SF Pro Display, Segoe UI, system-ui, sans-serif"
     fontSize: "22px"
     fontWeight: 700
+    fontVariantNumeric: tabular-nums
+  masthead:
+    fontFamily: "Segoe UI Variable Display, SF Pro Display, Segoe UI, system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 600
+  masthead-noir:
+    fontFamily: "Iowan Old Style, Palatino, Palatino Linotype, Georgia, serif"
+    fontSize: "15px"
+    fontWeight: 600
+    letterSpacing: "0.08em"
+  headline:
+    fontFamily: "Segoe UI Variable Display, SF Pro Display, Segoe UI, system-ui, sans-serif"
+    fontSize: "22px"
+    fontWeight: 700
+    fontVariantNumeric: tabular-nums
   title:
     fontFamily: "Segoe UI, system-ui, -apple-system, sans-serif"
     fontSize: "14px"

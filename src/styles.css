@@ -11,7 +11,14 @@
   --warn: #f2994a;
   --radius: 6px;
   color-scheme: dark;
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  /* UI text stays Segoe / the system face. Display is the larger optical size
+     for the wordmark and KPI figures: Segoe UI Variable Display on Windows 11,
+     SF Pro Display on macOS. No downloaded font — the app stays local-first. */
+  --font-ui: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Segoe UI Variable Display", "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  --font-masthead: var(--font-display);
+  --font-mono: "Cascadia Code", Consolas, ui-monospace, monospace;
+  font-family: var(--font-ui);
   font-size: 14px;
   color: var(--text);
   background: var(--bg);
@@ -38,7 +45,7 @@ textarea {
 
 code,
 .mono {
-  font-family: "Cascadia Code", Consolas, ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 
 .app {
@@ -61,6 +68,13 @@ code,
   align-items: center;
   gap: 8px;
   image-rendering: pixelated;
+}
+
+.brand strong {
+  font-family: var(--font-masthead);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .tabs {
@@ -93,6 +107,7 @@ code,
   color: var(--muted);
   font-size: 12px;
   margin-left: auto;
+  font-variant-numeric: tabular-nums;
 }
 
 .topbar-actions {
@@ -542,7 +557,7 @@ code,
   margin: 0;
   padding-left: 16px;
   font-size: 12px;
-  font-family: "Cascadia Code", Consolas, ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 
 .prompt-box {
@@ -573,7 +588,7 @@ code,
   background: #0c0e13;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-family: "Cascadia Code", Consolas, ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 11.5px;
 }
 
@@ -654,8 +669,11 @@ code,
 }
 
 .kpi-value {
+  font-family: var(--font-display);
   font-size: 22px;
   font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
 }
 
 .kpi-label {
@@ -1144,6 +1162,8 @@ label.check input {
 /* brass for the action, and shadow instead of glow.                  */
 /* ------------------------------------------------------------------ */
 [data-theme="noire"] {
+  /* 1947 bureau masthead. KPI figures stay on the display sans. */
+  --font-masthead: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
   --bg: #0d0c0b;
   --panel: #171512;
   --panel-2: #211e1a;
@@ -1170,6 +1190,11 @@ label.check input {
 [data-theme="noire"] .card h3 {
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+[data-theme="noire"] .brand strong {
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
 [data-theme="noire"] .panel-section h4 {
@@ -1297,6 +1322,11 @@ label.check input {
   background: rgba(23, 26, 35, 0.92);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+}
+
+.office-timeline-label {
+  font-variant-numeric: tabular-nums;
+  min-width: 8.5em;
 }
 
 .office-timeline-track {
