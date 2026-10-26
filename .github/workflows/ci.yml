@@ -32,6 +32,7 @@ jobs:
       - run: npm run build:ui
       - run: npm run lint
       - run: npm run test
+      - run: node --test scripts/update-manifest.test.mjs
       - name: Generated TypeScript bindings are up to date
         run: git diff --exit-code -- src/bindings
       - run: node scripts/smoke.mjs
@@ -53,14 +54,22 @@ jobs:
       - run: npx vitest run
       - name: Windows smoke test (headless)
         run: node scripts/smoke.mjs
+      - name: Stamp the published build number
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/ai-agent-office-architecture-y8wggg')
+        env:
+          AGENT_OFFICE_BUILD_NUMBER: ${{ github.run_number }}
+        run: node scripts/stamp-build-version.mjs
       - name: Build installer (NSIS)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run build
       - name: Installer smoke test (install, run, uninstall on this clean VM)
         run: node scripts/installer-smoke.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: AgentOfficeSetup
-          path: dist-installer/AgentOfficeSetup.exe
+          path: dist-installer/
           if-no-files-found: error
 
   macos:
@@ -80,19 +89,26 @@ jobs:
       - run: npx vitest run
       - name: macOS smoke test (headless)
         run: node scripts/smoke.mjs
+      - name: Stamp the published build number
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/ai-agent-office-architecture-y8wggg')
+        env:
+          AGENT_OFFICE_BUILD_NUMBER: ${{ github.run_number }}
+        run: node scripts/stamp-build-version.mjs
       - name: Build the app and disk image (universal, ad hoc signed)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run build
       - name: Disk image smoke test (mount, check, install, run, hooks, open)
         run: node scripts/dmg-smoke.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: AgentOffice-macOS
-          path: dist-installer/AgentOffice.dmg
+          path: dist-installer/
           if-no-files-found: error
 
-  # A rolling pre-release with stable download URLs. The app does not look for
-  # updates; this only puts the installers CI just tested where a browser can
-  # fetch them. A v* tag publishes a normal release instead.
+  # Installers plus, when both platforms of this build exist, latest.json.
+  # The installed app reads that file and asks before replacing itself.
   publish:
     name: Publish installers
     needs: [checks, windows, macos]
@@ -113,12 +129,8 @@ jobs:
       - name: Collect the installers that passed their smoke test
         run: |
           mkdir -p out
-          if [ -f dist/AgentOffice-macOS/AgentOffice.dmg ]; then
-            cp dist/AgentOffice-macOS/AgentOffice.dmg out/
-          fi
-          if [ -f dist/AgentOfficeSetup/AgentOfficeSetup.exe ]; then
-            cp dist/AgentOfficeSetup/AgentOfficeSetup.exe out/
-          fi
+          if [ -d dist/AgentOffice-macOS ]; then cp -R dist/AgentOffice-macOS/. out/; fi
+          if [ -d dist/AgentOfficeSetup ]; then cp -R dist/AgentOfficeSetup/. out/; fi
           ls -lh out
       - name: Publish the GitHub release
         env:

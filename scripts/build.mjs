@@ -37,27 +37,33 @@ if (process.platform === "darwin") {
 }
 
 const thumbprint = (process.env.AGENT_OFFICE_SIGN_THUMBPRINT ?? "").replace(/\s+/g, "");
+/** @type {{ bundle?: Record<string, unknown> }} */
+const overlay = {};
 if (thumbprint) {
   if (!/^[0-9a-fA-F]{40}$/.test(thumbprint)) {
     console.error("AGENT_OFFICE_SIGN_THUMBPRINT must be a 40-character SHA-1 thumbprint.");
     process.exit(2);
   }
-  const config = {
-    bundle: {
-      windows: {
-        certificateThumbprint: thumbprint,
-        digestAlgorithm: "sha256",
-        timestampUrl: process.env.AGENT_OFFICE_SIGN_TIMESTAMP_URL || "http://timestamp.digicert.com",
-      },
+  overlay.bundle = {
+    windows: {
+      certificateThumbprint: thumbprint,
+      digestAlgorithm: "sha256",
+      timestampUrl: process.env.AGENT_OFFICE_SIGN_TIMESTAMP_URL || "http://timestamp.digicert.com",
     },
   };
-  mkdirSync("target", { recursive: true });
-  const file = resolve("target", "tauri.signing.conf.json");
-  writeFileSync(file, JSON.stringify(config, null, 2));
-  args.push("--config", file);
   console.log("Signing with the certificate", thumbprint.slice(0, 8) + "…");
 } else {
   console.log("Building an unsigned installer (set AGENT_OFFICE_SIGN_THUMBPRINT to sign).");
+}
+if (process.env.TAURI_SIGNING_PRIVATE_KEY) {
+  overlay.bundle = { ...overlay.bundle, createUpdaterArtifacts: true };
+  console.log("Signing update packages.");
+}
+if (overlay.bundle) {
+  mkdirSync("target", { recursive: true });
+  const file = resolve("target", "tauri.signing.conf.json");
+  writeFileSync(file, JSON.stringify(overlay, null, 2));
+  args.push("--config", file);
 }
 
 const built = spawnSync(process.execPath, args, { stdio: "inherit" });

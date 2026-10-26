@@ -165,5 +165,9 @@ export async function createPreviewBackend(): Promise<Backend> {
       throw new Error(PREVIEW_ONLY);
     },
     listExternalSessions: async () => [],
+    checkForUpdate: async () => null,
+    installUpdate: async () => {
+      throw new Error(PREVIEW_ONLY);
+    },
   };
 }

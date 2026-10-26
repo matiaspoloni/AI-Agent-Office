@@ -27,12 +27,26 @@ export function DiagnosticsView() {
   const [report, setReport] = useState<DiagnosticsReport | null>(null);
   const [running, setRunning] = useState(false);
   const [listed, setListed] = useState<{ provider: string; sessions: ExternalSessionInfo[] } | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
 
   const listSessions = async (provider: string) => {
     try {
       setListed({ provider, sessions: await backend.listExternalSessions(provider) });
     } catch (error) {
       pushToast("error", `Could not list sessions: ${errorMessage(error)}`);
+    }
+  };
+
+  const checkUpdates = async () => {
+    setCheckingUpdate(true);
+    try {
+      const offer = await backend.checkForUpdate();
+      useOfficeStore.getState().setPendingUpdate(offer);
+      pushToast("info", offer ? `Version ${offer.version} is ready` : "This build is the newest one.");
+    } catch (error) {
+      pushToast("error", errorMessage(error));
+    } finally {
+      setCheckingUpdate(false);
     }
   };
 
@@ -95,6 +109,19 @@ export function DiagnosticsView() {
         </button>
         {report && <span className="muted small">Last run {formatTime(report.generatedAt)}</span>}
       </div>
+
+      <section className="card">
+        <div className="card-title-row">
+          <h3>Updates</h3>
+          <button className="btn small" onClick={checkUpdates} disabled={checkingUpdate}>
+            {checkingUpdate ? "Checking…" : "Check for updates"}
+          </button>
+        </div>
+        <p className="small">
+          Opening Agent Office looks for a newer signed build. Install and restart from the banner when one is ready. Your
+          data and hook integrations stay.
+        </p>
+      </section>
 
       <PreferencesCard onSaved={run} />
 

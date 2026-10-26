@@ -14,7 +14,7 @@ import type { Project } from "../bindings/Project";
 import type { RepositoriesReport } from "../bindings/RepositoriesReport";
 import type { SessionHandle } from "../bindings/SessionHandle";
 import type { UiBatch } from "../bindings/UiBatch";
-import type { Backend } from "./backend";
+import type { Backend, UpdateOffer } from "./backend";
 
 export function createTauriBackend(): Backend {
   return {
@@ -67,5 +67,7 @@ export function createTauriBackend(): Backend {
     setPreferences: (preferences) => invoke<Preferences>("set_preferences", { preferences }),
     integrationAction: (provider, action) => invoke<IntegrationStatus>("integration_action", { provider, action }),
     listExternalSessions: (provider) => invoke<ExternalSessionInfo[]>("list_external_sessions", { provider }),
+    checkForUpdate: () => invoke<UpdateOffer | null>("check_for_update"),
+    installUpdate: () => invoke<void>("install_update"),
   };
 }

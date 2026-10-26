@@ -10,7 +10,7 @@ import type { Project } from "../bindings/Project";
 import type { ProviderInfo } from "../bindings/ProviderInfo";
 import type { SessionState } from "../bindings/SessionState";
 import type { UiBatch } from "../bindings/UiBatch";
-import type { BackendKind } from "../ipc/backend";
+import type { BackendKind, UpdateOffer } from "../ipc/backend";
 
 export const MAX_EVENTS_PER_SESSION = 400;
 
@@ -36,6 +36,9 @@ export interface OfficeState {
   lastSeq: number;
   skippedEvents: number;
   toasts: Toast[];
+  /** A newer signed build, when the release check found one. */
+  pendingUpdate: UpdateOffer | null;
+  setPendingUpdate(offer: UpdateOffer | null): void;
   applyInitial(initial: InitialState, backendKind: BackendKind): void;
   applyBatch(batch: UiBatch): void;
   setProjects(projects: Project[]): void;
@@ -65,6 +68,11 @@ export const useOfficeStore = create<OfficeState>()((set) => ({
   lastSeq: 0,
   skippedEvents: 0,
   toasts: [],
+  pendingUpdate: null,
+
+  setPendingUpdate(offer) {
+    set({ pendingUpdate: offer });
+  },
 
   applyInitial(initial, backendKind) {
     const providers: Record<string, ProviderInfo> = {};

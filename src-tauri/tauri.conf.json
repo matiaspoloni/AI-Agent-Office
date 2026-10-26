@@ -26,6 +26,15 @@
       "csp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ipc: http://ipc.localhost"
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYyQTc1NzY0MzhERUNFNTAKUldSUXp0NDRaRmVuWXZDRjIzVVZxd2ZXNHZWTFhSZjdBL0FmN0VnVWFydURGRU9VbE42bzFKcFcK",
+      "endpoints": [
+        "https://github.com/matiaspoloni/AI-Agent-Office/releases/download/continuous/latest.json"
+      ],
+      "windows": { "installMode": "passive" }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["nsis"],

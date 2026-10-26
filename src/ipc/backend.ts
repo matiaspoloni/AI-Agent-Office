@@ -24,6 +24,12 @@ import type { UiBatch } from "../bindings/UiBatch";
 
 export type BackendKind = "desktop" | "preview";
 
+/** A newer signed build the installed app can install. */
+export interface UpdateOffer {
+  version: string;
+  notes: string | null;
+}
+
 export interface Backend {
   kind: BackendKind;
   appInfo(): Promise<AppInfo | null>;
@@ -74,6 +80,10 @@ export interface Backend {
   integrationAction(provider: string, action: IntegrationAction): Promise<IntegrationStatus>;
   /** Sessions reported by the provider's official listing command. */
   listExternalSessions(provider: string): Promise<ExternalSessionInfo[]>;
+  /** Whether a newer signed build is published. Null when this build is current. */
+  checkForUpdate(): Promise<UpdateOffer | null>;
+  /** Download that build, install it, and restart. */
+  installUpdate(): Promise<void>;
 }
 
 export function isDesktop(): boolean {

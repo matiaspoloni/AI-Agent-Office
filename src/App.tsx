@@ -59,7 +59,9 @@ export default function App() {
   const setView = useOfficeStore((s) => s.setView);
   const selected = useOfficeStore((s) => s.selectedAgentKey);
   const pushToast = useOfficeStore((s) => s.pushToast);
+  const pendingUpdate = useOfficeStore((s) => s.pendingUpdate);
   const hasAgents = useOfficeStore((s) => Object.keys(s.agents).length > 0);
+  const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,6 +98,21 @@ export default function App() {
     return () => {
       cancelled = true;
       unlisten?.();
+    };
+  }, [backend]);
+
+  // A release build looks for a newer signed build. Failure stays quiet; Diagnostics can retry.
+  useEffect(() => {
+    if (!backend) return;
+    let cancelled = false;
+    void backend
+      .checkForUpdate()
+      .then((offer) => {
+        if (!cancelled && offer) useOfficeStore.getState().setPendingUpdate(offer);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
     };
   }, [backend]);
 
@@ -145,6 +162,27 @@ export default function App() {
             </button>
           </div>
         </header>
+
+        {pendingUpdate && (
+          <div className="banner" role="status">
+            <span>Version {pendingUpdate.version} is ready.</span>
+            <button
+              className="btn small primary"
+              disabled={installing}
+              onClick={() => {
+                setInstalling(true);
+                void backend
+                  .installUpdate()
+                  .catch((error) => {
+                    setInstalling(false);
+                    pushToast("error", `Update failed: ${errorMessage(error)}`);
+                  });
+              }}
+            >
+              {installing ? "Installing…" : "Install and restart"}
+            </button>
+          </div>
+        )}
 
         {backend.kind === "preview" && (
           <div className="banner">

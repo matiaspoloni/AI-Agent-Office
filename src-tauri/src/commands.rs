@@ -17,7 +17,8 @@ use ao_store::{NewProject, Project};
 use serde::Serialize;
 use std::sync::Arc;
 use tauri::ipc::Channel;
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_updater::UpdaterExt;
 use ts_rs::TS;
 
 type HostState<'a> = State<'a, Arc<Host>>;
@@ -284,4 +285,50 @@ pub async fn list_external_sessions(
     provider: String,
 ) -> Result<Vec<ExternalSessionInfo>, String> {
     host.list_external_sessions(ProviderId::new(provider)).await
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateOffer {
+    pub version: String,
+    pub notes: Option<String>,
+}
+
+/// A release build asks GitHub whether a newer signed build exists.
+/// Development builds refuse: installing an update over `tauri dev` would replace the wrong copy.
+#[tauri::command]
+pub async fn check_for_update(app: AppHandle) -> Result<Option<UpdateOffer>, String> {
+    if cfg!(debug_assertions) {
+        return Err("Update checks run in the installed app, not in a development build".into());
+    }
+    let update = app
+        .updater()
+        .map_err(|err| err.to_string())?
+        .check()
+        .await
+        .map_err(|err| err.to_string())?;
+    Ok(update.map(|update| UpdateOffer {
+        version: update.version,
+        notes: update.body,
+    }))
+}
+
+/// Download the signed build, install it, and restart. The user already confirmed.
+#[tauri::command]
+pub async fn install_update(app: AppHandle) -> Result<(), String> {
+    if cfg!(debug_assertions) {
+        return Err("Updates install from a release build, not a development build".into());
+    }
+    let update = app
+        .updater()
+        .map_err(|err| err.to_string())?
+        .check()
+        .await
+        .map_err(|err| err.to_string())?
+        .ok_or_else(|| "No newer build is available".to_string())?;
+    update
+        .download_and_install(|_, _| {}, || {})
+        .await
+        .map_err(|err| err.to_string())?;
+    app.restart();
 }

@@ -43,13 +43,10 @@ trap 'rm -f "$notes_file"' EXIT
       AgentOfficeSetup.exe)
         echo "- **Windows:** \`AgentOfficeSetup.exe\` — per-user install. It is unsigned: SmartScreen → More info → Run anyway."
         ;;
-      *)
-        echo "- \`$(basename "$f")\`"
-        ;;
     esac
   done
   echo
-  echo "Agent Office does not update itself. Download the next build the same way. Data and hook integrations stay."
+  echo "An installed app offers to install a newer signed build when you open it. Data and hook integrations stay."
 } >"$notes_file"
 
 flags=(--title "$title" --notes-file "$notes_file" --target "$sha")
@@ -59,11 +56,28 @@ else
   flags+=(--latest)
 fi
 
+# latest.json is uploaded after the packages it points at, and only when macOS
+# and Windows from this same build are both here.
+node scripts/update-manifest.mjs "$dir" "$tag"
+shopt -s nullglob
+payload=()
+manifest=""
+for f in "$dir"/*; do
+  if [[ "$(basename "$f")" == "latest.json" ]]; then
+    manifest=$f
+  else
+    payload+=("$f")
+  fi
+done
+
 if gh release view "$tag" >/dev/null 2>&1; then
   gh release edit "$tag" "${flags[@]}"
-  gh release upload "$tag" "${files[@]}" --clobber
+  gh release upload "$tag" "${payload[@]}" --clobber
 else
-  gh release create "$tag" "${flags[@]}" "${files[@]}"
+  gh release create "$tag" "${flags[@]}" "${payload[@]}"
+fi
+if [[ -n "$manifest" ]]; then
+  gh release upload "$tag" "$manifest" --clobber
 fi
 
-echo "Published ${tag} (${short}): ${files[*]}"
+echo "Published ${tag} (${short}): ${payload[*]} ${manifest}"

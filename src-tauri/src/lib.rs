@@ -140,6 +140,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(move |app| {
             // Start the runtime inside Tauri's Tokio runtime so background tasks keep running.
             let options = HostOptions::for_app(&paths);
@@ -180,6 +181,8 @@ pub fn run() {
             commands::set_preferences,
             commands::integration_action,
             commands::list_external_sessions,
+            commands::check_for_update,
+            commands::install_update,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Agent Office")

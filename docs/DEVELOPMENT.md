@@ -264,7 +264,12 @@ CI publishes the installers that passed their smoke test. A push to `main` or
 * <https://github.com/matiaspoloni/AI-Agent-Office/releases/download/continuous/AgentOfficeSetup.exe>
 
 A tag `v*` (after the version bump below) publishes a normal release under that
-tag instead. The app does not check for updates.
+tag. Pushes to those branches stamp the shipped app as `0.1.<workflow run>`
+(the files in git stay `0.1.0`) and, when `TAURI_SIGNING_PRIVATE_KEY` and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` are set, sign an update package. The app
+reads `latest.json` from the continuous release and asks before installing.
+Both platforms of that run have to succeed; otherwise the previous manifest
+stays, so a Windows user is never offered a macOS build number.
 
 1. Set the same version in `Cargo.toml` (`[workspace.package]`),
    `src-tauri/tauri.conf.json` and `package.json` (a test fails otherwise).

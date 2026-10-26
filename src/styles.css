@@ -116,11 +116,19 @@ code,
 }
 
 .banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   padding: 6px 14px;
   background: #2a2412;
   color: #f2d98a;
   border-bottom: 1px solid #4a3f1c;
   font-size: 12px;
+}
+
+.banner .btn {
+  margin-left: auto;
 }
 
 .main {

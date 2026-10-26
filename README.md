@@ -82,10 +82,11 @@ The installer is **not signed yet**: Windows SmartScreen shows "Windows protecte
 your PC" the first time; choose *More info → Run anyway* only for a file you got
 from this project.
 
-**Updating:** run the newer `AgentOfficeSetup.exe`. Your data and your Claude /
-Codex hook integrations are kept (the old version's uninstaller takes the hooks
-out and the new installer puts them back). There is no automatic updater: Agent
-Office does not contact any server.
+**Updating:** open Agent Office. When a newer signed build is published it
+shows **Install and restart**. Your data and your Claude / Codex hook
+integrations are kept (the installer takes the hooks out and puts them back).
+The copy you install before that check exists is the last one you run by hand.
+Agent Office asks before replacing itself; it does not install in the background.
 
 **Uninstalling** (Installed apps → Agent Office → Uninstall) first removes Agent
 Office's hook entries from your Claude Code and Codex settings — only its own,
@@ -112,8 +113,12 @@ startup Agent Office asks your login shell once for its environment: agent CLIs
 installed with Homebrew, npm or nvm, `CLAUDE_CONFIG_DIR`, `CODEX_HOME` or API keys
 set in `~/.zshrc` work as they do in Terminal.
 
-**Updating:** replace the app in Applications with the newer one. The hooks keep
-working (they point to `/Applications/Agent Office.app`) and your data stays.
+**Updating:** open Agent Office. When a newer signed build is published it
+shows **Install and restart**, which replaces the app in Applications. The hooks
+keep working (they point to `/Applications/Agent Office.app`) and your data stays.
+The copy you install before that check exists is the last one you drag by hand.
+Because the app is not notarized, macOS may ask you to choose **Open Anyway**
+again after an update.
 
 **Uninstalling:** macOS has no uninstaller, so first remove Agent Office's hook
 entries from Claude Code and Codex — **Diagnostics → Uninstall** for each, or in
