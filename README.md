@@ -69,8 +69,9 @@ shows **"Unavailable"** instead of guessing.
 
 ### Windows 11
 
-Download and run **`AgentOfficeSetup.exe`** (the CI build is attached to each run
-as the *AgentOfficeSetup* artifact). It installs Agent Office for your Windows
+Download and run **[`AgentOfficeSetup.exe`](https://github.com/matiaspoloni/AI-Agent-Office/releases/download/continuous/AgentOfficeSetup.exe)**
+from the [continuous release](https://github.com/matiaspoloni/AI-Agent-Office/releases/tag/continuous).
+Each push that passes CI replaces that file. It installs Agent Office for your Windows
 user only (no administrator rights) in `%LOCALAPPDATA%\Agent Office`, with a
 Start Menu entry, a desktop shortcut and an entry in **Settings → Apps →
 Installed apps**. Nothing else is required — no Node, Rust, Python, WSL or Bash;
@@ -94,7 +95,8 @@ in `%LOCALAPPDATA%\AgentOffice`.
 
 ### macOS (11 Big Sur or later, Apple silicon or Intel)
 
-Download **`AgentOffice.dmg`** (the *AgentOffice-macOS* artifact of each CI run),
+Download **[`AgentOffice.dmg`](https://github.com/matiaspoloni/AI-Agent-Office/releases/download/continuous/AgentOffice.dmg)**
+from the [continuous release](https://github.com/matiaspoloni/AI-Agent-Office/releases/tag/continuous),
 open it and drag **Agent Office** to **Applications**. Open it from Applications —
 not from the disk image, where Agent Office refuses to install hooks because that
 path disappears when the image is ejected.

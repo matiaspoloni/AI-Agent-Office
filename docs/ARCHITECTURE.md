@@ -522,7 +522,9 @@ drawing), `sprites.ts` (pixel art), `renderer.ts` (Canvas 2D), `teams.ts`
   removes `%LOCALAPPDATA%\AgentOffice`.
 * `npm run build` signs with `signtool` when a certificate thumbprint is set.
   There is no auto-updater (it would need a release server, an update signing
-  key and network access).
+  key and network access). CI does publish the tested installers to a rolling
+  GitHub Release (tag `continuous`) so a browser can download them; the app
+  never looks for that release.
 * CI installs, checks, runs and uninstalls the installer on a clean Windows VM
   (`scripts/installer-smoke.mjs`).
 * **macOS**: `npm run build` on a Mac builds a universal `Agent Office.app`

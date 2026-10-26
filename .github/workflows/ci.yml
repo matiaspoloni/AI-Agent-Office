@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main, "claude/**"]
+    tags: ["v*"]
   pull_request:
 
 concurrency:
@@ -54,13 +55,13 @@ jobs:
         run: node scripts/smoke.mjs
       - name: Build installer (NSIS)
         run: npm run build
+      - name: Installer smoke test (install, run, uninstall on this clean VM)
+        run: node scripts/installer-smoke.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: AgentOfficeSetup
           path: dist-installer/AgentOfficeSetup.exe
           if-no-files-found: error
-      - name: Installer smoke test (install, run, uninstall on this clean VM)
-        run: node scripts/installer-smoke.mjs
 
   macos:
     name: macOS build, tests and disk image
@@ -81,10 +82,45 @@ jobs:
         run: node scripts/smoke.mjs
       - name: Build the app and disk image (universal, ad hoc signed)
         run: npm run build
+      - name: Disk image smoke test (mount, check, install, run, hooks, open)
+        run: node scripts/dmg-smoke.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: AgentOffice-macOS
           path: dist-installer/AgentOffice.dmg
           if-no-files-found: error
-      - name: Disk image smoke test (mount, check, install, run, hooks, open)
-        run: node scripts/dmg-smoke.mjs
+
+  # A rolling pre-release with stable download URLs. The app does not look for
+  # updates; this only puts the installers CI just tested where a browser can
+  # fetch them. A v* tag publishes a normal release instead.
+  publish:
+    name: Publish installers
+    needs: [checks, windows, macos]
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/ai-agent-office-architecture-y8wggg' || startsWith(github.ref, 'refs/tags/v')) &&
+      !cancelled() &&
+      needs.checks.result == 'success' &&
+      (needs.macos.result == 'success' || needs.windows.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Collect the installers that passed their smoke test
+        run: |
+          mkdir -p out
+          if [ -f dist/AgentOffice-macOS/AgentOffice.dmg ]; then
+            cp dist/AgentOffice-macOS/AgentOffice.dmg out/
+          fi
+          if [ -f dist/AgentOfficeSetup/AgentOfficeSetup.exe ]; then
+            cp dist/AgentOfficeSetup/AgentOfficeSetup.exe out/
+          fi
+          ls -lh out
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/publish-release.sh out

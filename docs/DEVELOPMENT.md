@@ -256,6 +256,16 @@ mapping together, and note the finding in PROVIDER_CAPABILITIES.md.
 
 ## Releasing
 
+CI publishes the installers that passed their smoke test. A push to `main` or
+`claude/ai-agent-office-architecture-y8wggg` updates the rolling pre-release
+**continuous** (the `continuous` tag moves to that commit):
+
+* <https://github.com/matiaspoloni/AI-Agent-Office/releases/download/continuous/AgentOffice.dmg>
+* <https://github.com/matiaspoloni/AI-Agent-Office/releases/download/continuous/AgentOfficeSetup.exe>
+
+A tag `v*` (after the version bump below) publishes a normal release under that
+tag instead. The app does not check for updates.
+
 1. Set the same version in `Cargo.toml` (`[workspace.package]`),
    `src-tauri/tauri.conf.json` and `package.json` (a test fails otherwise).
 2. `npm run build` on Windows (or take the *AgentOfficeSetup* artifact from CI,
