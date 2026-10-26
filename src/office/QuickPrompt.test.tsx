@@ -45,6 +45,7 @@ function seed(sessionOver: Partial<SessionState>) {
     sessions: { [session.key]: session },
     agents: { [lead.key]: lead, [sub.key]: sub },
     toasts: [],
+    selectedAgentKey: null,
   });
 }
 
@@ -100,6 +101,7 @@ describe("instruction bubble", () => {
     });
     expect(backend.sendPrompt).toHaveBeenCalledWith("claude", "s1", "Run the tests");
     expect(onClose).toHaveBeenCalled();
+    expect(useOfficeStore.getState().selectedAgentKey).toBe("claude:s1:main");
     expect(useOfficeStore.getState().toasts.at(-1)?.text).toBe("Sent to Nalu.");
   });
 
@@ -113,6 +115,7 @@ describe("instruction bubble", () => {
       box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
     expect(backend.sendPrompt).toHaveBeenCalledWith("claude", "s1", "Summarize");
+    expect(useOfficeStore.getState().selectedAgentKey).toBe("claude:s1:sub");
   });
 
   it("Shift+Enter is a new line, Escape closes", async () => {

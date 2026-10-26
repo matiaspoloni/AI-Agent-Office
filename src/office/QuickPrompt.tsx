@@ -31,6 +31,7 @@ export function QuickPrompt({
   const provider = useOfficeStore((s) => (agent ? s.providers[agent.provider] : undefined));
   const lead = useOfficeStore((s) => (session ? s.agents[session.mainAgentKey] : undefined));
   const pushToast = useOfficeStore((s) => s.pushToast);
+  const select = useOfficeStore((s) => s.select);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -55,6 +56,7 @@ export function QuickPrompt({
     setBusy(true);
     try {
       await backend.sendPrompt(agent.provider, agent.sessionId, prompt);
+      select(agent.key);
       pushToast("info", `Sent to ${target}.`);
       onClose();
     } catch (error) {

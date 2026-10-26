@@ -17,6 +17,7 @@ import {
 import { folderName, formatGitStatus } from "../state/git";
 import { silentSince } from "../state/silence";
 import { useOfficeStore } from "../state/store";
+import { AgentChat } from "./AgentChat";
 import { AppearanceEditor } from "./AppearanceEditor";
 import { VirtualList } from "./VirtualList";
 
@@ -52,7 +53,6 @@ export function AgentPanel() {
   const select = useOfficeStore((s) => s.select);
   const pushToast = useOfficeStore((s) => s.pushToast);
   const [history, setHistory] = useState<AgentEvent[]>([]);
-  const [prompt, setPrompt] = useState("");
   const [onlyThisAgent, setOnlyThisAgent] = useState(false);
   const [busy, setBusy] = useState(false);
   // Restarting a running session stops it first: the button asks once more.
@@ -80,18 +80,31 @@ export function AgentPanel() {
     };
   }, [backend, agent?.sessionKey]);
 
-  const events = useMemo(() => {
+  const merged = useMemo(() => {
     const seen = new Set<string>();
-    const merged: AgentEvent[] = [];
+    const list: AgentEvent[] = [];
     for (const e of [...history, ...liveEvents]) {
       if (seen.has(e.eventId)) continue;
       seen.add(e.eventId);
-      if (onlyThisAgent && agent && e.agentId !== agent.agentId) continue;
-      merged.push(e);
+      list.push(e);
     }
-    merged.sort((a, b) => a.timestamp - b.timestamp);
-    return merged;
-  }, [history, liveEvents, onlyThisAgent, agent]);
+    list.sort((a, b) => a.timestamp - b.timestamp);
+    return list;
+  }, [history, liveEvents]);
+
+  const events = useMemo(() => {
+    if (!onlyThisAgent || !agent) return merged;
+    return merged.filter((e) => e.agentId === agent.agentId);
+  }, [merged, onlyThisAgent, agent]);
+
+  const names = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (!agent) return map;
+    for (const other of Object.values(agents)) {
+      if (other.sessionKey === agent.sessionKey) map[other.agentId] = other.name;
+    }
+    return map;
+  }, [agents, agent]);
 
   if (!agent || !session) return null;
 
@@ -234,7 +247,94 @@ export function AgentPanel() {
         </div>
       )}
 
+      <AgentChat
+        sessionKey={agent.sessionKey}
+        agentName={agent.name}
+        focusAgentId={agent.agentId}
+        names={names}
+        events={merged}
+        activity={agent.activity}
+        ended={session.status === "ended"}
+        send={send}
+        busy={busy}
+        onSend={async (prompt) => {
+          setBusy(true);
+          try {
+            await backend.sendPrompt(agent.provider, agent.sessionId, prompt);
+          } catch (error) {
+            pushToast("error", `Send prompt: ${errorMessage(error)}`);
+            throw error;
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+
       <section className="panel-section">
+        <h4>Actions</h4>
+        <div className="button-row wrap">
+          <button
+            className="btn"
+            disabled={!stop.enabled || busy || session.status === "ended"}
+            title={stop.reason}
+            onClick={() => run("Stop", () => backend.stopSession(agent.provider, agent.sessionId, false))}
+          >
+            Stop
+          </button>
+          {session.mode === "managed" && (
+            <button
+              className={`btn${confirmRestart ? " bad" : ""}`}
+              disabled={!restart.enabled || busy}
+              title={restart.reason}
+              onClick={() => {
+                if (session.status === "active" && !confirmRestart) {
+                  setConfirmRestart(true);
+                  return;
+                }
+                setConfirmRestart(false);
+                void run("Restart", () => backend.restartSession(agent.provider, agent.sessionId));
+              }}
+            >
+              {confirmRestart ? "Stop and restart?" : "Restart"}
+            </button>
+          )}
+          {session.mode === "external" && (
+            <button
+              className="btn"
+              disabled={!continueHere.enabled || busy}
+              title={continueHere.reason}
+              onClick={() =>
+                run("Continue in Agent Office", async () => {
+                  await backend.continueSession(agent.provider, agent.sessionId);
+                  pushToast("info", `${agent.name} continues in Agent Office: you can send it prompts now.`);
+                })
+              }
+            >
+              Continue in Agent Office
+            </button>
+          )}
+          <button
+            className="btn"
+            disabled={!terminal.enabled || busy}
+            title={terminal.reason}
+            onClick={() => run("Open terminal", () => backend.openTerminal(agent.provider, agent.sessionId))}
+          >
+            Open terminal
+          </button>
+          <button
+            className="btn"
+            disabled={!openProject.enabled || busy}
+            title={openProject.reason}
+            onClick={() => projectFolder && run("Open project", () => backend.openFolder(projectFolder))}
+          >
+            Open project
+          </button>
+        </div>
+      </section>
+
+      <details className="panel-details">
+        <summary>Session details</summary>
+        <section className="panel-section">
         <Row label="Agent">
           {agent.isMain ? "Main agent" : `Subagent${agent.agentType ? ` · ${agent.agentType}` : ""}`}
         </Row>
@@ -317,90 +417,6 @@ export function AgentPanel() {
         </section>
       )}
 
-      <section className="panel-section">
-        <h4>Actions</h4>
-        <div className="button-row wrap">
-          <button
-            className="btn"
-            disabled={!stop.enabled || busy || session.status === "ended"}
-            title={stop.reason}
-            onClick={() => run("Stop", () => backend.stopSession(agent.provider, agent.sessionId, false))}
-          >
-            Stop
-          </button>
-          {session.mode === "managed" && (
-            <button
-              className={`btn${confirmRestart ? " bad" : ""}`}
-              disabled={!restart.enabled || busy}
-              title={restart.reason}
-              onClick={() => {
-                if (session.status === "active" && !confirmRestart) {
-                  setConfirmRestart(true);
-                  return;
-                }
-                setConfirmRestart(false);
-                void run("Restart", () => backend.restartSession(agent.provider, agent.sessionId));
-              }}
-            >
-              {confirmRestart ? "Stop and restart?" : "Restart"}
-            </button>
-          )}
-          {session.mode === "external" && (
-            <button
-              className="btn"
-              disabled={!continueHere.enabled || busy}
-              title={continueHere.reason}
-              onClick={() =>
-                run("Continue in Agent Office", async () => {
-                  await backend.continueSession(agent.provider, agent.sessionId);
-                  pushToast("info", `${agent.name} continues in Agent Office: you can send it prompts now.`);
-                })
-              }
-            >
-              Continue in Agent Office
-            </button>
-          )}
-          <button
-            className="btn"
-            disabled={!terminal.enabled || busy}
-            title={terminal.reason}
-            onClick={() => run("Open terminal", () => backend.openTerminal(agent.provider, agent.sessionId))}
-          >
-            Open terminal
-          </button>
-          <button
-            className="btn"
-            disabled={!openProject.enabled || busy}
-            title={openProject.reason}
-            onClick={() => projectFolder && run("Open project", () => backend.openFolder(projectFolder))}
-          >
-            Open project
-          </button>
-        </div>
-        <div className="prompt-box">
-          <textarea
-            placeholder={send.enabled ? "Send a prompt to this agent…" : send.reason}
-            value={prompt}
-            disabled={!send.enabled || session.status === "ended"}
-            onChange={(e) => setPrompt(e.target.value)}
-            rows={2}
-          />
-          <button
-            className="btn primary"
-            disabled={!send.enabled || !prompt.trim() || busy || session.status === "ended"}
-            title={send.reason}
-            onClick={() =>
-              run("Send prompt", async () => {
-                await backend.sendPrompt(agent.provider, agent.sessionId, prompt);
-                setPrompt("");
-              })
-            }
-          >
-            Send
-          </button>
-        </div>
-      </section>
-
       <AppearanceEditor agent={agent} session={session} />
 
       <section className="panel-section grow">
@@ -424,6 +440,7 @@ export function AgentPanel() {
           )}
         />
       </section>
+      </details>
     </aside>
   );
 }
